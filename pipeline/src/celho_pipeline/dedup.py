@@ -4,6 +4,8 @@
 2. Stesso mazzo, ±1 giorno, solo tra cartelle diverse della stessa famiglia di copie:
    si scarta un mazzo se un'altra cartella della famiglia ne ha già tenuto uno uguale
    non ancora abbinato a questa cartella (vale il massimo per cartella, non la somma).
+   Eccezione: ±8 giorni tra file League di mtgo.com_before_new_data_model e di mtgo.com,
+   perché l'archivio data le League alla pubblicazione settimanale.
 """
 
 import datetime as dt
@@ -13,6 +15,18 @@ from dataclasses import replace
 from .source import FAMILIES, Tournament, precedence
 
 DAY_TOLERANCE = 1
+LEAGUE_TOLERANCE = 8
+LEAGUE_PAIR = frozenset({"mtgo.com_before_new_data_model", "mtgo.com"})
+
+
+def is_league(t: Tournament) -> bool:
+    return "league" in t.rel.rsplit("/", 1)[-1].lower()
+
+
+def tolerance(folder_a: str, league_a: bool, folder_b: str, league_b: bool, league_tolerance: int) -> int:
+    if league_a and league_b and {folder_a, folder_b} == LEAGUE_PAIR:
+        return league_tolerance
+    return DAY_TOLERANCE
 
 
 def deck_fingerprint(main, side, keymap: list[int]) -> int:
@@ -29,8 +43,8 @@ def _year(day: int) -> int:
 
 
 def dedupe(tournaments: list[Tournament], keymap: list[int],
-           league_tolerance: int = DAY_TOLERANCE) -> tuple[list[Tournament], dict]:
-    """`league_tolerance`: tolleranza in giorni per i file League (l'archivio li data alla pubblicazione)."""
+           league_tolerance: int = LEAGUE_TOLERANCE) -> tuple[list[Tournament], dict]:
+    """`league_tolerance`: giorni tra League di mtgo.com_before_new_data_model e mtgo.com."""
     for t in tournaments:
         for d in t.decks:
             d.fp = deck_fingerprint(d.main, d.side, keymap)
@@ -59,22 +73,32 @@ def dedupe(tournaments: list[Tournament], keymap: list[int],
         fam = FAMILIES.get(t.family, ())
         return (fam.index(t.folder) if t.folder in fam else 99, t.archive, t.day, t.rel)
 
-    kept_idx: dict[tuple, list[list]] = defaultdict(list)  # (famiglia, fp) -> [[giorno, cartella, abbinate]]
+    # (famiglia, fp) -> mazzi tenuti: {"folder", "seen": cartelle già abbinate, "obs": [(giorno, cartella, league)]}
+    # "obs" registra anche le copie scartate: una terza cartella può abbinarsi alla data di una copia
+    # (per esempio magic.wizards.com alla copia in before_new_data_model di una League di mtgo.com).
+    kept_idx: dict[tuple, list[dict]] = defaultdict(list)
     rule2: Counter = Counter()
     emptied: Counter = Counter()
     result: list[Tournament] = []
+
+    def matches(e: dict, folder: str, league: bool, day: int) -> bool:
+        if e["folder"] == folder or folder in e["seen"]:
+            return False
+        return any(f != folder and abs(od - day) <= tolerance(folder, league, f, ol, league_tolerance)
+                   for od, f, ol in e["obs"])
+
     for t in sorted(survivors, key=order):
         keep = []
-        tol = league_tolerance if "league" in t.rel.rsplit("/", 1)[-1].lower() else DAY_TOLERANCE
+        league = is_league(t)
         for d in t.decks:
             entries = kept_idx[(t.family, d.fp)]
-            match = next((e for e in entries if e[1] != t.folder and abs(e[0] - d.day) <= tol
-                          and t.folder not in e[2]), None)
+            match = next((e for e in entries if matches(e, t.folder, league, d.day)), None)
             if match is not None:
-                match[2].add(t.folder)
-                rule2[(t.folder, match[1], _year(d.day))] += 1
+                match["seen"].add(t.folder)
+                match["obs"].append((d.day, t.folder, league))
+                rule2[(t.folder, match["folder"], _year(d.day))] += 1
             else:
-                entries.append([d.day, t.folder, set()])
+                entries.append({"folder": t.folder, "seen": set(), "obs": [(d.day, t.folder, league)]})
                 keep.append(d)
         if t.decks and not keep:
             emptied[(t.folder, _year(t.day))] += 1

@@ -67,12 +67,33 @@ def test_dedupe_does_not_mutate_input():
     assert len(arch.decks) == 2
 
 
-def test_league_tolerance_is_configurable():
+def test_league_tolerance_only_between_old_model_and_mtgo_com():
     live = tour("mtgo.com", [deck(D0, A)], rel="mtgo.com/pauper-league-1.json")
     arch = tour("mtgo.com_before_new_data_model", [deck(D0 + 5, A), deck(D0 + 5, B)], day=D0 + 5,
                 rel="arch/pauper-league-2.json", archive=True)
-    assert sum(len(t.decks) for t in dedupe([live, arch], KEYMAP)[0]) == 3
-    assert sum(len(t.decks) for t in dedupe([live, arch], KEYMAP, league_tolerance=8)[0]) == 2
+    assert sum(len(t.decks) for t in dedupe([live, arch], KEYMAP)[0]) == 2
+    assert sum(len(t.decks) for t in dedupe([live, arch], KEYMAP, league_tolerance=1)[0]) == 3
+    # stessa distanza ma con magic.wizards.com: vale ±1
+    wiz = tour("magic.wizards.com", [deck(D0 + 5, A), deck(D0 + 5, B)], day=D0 + 5,
+               uri="https://magic.wizards.com/x", rel="wiz/pauper-league-3.json", archive=True)
+    assert sum(len(t.decks) for t in dedupe([live, wiz], KEYMAP)[0]) == 3
+    # file non League: vale ±1
+    chal = tour("mtgo.com_before_new_data_model", [deck(D0 + 5, A), deck(D0 + 5, B)], day=D0 + 5,
+                rel="arch/pauper-challenge-4.json", archive=True)
+    assert sum(len(t.decks) for t in dedupe([live, chal], KEYMAP)[0]) == 3
+
+
+def test_copy_of_a_merged_copy_is_merged_too():
+    # mtgo.com (D0) <- before_new (D0+5, League ±8) <- magic.wizards.com (D0+5, ±1 dalla copia before_new)
+    live = tour("mtgo.com", [deck(D0, A), deck(D0, B)], rel="mtgo.com/pauper-league-1.json")
+    arch = tour("mtgo.com_before_new_data_model", [deck(D0 + 5, A), deck(D0 + 5, [("Gush", 1)])], day=D0 + 5,
+                rel="arch/pauper-league-2.json", archive=True)
+    wiz = tour("magic.wizards.com", [deck(D0 + 5, A), deck(D0 + 5, [("Fire // Ice", 1)])], day=D0 + 5,
+               uri="https://magic.wizards.com/x", rel="wiz/pauper-league-3.json", archive=True)
+    kept, log = dedupe([live, arch, wiz], KEYMAP)
+    assert sum(len(t.decks) for t in kept) == 4  # A, B, Gush, Fire//Ice
+    pairs = {(r["scartata"], r["tenuta"]) for r in log["regola2_mazzi_ripetuti"]}
+    assert pairs == {("mtgo.com_before_new_data_model", "mtgo.com"), ("magic.wizards.com", "mtgo.com")}
 
 
 def test_rule2_max_per_folder_not_sum():

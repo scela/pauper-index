@@ -123,7 +123,22 @@ Quindi le percentuali MTGO recenti sovrastimano i mazzi vincenti. Va spiegato ne
    Un mazzo si scarta solo se lo stesso mazzo è già stato tenuto **da un'altra cartella della stessa famiglia**, entro ±1 giorno, e quel mazzo non è già stato abbinato a un altro mazzo della stessa cartella. In pratica vale il massimo per cartella, non la somma. **Mai tra fonti diverse.**
 
    I mazzi identici dentro lo stesso file sono giocatori diversi e si contano tutti.
+
+   **Eccezione approvata in Fase 2: ±8 giorni** solo tra file **League** di `mtgo.com_before_new_data_model` e di `mtgo.com`. L'archivio data le League alla pubblicazione settimanale, da −6 a +8 giorni rispetto a mtgo.com.
+
+   **Abbinamento transitivo**: quando un mazzo viene scartato, la sua data resta registrata sul mazzo tenuto. Una terza cartella può abbinarsi a quella data, con la tolleranza della propria coppia. Per esempio, la copia in magic.wizards.com si abbina entro ±1 giorno alla copia in before_new_data_model, che a sua volta si abbina entro ±8 giorni a mtgo.com.
 3. **Log** in `data/reviews/dedup.json`: unioni per coppia di cartelle e per anno.
+
+**Impatto** (fonte al 2026-10-04):
+
+| | Tornei | Mazzi |
+|---|---|---|
+| Senza deduplica | 8.596 | 206.836 |
+| Con deduplica | 7.062 | 155.432 |
+| 12 mesi, senza deduplica | 1.221 | 33.999 |
+| 12 mesi, con deduplica | 1.178 | 32.848 |
+
+Le carte dei 12 mesi (3.084) non cambiano.
 
 ## Scryfall (verificato in Fase 0)
 
@@ -229,7 +244,10 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
   - `released_at` ≤ oggi.
 
   Si escludono le printing di set `memorabilia` o `token`, con `border_color == silver` o con `security_stamp == acorn`. I set `funny` **non** si escludono in blocco: le common di Unfinity senza acorn sono legali. Il set d'ingresso si assegna solo alle carte che Scryfall dà legali o bannate; la legalità di Scryfall resta la fonte autorevole. Con questa regola nessuna carta legale resta senza set d'ingresso.
-- **Set rilevante**: si raggruppa per `parent_set_code`, così om1 + spe + spm fanno un gruppo e fdn + j25 un altro. Elenco da approvare (vedi le decisioni in sospeso).
+- **Set rilevanti e revisioni** (approvato in Fase 2):
+  - **una revisione per gruppo di set**, raggruppati per `parent_set_code` (per esempio Spider-Man = om1 + spe + spm, Foundations = fdn + j25);
+  - il gruppo è rilevante se rende Pauper-legali almeno 5 carte in totale;
+  - il ritardo di 60 giorni si conta dalla **data di uscita del set principale** (il codice del gruppo).
 
 - Ultima apparizione: due record separati, MTGO e cartaceo. Ognuno contiene data, nome del torneo, tipo di fonte, piazzamento normalizzato, copie in main e in side, `Tournament.Uri`. Mai `AnchorUri` né `Player`.
 
@@ -287,6 +305,4 @@ Idee da valutare dopo la prima versione: `docs/IDEE.md`.
 
 ## Decisioni in sospeso
 
-- **Set rilevanti**: elenco degli ultimi 2 anni in `data/reviews/set-ingresso.md`, da approvare (revisione per gruppo o per set).
-- **Tolleranza per le League dell'archivio**: in `mtgo.com_before_new_data_model` le League sono raccolte settimanali delle liste 5-0 di `mtgo.com`, datate dal giorno della pubblicazione: da −6 a +8 giorni rispetto all'originale. Con ±1 giorno restano circa 9.200 duplicati (2018–2023, solo nello storico). Proposta: `league_tolerance=8` in `dedup.dedupe`. Oggi resta ±1, come approvato.
 - **Snapshot e report di revisione**: rimandati alla Fase 3, insieme al workflow.

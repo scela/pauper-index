@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-10-05T10:15:04+00:00",
+  "generated_at": "2026-10-05T10:25:58+00:00",
   "last_tournament": "2026-10-04",
-  "tournaments": 7326,
-  "decks": 164604,
+  "tournaments": 7062,
+  "decks": 155432,
   "windows": [
     {
       "days": 61,
@@ -21,8 +21,8 @@
     },
     {
       "days": null,
-      "decks": 164604,
-      "tournaments": 7326
+      "decks": 155432,
+      "tournaments": 7062
     }
   ],
   "cards": 5037,
@@ -44,8 +44,8 @@
       "tornei_senza_mazzi": 0
     },
     "after": {
-      "tournaments": 7326,
-      "decks": 164604
+      "tournaments": 7062,
+      "decks": 155432
     }
   },
   "resolution": {
@@ -60,7 +60,7 @@
       "unresolved": 8
     },
     "unresolved_occurrences": 8,
-    "occurrences": 4129790,
+    "occurrences": 3886807,
     "unresolved_pct": 0.0002
   }
 }
