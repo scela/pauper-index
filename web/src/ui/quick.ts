@@ -170,7 +170,10 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
     result.replaceChildren(h('div', { class: 'qres' + (owned && owned.total > 0 ? ' is-owned' : '') }, img, h('div', { class: 'qinfo' }, ...info)));
   };
 
+  // chiusura differita dopo il blur: annullata se il campo torna attivo prima che scatti
+  let blurTimer: number | undefined;
   input.addEventListener('focus', () => {
+    window.clearTimeout(blurTimer);
     void loadAll();
     // scrivere la carta successiva sostituisce subito quella precedente
     window.setTimeout(() => input.select(), 0);
@@ -204,7 +207,11 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
     const li = (ev.target as HTMLElement).closest<HTMLElement>('[role="option"]');
     if (li) choose(items[Number(li.dataset.i)]);
   });
-  input.addEventListener('blur', () => window.setTimeout(close, 120));
+  input.addEventListener('blur', () => {
+    blurTimer = window.setTimeout(() => {
+      if (document.activeElement !== input) close();
+    }, 120);
+  });
 
   return { refresh: render };
 }

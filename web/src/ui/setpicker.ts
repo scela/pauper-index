@@ -71,7 +71,10 @@ export function initSetPicker(ctx: SetPickerCtx): { refresh(): void } {
     input.value = label(g);
   };
 
+  // chiusura differita dopo il blur: annullata se il campo torna attivo prima che scatti
+  let blurTimer: number | undefined;
   input.addEventListener('focus', () => {
+    window.clearTimeout(blurTimer);
     wrap.classList.add('open');
     void open();
     window.setTimeout(() => input.select(), 0);
@@ -103,7 +106,8 @@ export function initSetPicker(ctx: SetPickerCtx): { refresh(): void } {
     const li = (ev.target as HTMLElement).closest<HTMLElement>('[role="option"]');
     if (li) choose(items[Number(li.dataset.i)]);
   });
-  input.addEventListener('blur', () => window.setTimeout(() => {
+  input.addEventListener('blur', () => blurTimer = window.setTimeout(() => {
+    if (document.activeElement === input) return;
     close();
     const sel = ctx.selected();
     input.value = sel ? label(sel) : '';
