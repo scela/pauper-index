@@ -9,14 +9,15 @@ const DATA = resolve(here, '../data');
 // Solo questi file di data/ vanno nel sito. I report interni (unresolved.csv, risoluzione.csv,
 // dedup.json, set-ingresso.md, baseline-*.md) contengono testo grezzo delle decklist e restano nel repo.
 const PUBLIC_DATA = ['cards.json', 'printings.json', 'names.json', 'allnames.json', 'meta.json'];
-const PUBLIC_REVIEWS = /^(index\.json|[a-z0-9]+\.(json|md))$/;
+// Dalle revisioni solo l'indice pubblico (senza nomi grezzi non risolti).
+const PUBLIC_REVIEWS = /^index\.json$/;
 
 function publicDataFiles(): string[] {
   const out = PUBLIC_DATA.filter((f) => existsSync(join(DATA, f)));
   const rev = join(DATA, 'reviews');
   if (existsSync(rev)) {
     for (const f of readdirSync(rev)) {
-      if (PUBLIC_REVIEWS.test(f) && f !== 'dedup.json' && statSync(join(rev, f)).isFile()) out.push(`reviews/${f}`);
+      if (PUBLIC_REVIEWS.test(f) && statSync(join(rev, f)).isFile()) out.push(`reviews/${f}`);
     }
   }
   return out;

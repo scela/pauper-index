@@ -1,0 +1,190 @@
+# Pauper Index: aggiornamento giornaliero dei dati, revisioni, allarmi e pubblicazione su GitHub Pages.
+# Un solo workflow con più job. Actions fissate per SHA (aggiornate da Dependabot); nessun segreto oltre a GITHUB_TOKEN.
+name: Aggiorna e pubblica
+
+on:
+  schedule:
+    - cron: '23 7 * * *'   # ogni giorno alle 07:23 UTC (la fonte pubblica di solito nella notte europea)
+  workflow_dispatch:
+    inputs:
+      forza_revisione:
+        description: 'Codice Scryfall del set da rivedere subito (per esempio hob). Vuoto: nessuna.'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths: ['web/**', 'data/**', 'pipeline/**', '.github/workflows/**']
+
+permissions: {}
+
+concurrency:
+  group: pauper-index
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: '3.14'
+  NODE_VERSION: '24'
+  FORCE_COLOR: '0'
+
+jobs:
+  test:
+    name: Test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pipeline/requirements-lock.txt
+      - name: 'Pipeline: dipendenze, test e lint'
+        run: |
+          pip install -r pipeline/requirements-lock.txt -e pipeline
+          python -m pytest pipeline -q
+          ruff check pipeline
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: 'Sito: test, build e smoke test'
+        working-directory: web
+        run: |
+          npm ci
+          npm test
+          npm run build
+          npx playwright install --with-deps chromium
+          npm run e2e
+
+  update:
+    name: Aggiorna i dati
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write   # commit dei dati
+      issues: write     # revisioni e allarmi
+      actions: write    # riattivazione del workflow (keepalive)
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      FORZA_REVISIONE: ${{ inputs.forza_revisione }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pipeline/requirements-lock.txt
+      - name: Dipendenze
+        run: pip install -r pipeline/requirements-lock.txt -e pipeline
+      - name: Cache del clone della fonte
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/source
+          key: source-${{ github.run_id }}
+          restore-keys: source-
+      - name: Ricostruisci i dati (fonte + Scryfall)
+        run: python -m pauper_index build > .cache-build.log && tail -n 60 .cache-build.log
+      - name: Revisioni dopo le espansioni
+        run: |
+          if [ -n "$FORZA_REVISIONE" ]; then
+            if ! printf '%s' "$FORZA_REVISIONE" | grep -Eq '^[a-z0-9]{2,6}$'; then
+              echo "::error::codice del set non valido: usa lettere minuscole e cifre, per esempio hob"; exit 1
+            fi
+            python -m pauper_index review --force "$FORZA_REVISIONE"
+          else
+            python -m pauper_index review
+          fi
+      - name: Allarme fonte ferma
+        run: python -m pauper_index alarm
+      - name: Commit dei dati (solo se qualcosa è cambiato)
+        run: |
+          rm -f .cache-build.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if python -m pauper_index changed; then
+            git add data
+            git commit -m "Dati: aggiornamento del $(date -u +%F)"
+            git push
+          fi
+      - name: Issue per revisioni e allarmi
+        run: |
+          shopt -s nullglob
+          for f in .cache/issues/*.md; do
+            title=$(head -n 1 "$f")
+            tail -n +2 "$f" > body.md
+            if [ "$title" = "Fonte dati ferma" ] && \
+               [ -n "$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number')" ]; then
+              echo "Issue \"$title\" già aperta"; continue
+            fi
+            gh issue create --title "$title" --body-file body.md --assignee "${{ github.repository_owner }}"
+          done
+      - name: Keepalive (il workflow programmato non deve spegnersi da solo)
+        run: |
+          # 1) riattiva il workflow: azzera il conteggio dei 60 giorni di inattività dei repository pubblici
+          gh api -X PUT "repos/${{ github.repository }}/actions/workflows/aggiorna.yml/enable"
+          # 2) se non ci sono commit da 45 giorni (fonte ferma, dati invariati), registra comunque un'attività
+          last=$(git log -1 --format=%ct)
+          if [ $(( ($(date +%s) - last) / 86400 )) -ge 45 ]; then
+            date -u +%F > .github/keepalive.txt
+            git add .github/keepalive.txt
+            git commit -m "Keepalive del $(date -u +%F)"
+            git push
+          fi
+
+  deploy:
+    name: Pubblica su GitHub Pages
+    needs: [test, update]
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.update.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main   # include il commit dei dati appena fatto dal job update
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build del sito
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: web/dist
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  notify:
+    name: Avviso di errore
+    needs: [test, update, deploy]
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Apri una Issue (arriva un'email al proprietario del repository)
+        run: |
+          url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          gh issue create --repo "${{ github.repository }}" \
+            --title "Esecuzione fallita: ${{ github.workflow }} del $(date -u +%F)" \
+            --assignee "${{ github.repository_owner }}" \
+            --body "L'esecuzione $url (evento: ${{ github.event_name }}) è fallita. Apri il link per vedere quale passaggio non è andato a buon fine."

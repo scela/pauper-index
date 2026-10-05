@@ -20,7 +20,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
 - [x] Fase 0: setup e ispezione dei formati
 - [x] Fase 1: pipeline in locale, test, confronto con la baseline
 - [x] Fase 2: frontend
-- [ ] Fase 3: GitHub Actions e deploy
+- [ ] Fase 3: GitHub Actions e deploy (in corso)
 - [ ] Fase 4: rifinitura e README
 
 ## Struttura
@@ -368,9 +368,38 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Ventaglio**: un artwork per `illustration_id`, preferendo la printing posseduta, poi la più recente in inglese. Al massimo 7, più "Mostra tutte" che apre una griglia in un `<dialog>`. Le carte sono **distanziate e ruotate di pochi gradi, senza sovrapporsi**, per non coprire artista e copyright (regole di Scryfall). La carta attiva è mostrata intera e più grande.
 - **Persistenza**: IndexedDB (database `pauper-index`) per la collezione; localStorage solo per tema, ordinamento e filtro, con prefisso `pauper-index:`. "Cancella i miei dati" elimina il database e **solo** le chiavi `pauper-index:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
 - **Tabella**: pagine da 100 righe ("Mostra altre"). Ordinamento per percentuale di mazzi, nome, ultima apparizione (recente o meno recente). Filtro "viste negli ultimi 6 mesi / non viste da oltre 6 mesi", rispetto alla data dei dati.
-- **Link "Segnala un errore"**: usa `VITE_REPO_URL` al momento della build (da impostare nella Fase 3); senza, mostra un testo generico.
+- **Segnalare un errore**: link `mailto:massadalbe@hotmail.com` nella pagina Informazioni (`REPORT_EMAIL` in `web/src/ui/about.ts`).
 - **Icone**: `public/icon.svg` più PNG generate con `npm run icons` (Chromium di Playwright) e committate. Nessun simbolo di Wizards.
 
-## Decisioni in sospeso
+## Automazione e pubblicazione (Fase 3)
 
-- **Snapshot e report di revisione**: rimandati alla Fase 3, insieme al workflow.
+**Workflow** `.github/workflows/aggiorna.yml`, uno solo con quattro job:
+- `test`: a ogni push su `main` (pipeline, web, data, workflow): pytest, ruff, Vitest, build, Playwright.
+- `update`: **ogni giorno alle 07:23 UTC** e con avvio manuale (`workflow_dispatch`, campo `forza_revisione`). Passi:
+  1. `build` (ricalcolo completo; il clone della fonte resta in `actions/cache`);
+  2. `review`;
+  3. `alarm`;
+  4. commit solo se `changed` trova cambiamenti significativi;
+  5. Issue per revisioni e allarmi;
+  6. keepalive.
+- `deploy`: dopo `test` o `update`; build di `web/` da `main` e pubblicazione su GitHub Pages (HTTPS obbligatorio).
+- `notify`: se un job fallisce apre una Issue assegnata al proprietario, che riceve l'email. In più GitHub manda la sua email di "workflow failed" a chi ha creato il workflow programmato.
+
+**Regole**:
+- Actions fissate per SHA, aggiornate da Dependabot (`.github/dependabot.yml`: Actions, npm, pip).
+- Permessi minimi per job; `permissions: {}` a livello di workflow. Nessun segreto oltre a `GITHUB_TOKEN`.
+- I commit fatti con `GITHUB_TOKEN` non avviano altri workflow: per questo `deploy` è nello stesso workflow di `update`.
+- **`changed`** (`python -m pauper_index changed`): ignora i campi volatili di `meta.json` (`generated_at`, `source.commit`, `source.commit_date`, `source.days_since_last_tournament`). Se cambiano solo quelli, ripristina il file e non fa commit. Quindi `generated_at` nel sito è la data dell'**ultimo cambiamento dei dati**.
+- **Allarme "fonte ferma"**: `alarm` gira ogni giorno, anche senza dati nuovi. Se l'ultimo torneo è più vecchio di 21 giorni apre la Issue "Fonte dati ferma", con i fork di MTGODecklistCache aggiornati di recente, ma solo se non ce n'è già una aperta. Il sito calcola l'avviso anche da solo, dalla data dell'ultimo torneo, perché senza dati nuovi non c'è un nuovo commit.
+- **Workflow programmati nei repository pubblici**: GitHub li disattiva dopo 60 giorni senza attività nel repository (docs "Disabling and enabling a workflow"; cosa conti come attività non è specificato). Due difese:
+  1. a ogni esecuzione `gh api -X PUT …/actions/workflows/aggiorna.yml/enable`;
+  2. se l'ultimo commit su `main` ha almeno 45 giorni, commit di `.github/keepalive.txt`.
+
+**Revisioni** (`pauper_index/review.py`, `python -m pauper_index review [--force SET]`):
+- Al primo avvio crea lo snapshot di partenza (`data/snapshots/2026-10-05.json`) e `data/reviews/state.json` (`baseline`, `done`). I gruppi già scaduti prima della partenza non si recuperano.
+- Un gruppo (`parent_set_code`) con almeno 5 carte Pauper-legali entrate si rivede quando oggi ≥ uscita del set principale + 60 giorni. Il prossimo: The Hobbit (HOB), dal 2026-10-13.
+- Ogni revisione scrive `data/reviews/<set>.json` e `.md` (report completo, con i nuovi nomi non risolti), aggiorna `data/reviews/index.json` (pubblico, **senza** nomi grezzi) e crea un nuovo snapshot. Il report va anche in una Issue.
+- Definizione di default per i confronti: ultimo anno, almeno 1 mazzo, legale oggi, terre base escluse.
+- Nel sito si pubblica dalla cartella reviews **solo** `index.json`.
+
+## Decisioni in sospeso

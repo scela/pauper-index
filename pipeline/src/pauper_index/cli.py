@@ -3,6 +3,9 @@
   build      aggiorna fonte e bulk, ricalcola tutto e scrive data/
   sets       set d'ingresso: validazione della regola ed elenco dei set rilevanti (ultimi 2 anni)
   baseline   confronto con baseline/pauper-2026-09-14.csv
+  review     revisioni dopo le espansioni (--force SET per forzarne una)
+  alarm      allarme "fonte ferma" (scrive il testo della Issue in .cache/issues/)
+  changed    exit 0 se data/ ha cambiamenti significativi da committare
 
 Opzioni: --offline (niente rete: usa cache e fuzzy_matches.csv), --no-fetch (non aggiorna la fonte).
 """
@@ -175,13 +178,80 @@ def cmd_baseline(args) -> None:
     print(f"\nscritto {out}")
 
 
+def cmd_review(args) -> None:
+    from .carddb import CardDB
+    from .review import group_entries, run_reviews
+    from .scryfall import Api, ensure_bulk, fetch_sets, iter_jsonl
+
+    api = None if args.offline else Api()
+    oracle, _ = ensure_bulk("oracle_cards", api)
+    default, _ = ensure_bulk("default_cards", api)
+    sets_info = fetch_sets(api)
+    db = CardDB(iter_jsonl(oracle), iter_jsonl(default))
+    today = dt.date.fromisoformat(args.today) if args.today else dt.date.today()
+    run_reviews(sets_info, group_entries(entry_map(db), sets_info), today, force=args.force)
+
+
+def cmd_alarm(args) -> None:
+    import os
+
+    from .review import stale_alarm
+
+    meta = json.loads((config.DATA / "meta.json").read_text("utf-8"))
+    today = dt.date.fromisoformat(args.today) if args.today else dt.date.today()
+    stale_alarm(meta, today, token=os.environ.get("GITHUB_TOKEN"))
+
+
+VOLATILE_META = ("generated_at",)
+VOLATILE_SOURCE = ("commit", "commit_date", "days_since_last_tournament")
+
+
+def _stable_meta(text: str) -> dict:
+    m = json.loads(text)
+    for k in VOLATILE_META:
+        m.pop(k, None)
+    for k in VOLATILE_SOURCE:
+        m.get("source", {}).pop(k, None)
+    return m
+
+
+def cmd_changed(args) -> None:
+    """Exit 0 se data/ contiene cambiamenti significativi rispetto a HEAD, 1 altrimenti.
+
+    Se cambia solo la parte volatile di meta.json (data di generazione, commit della fonte), la ripristina.
+    """
+    import subprocess
+
+    def git(*a):
+        return subprocess.run(["git", *a], cwd=config.ROOT, capture_output=True, text=True, check=False).stdout
+
+    changed = [f for f in git("status", "--porcelain", "--", "data").splitlines() if f.strip()]
+    paths = [line[3:].strip() for line in changed]
+    others = [p for p in paths if p != "data/meta.json"]
+    meta_changed = "data/meta.json" in paths
+    if meta_changed and not others:
+        old = git("show", "HEAD:data/meta.json")
+        new = (config.DATA / "meta.json").read_text("utf-8")
+        if old and _stable_meta(old) == _stable_meta(new):
+            git("checkout", "--", "data/meta.json")
+            print("nessun cambiamento significativo (solo date di generazione)")
+            raise SystemExit(1)
+    if not paths:
+        print("nessun cambiamento")
+        raise SystemExit(1)
+    print("cambiamenti: " + ", ".join(paths[:20]) + (" …" if len(paths) > 20 else ""))
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="pauper_index", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["build", "sets", "baseline"])
+    ap.add_argument("command", choices=["build", "sets", "baseline", "review", "alarm", "changed"])
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--no-fetch", action="store_true")
+    ap.add_argument("--force", help="review: forza la revisione di questo set (codice Scryfall)")
+    ap.add_argument("--today", help="review/alarm: data di riferimento AAAA-MM-GG (per i test)")
     args = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    {"build": cmd_build, "sets": cmd_sets, "baseline": cmd_baseline}[args.command](args)
+    {"build": cmd_build, "sets": cmd_sets, "baseline": cmd_baseline, "review": cmd_review, "alarm": cmd_alarm,
+     "changed": cmd_changed}[args.command](args)

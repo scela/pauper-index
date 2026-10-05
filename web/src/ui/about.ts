@@ -9,7 +9,7 @@ export const SITE_TITLE = 'Pauper Index';
 // Testo esatto richiesto da company.wizards.com/en/legal/fancontentpolicy (verificato il 2026-10-05).
 export const FCP_NOTICE = `${SITE_TITLE} is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.`;
 
-const REPO_URL: string = import.meta.env.VITE_REPO_URL || '';
+export const REPORT_EMAIL = 'massadalbe@hotmail.com';
 
 const ext = (href: string, text: string) => h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text);
 
@@ -52,7 +52,7 @@ export function renderAbout(root: HTMLElement, d: Data | null): void {
         h('li', null, 'La fonte dichiara di non essere più mantenuta attivamente: se smette di aggiornarsi, qui in alto compare un avviso.'),
         h('li', null, 'Alcuni archivi contengono gli stessi tornei più volte: i duplicati vengono rimossi. I nomi delle carte scritti male o in altre lingue vengono ricondotti alla carta giusta quando possibile.'),
         h('li', null, 'Le finestre (61 giorni, 1 anno, 2 anni) partono dalla data dell\'ultimo torneo disponibile. "Copie tipiche" è la mediana delle copie nei mazzi che giocano la carta.')),
-      m ? h('p', null, `Dati aggiornati al ${fmtDate(m.last_tournament)}: ${fmtInt(m.tournaments)} tornei, ${fmtInt(m.decks)} mazzi. Generati il ${fmtDate(m.generated_at)}; dati Scryfall del ${fmtDate(m.scryfall.default_cards || '')}. L'aggiornamento è automatico ogni settimana.`) : null),
+      m ? h('p', null, `Dati aggiornati al ${fmtDate(m.last_tournament)}: ${fmtInt(m.tournaments)} tornei, ${fmtInt(m.decks)} mazzi. Generati il ${fmtDate(m.generated_at)}; dati Scryfall del ${fmtDate(m.scryfall.default_cards || '')}. L'aggiornamento è automatico ogni giorno.`) : null),
 
     h('section', null,
       h('h3', null, 'Privacy'),
@@ -64,9 +64,8 @@ export function renderAbout(root: HTMLElement, d: Data | null): void {
 
     h('section', null,
       h('h3', null, 'Segnalare un errore'),
-      REPO_URL
-        ? h('p', null, 'Apri una segnalazione su ', ext(`${REPO_URL.replace(/\/$/, '')}/issues`, 'GitHub'), ', indicando la carta, cosa ti aspettavi e cosa vedi. Non allegare la tua collezione.')
-        : h('p', null, 'Apri una segnalazione (issue) nel repository GitHub del progetto, indicando la carta, cosa ti aspettavi e cosa vedi. Non allegare la tua collezione.')),
+      h('p', null, 'Scrivi a ', h('a', { href: `mailto:${REPORT_EMAIL}?subject=${encodeURIComponent('Pauper Index: segnalazione')}` }, REPORT_EMAIL),
+        ', indicando la carta, cosa ti aspettavi e cosa vedi. Non allegare la tua collezione.')),
 
     h('p', null, h('a', { href: '#' }, '← Torna al confronto')),
   ));

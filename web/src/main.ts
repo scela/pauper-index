@@ -19,6 +19,7 @@ import { cancelClose, closeSheet, isOpenFor, openSheet, renderGrid, scheduleClos
 const PAGE = 100;
 const NEW_DAYS = 60;
 const STALE_DAYS = 182;
+const STALE_SOURCE_DAYS = 21;
 const PERIOD_DESC = ['ultimi 61 giorni', 'ultimo anno', 'ultimi 2 anni', 'dal 2014'];
 const PERIOD_LABELS = [`${WINDOW_LABELS[0]} (61 giorni)`, WINDOW_LABELS[1], WINDOW_LABELS[2], `${WINDOW_LABELS[3]} (dal 2014)`];
 
@@ -248,9 +249,11 @@ function renderDataline(): void {
   const m = S.d!.meta;
   const el = $('#dataline');
   el.classList.remove('error');
-  el.replaceChildren(`Dati al ${fmtDate(m.last_tournament)} · ${fmtInt(m.tournaments)} tornei · ${fmtInt(m.decks)} mazzi`);
-  if (m.source.status === 'ferma') {
-    el.append(h('span', { class: 'warn' }, `La fonte dei tornei non si aggiorna da ${m.source.days_since_last_tournament} giorni: i dati più recenti potrebbero mancare.`));
+  el.replaceChildren(`Tornei fino al ${fmtDate(m.last_tournament)} · ${fmtInt(m.tournaments)} tornei · ${fmtInt(m.decks)} mazzi · dati aggiornati il ${fmtDate(m.generated_at)}`);
+  // allarme calcolato anche nel browser: se i dati non cambiano non c'è un nuovo commit, ma l'avviso deve comparire
+  const days = daysBetween(m.last_tournament, new Date().toISOString().slice(0, 10));
+  if (m.source.status === 'ferma' || days > STALE_SOURCE_DAYS) {
+    el.append(h('span', { class: 'warn' }, `La fonte dei tornei non riceve nuovi tornei da ${days} giorni: i dati più recenti potrebbero mancare.`));
   }
 }
 
@@ -464,13 +467,26 @@ function renderExtra(): void {
 async function renderNews(): Promise<void> {
   const root = $('#news');
   const empty = h('p', { class: 'note' }, 'Nessuna revisione ancora. Quando esce un set che porta carte nel Pauper, dopo 60 giorni qui compare il resoconto: carte nuove nella lista, carte uscite, ban e unban.');
+  type Rev = {
+    set: string; nome: string; uscita: string; data: string; sommario: string;
+    nuove: [string, number, number][]; entrate: [string, number, number][]; uscite: [string, number][];
+    legalita: [string, string, string][];
+  };
+  const LEG: Record<string, string> = { l: 'legale', b: 'bannata', n: 'non legale' };
+  const list_ = (title: string, items: string[]) => items.length
+    ? h('div', null, h('b', null, title), h('ul', null, ...items.map((t) => h('li', null, t))))
+    : null;
   try {
     const r = await fetch('data/reviews/index.json');
-    const list = r.ok ? ((await r.json()) as { set: string; nome: string; data: string; sommario?: string }[]) : [];
+    const list = r.ok ? ((await r.json()) as Rev[]) : [];
     if (!Array.isArray(list) || !list.length) return void root.replaceChildren(empty);
-    root.replaceChildren(h('ul', { class: 'news' }, ...list.slice(0, 6).map((x) => h('li', null,
-      h('b', null, `${x.nome} (${String(x.set).toUpperCase()})`), ` · ${fmtDate(x.data)}`,
-      x.sommario ? h('p', { class: 'note' }, x.sommario) : null))));
+    root.replaceChildren(...list.slice(0, 6).map((x) => h('details', { class: 'review' },
+      h('summary', null, `${x.nome} (${String(x.set).toUpperCase()}) · revisione del ${fmtDate(x.data)}`),
+      h('p', { class: 'note' }, x.sommario),
+      list_('Carte del set nella lista', (x.nuove || []).map(([n, d, p]) => `${n}: ${fmtInt(d)} mazzi (${p}%)`)),
+      list_('Entrate nella lista', (x.entrate || []).map(([n, d, p]) => `${n}: ${fmtInt(d)} mazzi (${p}%)`)),
+      list_('Uscite dalla lista', (x.uscite || []).map(([n]) => n)),
+      list_('Cambi di legalità', (x.legalita || []).map(([n, a, b]) => `${n}: ${LEG[a] || a} → ${LEG[b] || b}`)))));
   } catch {
     root.replaceChildren(empty);
   }

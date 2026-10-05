@@ -16,7 +16,7 @@ async function setup(page: Page): Promise<string[]> {
   // niente richieste vere al CDN di Scryfall durante i test
   await page.route('https://cards.scryfall.io/**', (r) => r.fulfill({ contentType: 'image/png', body: PNG }));
   await page.goto('./');
-  await expect(page.locator('#dataline')).toContainText('Dati al');
+  await expect(page.locator('#dataline')).toContainText('dati aggiornati il');
   return problems;
 }
 
@@ -193,6 +193,8 @@ test('Informazioni: avviso Fan Content Policy esatto; in pagina una sola riga', 
   await expect(page.locator('#viewAbout')).toContainText('vengono letti solo nel tuo browser');
   await expect(page.locator('#viewAbout')).toContainText('primi 32 mazzi');
   await expect(page.locator('#viewAbout')).toContainText('Snow-Covered) non compaiono mai');
+  await expect(page.locator('#viewAbout')).toContainText('ogni giorno');
+  await expect(page.locator('#viewAbout a[href^="mailto:massadalbe@hotmail.com"]')).toHaveCount(1);
   await page.click('#viewAbout a[href="#"]');
   await expect(page.locator('#viewMain')).toBeVisible();
 });
@@ -207,8 +209,23 @@ test('persistenza e "Cancella i miei dati"', async ({ page }) => {
   await page.click('#clearData');
   await expect(page.locator('#loadArea')).toBeVisible();
   await page.reload();
-  await expect(page.locator('#dataline')).toContainText('Dati al');
+  await expect(page.locator('#dataline')).toContainText('Tornei fino al');
   await expect(page.locator('#loaded')).toBeHidden();
   const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('pauper-index:')));
   expect(keys).toEqual([]);
+});
+
+test('Novità: mostra le revisioni dall\'indice pubblico', async ({ page }) => {
+  await page.route('**/data/reviews/index.json', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    set: 'hob', nome: 'The Hobbit', uscita: '2026-08-14', data: '2026-10-13', sommario: '21 carte del set nella lista; 0 entrate; 0 uscite.',
+    nuove: [["Giant's Boulder", 638, 1.94]], entrate: [], uscite: [], legalita: [['Some Card', 'l', 'b']],
+  }]) }));
+  await setup(page);
+  await page.locator('#newsDetails > summary').click();
+  const rev = page.locator('#news details.review');
+  await expect(rev).toHaveCount(1);
+  await rev.locator('summary').click();
+  await expect(rev).toContainText('The Hobbit (HOB)');
+  await expect(rev).toContainText("Giant's Boulder: 638 mazzi (1.94%)");
+  await expect(rev).toContainText('Some Card: legale → bannata');
 });
