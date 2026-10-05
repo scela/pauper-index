@@ -402,6 +402,34 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - Definizione di default per i confronti: ultimo anno, almeno 1 mazzo, legale oggi, terre base escluse.
 - Nel sito si pubblica dalla cartella reviews **solo** `index.json`.
 
+## Lingue (funzione 1, dopo la Fase 3)
+
+- **Dizionari** in `web/src/i18n/`:
+  - `it.ts` è la fonte delle chiavi;
+  - `en.ts` è tipizzato `Record<Key, Msg>`, quindi chiavi mancanti o in più fanno fallire la build;
+  - segnaposto `{nome}`; plurali `{ one, other }` scelti con `Intl.PluralRules`.
+- **Regola**: ogni nuovo testo dell'interfaccia (anche errori, riepiloghi, aria-label, nomi dei file di export) va **in entrambi i dizionari**. Mai stringhe visibili scritte nel codice. Le nuove funzioni nascono già in IT e EN.
+- **Funzioni**: `t(key, vars)` per la lingua corrente; `translate(lang, key, vars)` (usata anche dai test); `tNodes()` per testi con link al posto di un segnaposto.
+- **Formattazione**: `fmtDate` / `fmtInt` / `fmtPct` / `fmtResult` usano `Intl` con `it-IT` o `en-US`. Le date sono in UTC, così il fuso del browser non sposta il giorno. I piazzamenti sono "3°" in italiano e "3rd" in inglese.
+- **Lingua iniziale**:
+  1. `localStorage` `pauper-index:lang`;
+  2. altrimenti italiano se una delle lingue del browser è `it*`;
+  3. altrimenti inglese.
+
+  Il selettore IT/EN è in testata (`aria-pressed`). "Cancella i miei dati" cancella anche la scelta.
+- **Testi statici** di `index.html`: attributi `data-i18n` (testo), `data-i18n-ph` (placeholder), `data-i18n-aria`, `data-i18n-title`, `data-i18n-content` (meta description). Nelle etichette con campi il testo sta in uno `<span>`.
+- **Etichette delle celle su mobile**: `data-label` tradotto, mostrato con `content: attr(data-label)`. Niente testi nel CSS.
+- **I nomi delle carte restano in inglese**, come su Scryfall. Il gruppo "Testo incollato" si traduce quando viene mostrato (`source === '__pasted__'`).
+- **Avviso Fan Content Policy**: il testo ufficiale inglese (`#fcp`, `lang="en"`) è uguale nelle due lingue. In italiano segue la traduzione, con la nota che fa fede il testo inglese; il piè di pagina ha una riga breve per lingua.
+- **Novità**: le revisioni hanno titoli ed elenchi tradotti. Il `sommario` generato dalla pipeline è in italiano e si mostra solo in italiano.
+- **Test**:
+  - `tests/i18n.test.ts`: stesse chiavi, nessun testo vuoto, stessi segnaposto, formattazione, scelta della lingua;
+  - Playwright con quattro progetti (`desktop-it`, `desktop-en`, `mobile-it`, `mobile-en`, scelti con `locale`), con i testi attesi presi dagli stessi dizionari.
+
+## Dependabot
+
+Le Pull Request di Dependabot attivano il job `test` (evento `pull_request`: solo test, nessuna pubblicazione e nessuna Issue). Si uniscono (squash) **solo se tutti i test passano**, e si riporta all'utente cosa è stato unito.
+
 ## Decisioni in sospeso
 
 ## Repository e privacy dei commit

@@ -5,7 +5,6 @@ import { cardByName, type Data } from './data';
 import { norm, splitFaces } from './norm';
 import type { CardRow, Group, Role, Row } from './types';
 
-export const WINDOW_LABELS = ['Meta attuale', 'Ultimo anno', 'Ultimi 2 anni', 'Storico'];
 
 export interface Opts {
   win: number; // indice in cards.w

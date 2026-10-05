@@ -7,7 +7,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#EDF0F3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1B2028" media="(prefers-color-scheme: dark)">
-<meta name="description" content="Quali carte giocate in Pauper possiedi, in qualunque printing? Confronta la tua collezione ManaBox con la lista aggiornata ogni settimana.">
+<meta name="description" data-i18n-content="meta.description" content="Quali carte giocate in Pauper possiedi, in qualunque printing? Confronta la tua collezione ManaBox con la lista aggiornata ogni giorno.">
 <title>Pauper Index</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -16,35 +16,39 @@
 <script type="module" src="/src/main.ts"></script>
 </head>
 <body>
-<a class="skip" href="#contenuto">Vai al contenuto</a>
+<a class="skip" href="#contenuto" data-i18n="skip">Vai al contenuto</a>
 <div class="wrap">
 
   <header class="top">
     <h1><a href="#" class="home">Pauper Index</a></h1>
-    <nav class="nav" aria-label="Navigazione">
-      <a href="#informazioni" id="navAbout">Informazioni</a>
+    <nav class="nav" data-i18n-aria="nav.aria" aria-label="Navigazione">
+      <a href="#informazioni" id="navAbout" data-i18n="nav.about">Informazioni</a>
+      <span class="langs" role="group" data-i18n-aria="nav.lang" aria-label="Lingua">
+        <button class="btn quiet small" type="button" data-lang="it" lang="it" aria-label="Italiano">IT</button>
+        <button class="btn quiet small" type="button" data-lang="en" lang="en" aria-label="English">EN</button>
+      </span>
       <button class="btn quiet small" id="theme" type="button">Tema</button>
     </nav>
   </header>
-  <p class="dataline" id="dataline" role="status" aria-live="polite">Caricamento dei dati…</p>
+  <p class="dataline" id="dataline" role="status" aria-live="polite" data-i18n="data.loading">Caricamento dei dati…</p>
 
   <main id="contenuto">
   <div id="viewMain">
 
-    <section class="loadsec" id="loadArea" aria-label="Carica la collezione">
+    <section class="loadsec" id="loadArea" data-i18n-aria="load.aria" aria-label="Carica la collezione">
       <div class="load">
         <label class="drop" id="drop">
           <input type="file" id="files" multiple accept=".csv,.txt,text/csv,text/plain">
-          <strong>Carica l'export CSV di ManaBox</strong>
-          <span>Trascina qui i file o tocca per sceglierli</span>
+          <strong data-i18n="load.dropTitle">Carica l'export CSV di ManaBox</strong>
+          <span data-i18n="load.dropHint">Trascina qui i file o tocca per sceglierli</span>
         </label>
         <div class="paste">
-          <label for="pasteText">Incolla la lista in testo</label>
+          <label for="pasteText" data-i18n="load.pasteLabel">Incolla la lista in testo</label>
           <textarea id="pasteText" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="4 Ponder&#10;1 Lightning Bolt (M10) 146"></textarea>
           <div class="row">
-            <button class="btn quiet small" id="cancelReplace" type="button" hidden>Annulla</button>
-            <button class="btn small" id="pasteClip" type="button" hidden>Incolla dagli appunti</button>
-            <button class="btn primary small" id="pasteAdd" type="button">Carica</button>
+            <button class="btn quiet small" id="cancelReplace" type="button" hidden data-i18n="load.cancel">Annulla</button>
+            <button class="btn small" id="pasteClip" type="button" hidden data-i18n="load.clipboard">Incolla dagli appunti</button>
+            <button class="btn primary small" id="pasteAdd" type="button" data-i18n="load.submit">Carica</button>
           </div>
         </div>
       </div>
@@ -53,19 +57,19 @@
 
     <p class="loaded" id="loaded" hidden></p>
 
-    <form class="filters" id="filters" role="search" aria-label="Filtri">
-      <label class="f-field">Periodo
+    <form class="filters" id="filters" role="search" data-i18n-aria="filters.aria" aria-label="Filtri">
+      <label class="f-field"><span data-i18n="filters.period">Periodo</span>
         <select id="period"></select>
       </label>
-      <label class="f-field">Min. mazzi
+      <label class="f-field"><span data-i18n="filters.min">Min. mazzi</span>
         <input type="number" id="optMin" min="1" max="9999" value="1" inputmode="numeric">
       </label>
       <div class="chips">
-      <label class="chk"><input type="checkbox" id="optLegal" checked> Solo legali</label>
-      <label class="chk"><input type="checkbox" id="optSide" checked> Conta anche il side</label>
-      <label class="chk" title="La lista non ha quantità: il confronto è con le copie tipiche, cioè la mediana delle copie nei mazzi che giocano la carta."><input type="checkbox" id="optQty"> Conta le copie</label>
+      <label class="chk"><input type="checkbox" id="optLegal" checked> <span data-i18n="filters.legal">Solo legali</span></label>
+      <label class="chk"><input type="checkbox" id="optSide" checked> <span data-i18n="filters.side">Conta anche il side</span></label>
+      <label class="chk" data-i18n-title="filters.qtyHelp" title=""><input type="checkbox" id="optQty"> <span data-i18n="filters.qty">Conta le copie</span></label>
       </div>
-      <input type="search" class="search" id="search" placeholder="Cerca una carta" aria-label="Cerca una carta">
+      <input type="search" class="search" id="search" data-i18n-ph="filters.search" data-i18n-aria="filters.search" placeholder="Cerca una carta" aria-label="Cerca una carta">
     </form>
 
     <section class="results" id="results" aria-labelledby="verdict">
@@ -75,71 +79,71 @@
           <p class="sub" id="sub"></p>
         </div>
         <div class="res-tools">
-          <select id="sort" aria-label="Ordina">
-            <option value="share">Più giocate</option>
-            <option value="name">Nome (A–Z)</option>
-            <option value="recent">Viste di recente</option>
-            <option value="oldest">Non viste da più tempo</option>
+          <select id="sort" data-i18n-aria="sort.aria" aria-label="Ordina">
+            <option value="share" data-i18n="sort.share">Più giocate</option>
+            <option value="name" data-i18n="sort.name">Nome (A–Z)</option>
+            <option value="recent" data-i18n="sort.recent">Viste di recente</option>
+            <option value="oldest" data-i18n="sort.oldest">Non viste da più tempo</option>
           </select>
-          <select id="seenFilter" aria-label="Ultima apparizione">
-            <option value="all">Qualsiasi data</option>
-            <option value="recent">Viste negli ultimi 6 mesi</option>
-            <option value="old">Non viste da oltre 6 mesi</option>
+          <select id="seenFilter" data-i18n-aria="seen.aria" aria-label="Ultima apparizione">
+            <option value="all" data-i18n="seen.all">Qualsiasi data</option>
+            <option value="recent" data-i18n="seen.recent">Viste negli ultimi 6 mesi</option>
+            <option value="old" data-i18n="seen.old">Non viste da oltre 6 mesi</option>
           </select>
         </div>
       </div>
       <div class="tablewrap">
         <table class="cards">
-          <thead><tr><th scope="col">Carta</th><th scope="col" class="c-qty" id="thQty">Copie</th><th scope="col" class="c-pct">Mazzi</th><th scope="col">Ultima apparizione</th><th scope="col">Ingresso</th></tr></thead>
+          <thead><tr><th scope="col" data-i18n="th.card">Carta</th><th scope="col" class="c-qty" id="thQty">Copie</th><th scope="col" class="c-pct" data-i18n="th.decks">Mazzi</th><th scope="col" data-i18n="th.last">Ultima apparizione</th><th scope="col" data-i18n="th.entry">Ingresso</th></tr></thead>
           <tbody id="cardRows"></tbody>
         </table>
       </div>
-      <button class="btn more" id="more" type="button" hidden>Mostra altre</button>
+      <button class="btn more" id="more" type="button" hidden></button>
     </section>
 
-    <section class="extra" id="extra" aria-label="Altre opzioni">
+    <section class="extra" id="extra" data-i18n-aria="extra.aria" aria-label="Altre opzioni">
       <div class="extra-row" id="extraColl" hidden>
-        <label class="chk"><input type="checkbox" id="optMissing"> Mostra anche le mancanti</label>
+        <label class="chk"><input type="checkbox" id="optMissing"> <span data-i18n="extra.showMissing">Mostra anche le mancanti</span></label>
         <details class="mini" id="expDetails">
-          <summary>Esporta e copia</summary>
+          <summary data-i18n="extra.export">Esporta e copia</summary>
           <div class="export">
-            <span class="lbl">Copia</span>
+            <span class="lbl" data-i18n="export.copy">Copia</span>
             <div class="btns">
-              <button class="btn small" type="button" data-copy="owned">Possedute</button>
-              <button class="btn small" type="button" data-copy="missing">Mancanti</button>
-              <button class="btn small" type="button" data-copy="csv">List riallineata (CSV)</button>
+              <button class="btn small" type="button" data-copy="owned" data-i18n="export.owned">Possedute</button>
+              <button class="btn small" type="button" data-copy="missing" data-i18n="export.missing">Mancanti</button>
+              <button class="btn small" type="button" data-copy="csv" data-i18n="export.csv">List riallineata (CSV)</button>
             </div>
-            <span class="lbl">Scarica</span>
+            <span class="lbl" data-i18n="export.download">Scarica</span>
             <div class="btns">
-              <button class="btn small" type="button" data-save="owned">Possedute .txt</button>
-              <button class="btn small" type="button" data-save="missing">Mancanti .txt</button>
-              <button class="btn small" type="button" data-save="csv">List riallineata .csv</button>
+              <button class="btn small" type="button" data-save="owned" data-i18n="export.ownedFile">Possedute .txt</button>
+              <button class="btn small" type="button" data-save="missing" data-i18n="export.missingFile">Mancanti .txt</button>
+              <button class="btn small" type="button" data-save="csv" data-i18n="export.csvFile">List riallineata .csv</button>
             </div>
-            <p class="note">Liste di testo nel formato "1 Nome carta" (ManaBox, Cardmarket). La List riallineata usa una printing che possiedi o, per le mancanti, quella di riferimento: importala in ManaBox come nuova List e il filtro "In Collection" la riconoscerà.</p>
+            <p class="note" data-i18n="export.note"></p>
           </div>
         </details>
         <details class="mini" id="impDetails">
-          <summary id="impSummary">Importazione</summary>
+          <summary id="impSummary" data-i18n="imp.title">Importazione</summary>
           <div class="summary" id="importSummary"></div>
         </details>
         <details class="mini" id="grpDetails">
-          <summary id="grpSummary">Binder inclusi</summary>
+          <summary id="grpSummary" data-i18n="grp.title">Binder inclusi</summary>
           <div class="tablewrap">
             <table class="groups">
-              <thead><tr><th scope="col">Gruppo</th><th scope="col">Contenuto</th><th scope="col">Ruolo</th><th scope="col"><span class="sr">Azioni</span></th></tr></thead>
+              <thead><tr><th scope="col" data-i18n="grp.th.group">Gruppo</th><th scope="col" data-i18n="grp.th.content">Contenuto</th><th scope="col" data-i18n="grp.th.role">Ruolo</th><th scope="col"><span class="sr" data-i18n="grp.th.actions">Azioni</span></th></tr></thead>
               <tbody id="groupRows"></tbody>
             </table>
           </div>
-          <label class="chk" id="optProxyWrap" hidden><input type="checkbox" id="optProxy"> Conta i proxy come posseduti</label>
+          <label class="chk" id="optProxyWrap" hidden><input type="checkbox" id="optProxy"> <span data-i18n="grp.proxy">Conta i proxy come posseduti</span></label>
           <p class="memo" id="memo"></p>
         </details>
       </div>
       <div class="extra-row">
         <details class="mini" id="newsDetails">
-          <summary>Novità</summary>
-          <div id="news"><p class="note">Caricamento…</p></div>
+          <summary data-i18n="news.title">Novità</summary>
+          <div id="news"><p class="note" data-i18n="news.loading">Caricamento…</p></div>
         </details>
-        <button class="btn quiet small" id="clearData" type="button">Cancella i miei dati</button>
+        <button class="btn quiet small" id="clearData" type="button" data-i18n="clear.button">Cancella i miei dati</button>
       </div>
     </section>
   </div>
@@ -148,7 +152,7 @@
   </main>
 
   <footer class="foot">
-    <p>Pauper Index è Fan Content non ufficiale consentito dalla Fan Content Policy, non approvato da Wizards. <a href="#informazioni">Informazioni, crediti e privacy</a></p>
+    <p><span data-i18n="foot.line">Pauper Index è Fan Content non ufficiale consentito dalla Fan Content Policy, non approvato da Wizards.</span> <a href="#informazioni" data-i18n="foot.link">Informazioni, crediti e privacy</a></p>
   </footer>
 </div>
 
@@ -156,9 +160,9 @@
 <dialog class="grid-dialog" id="gridDialog" aria-labelledby="gridTitle"></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="copy-panel" id="copyPanel" hidden>
-  <p class="copy-msg">Il browser non permette la copia automatica: seleziona il testo e copialo.</p>
+  <p class="copy-msg" data-i18n="copy.manual">Il browser non permette la copia automatica: seleziona il testo e copialo.</p>
   <textarea id="copyText" readonly></textarea>
-  <div><button class="btn" id="copyClose" type="button">Chiudi</button></div>
+  <div><button class="btn" id="copyClose" type="button" data-i18n="copy.close">Chiudi</button></div>
 </div>
 </body>
 </html>

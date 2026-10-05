@@ -1,9 +1,10 @@
 import './style.css';
 
 import {
-  compute, DEFAULT_OPTS, defaultRole, presetCounts, summarize, WINDOW_LABELS,
+  compute, DEFAULT_OPTS, defaultRole, presetCounts, summarize,
   type ImportSummary, type Opts, type Result,
 } from './lib/compare';
+import { detectLang, fmtDateTime, getLang, setLang, t, type Key, type Lang } from './i18n';
 import { baseName, isFoil, looksLikeCSV, readTable } from './lib/csv';
 import { imageUrl, loadData, type Data } from './lib/data';
 import { $, h } from './lib/dom';
@@ -20,8 +21,9 @@ const PAGE = 100;
 const NEW_DAYS = 60;
 const STALE_DAYS = 182;
 const STALE_SOURCE_DAYS = 21;
-const PERIOD_DESC = ['ultimi 61 giorni', 'ultimo anno', 'ultimi 2 anni', 'dal 2014'];
-const PERIOD_LABELS = [`${WINDOW_LABELS[0]} (61 giorni)`, WINDOW_LABELS[1], WINDOW_LABELS[2], `${WINDOW_LABELS[3]} (dal 2014)`];
+const PASTED = '__pasted__'; // sorgente dei gruppi incollati: il nome si traduce quando viene mostrato
+const periodLabel = (i: number) => t(`period.${i}` as Key);
+const periodDesc = (i: number) => t(`periodDesc.${i}` as Key);
 
 interface Saved {
   v: 2;
@@ -63,15 +65,24 @@ let saveTimer: number | undefined;
 /* ---------- utilità ---------- */
 
 function toast(msg: string): void {
-  const t = $('#toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
   window.clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => t.classList.remove('show'), 2600);
+  toastTimer = window.setTimeout(() => el.classList.remove('show'), 2600);
 }
 
+function groupName(g: Group): string {
+  if (g.kind === 'text' && g.source === PASTED) {
+    const n = g.id.match(/-(\d+)$/)?.[1];
+    return n ? `${t('group.pasted')} ${n}` : t('group.pasted');
+  }
+  return g.name;
+}
+
+const cardsWord = (n: number) => t('load.cards', { n });
+
 const hasColl = () => S.groups.some((g) => S.roles[g.id] === 'coll');
-const plural = (n: number, one: string, many: string) => `${fmtInt(n)} ${n === 1 ? one : many}`;
 
 async function getAllNames(): Promise<Set<string> | null> {
   if (S.allNames) return S.allNames;
@@ -94,14 +105,13 @@ function persist(): void {
     const ok = await idbSet('state', {
       v: 2, groups: S.groups, roles: S.roles, opts: S.opts, showMissing: S.showMissing, savedAt: S.savedAt,
     } satisfies Saved);
-    $('#memo').textContent = ok ? memoText() : 'Questo browser non permette di salvare la collezione: la prossima volta dovrai ricaricarla.';
+    $('#memo').textContent = ok ? memoText() : t('err.storage');
   }, 150);
 }
 
 function memoText(): string {
   if (!S.savedAt) return '';
-  const d = new Date(S.savedAt);
-  return `Salvata su questo dispositivo il ${d.toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.`;
+  return t('grp.saved', { when: fmtDateTime(S.savedAt) });
 }
 
 async function restore(): Promise<void> {
@@ -135,11 +145,12 @@ function addGroups(gs: Group[]): void {
   }
 }
 
-function textGroup(rows: Row[], label: string): Group {
+function textGroup(rows: Row[], label: string | null): Group {
   let n = 1;
   let id = 'testo';
   while (S.groups.some((g) => g.id === id)) id = `testo-${++n}`;
-  return { id, name: n > 1 ? `${label} ${n}` : label, type: '', source: label, rows, hasProxy: false, kind: 'text' };
+  const name = label ?? t('group.pasted');
+  return { id, name: n > 1 ? `${name} ${n}` : name, type: '', source: label ?? PASTED, rows, hasProxy: false, kind: 'text' };
 }
 
 async function summarizeImport(source: string, kind: 'csv' | 'text', groups: Group[]): Promise<void> {
@@ -153,18 +164,18 @@ async function summarizeImport(source: string, kind: 'csv' | 'text', groups: Gro
 }
 
 function readOne(name: string, text: string): { groups?: Group[]; kind?: 'csv' | 'text'; error?: string } {
-  if (text.includes('\u0000')) return { error: `${name}: non è un file di testo o CSV.` };
+  if (text.includes('\u0000')) return { error: t('err.notText', { file: name }) };
   if (/\.csv$/i.test(name) || looksLikeCSV(text)) {
     const res = readTable(name, text);
     if ('groups' in res) return { groups: res.groups, kind: 'csv' };
     if (res.error === 'noname') {
-      return { error: `${name}: non sembra un export di ManaBox: nella prima riga non c’è una colonna con il nome della carta (per esempio "Name"). Intestazioni lette: ${res.headers.slice(0, 8).join(', ')}.` };
+      return { error: t('err.noName', { file: name, headers: res.headers.slice(0, 8).join(', ') }) };
     }
-    return { error: `${name}: il file non contiene carte.` };
+    return { error: t('err.noCards', { file: name }) };
   }
   const { rows } = parseTextList(text);
-  if (!rows.length) return { error: `${name}: non trovo righe nel formato "4 Nome carta".` };
-  return { groups: [textGroup(rows, baseName(name) || 'Testo')], kind: 'text' };
+  if (!rows.length) return { error: t('err.noLines', { file: name }) };
+  return { groups: [textGroup(rows, baseName(name) || t('group.text'))], kind: 'text' };
 }
 
 async function handleFiles(files: File[]): Promise<void> {
@@ -174,7 +185,7 @@ async function handleFiles(files: File[]): Promise<void> {
     try {
       parsed.push({ name: f.name, r: readOne(f.name, await f.text()) });
     } catch {
-      errs.push(`${f.name}: impossibile leggere il file.`);
+      errs.push(t('err.read', { file: f.name }));
     }
   }
   const ok = parsed.filter((p) => p.r.groups);
@@ -193,15 +204,15 @@ async function handleText(): Promise<void> {
   const ta = $('#pasteText') as HTMLTextAreaElement;
   const text = ta.value;
   if (!text.trim()) {
-    showErrors(['Il riquadro è vuoto: incolla una lista di carte, una per riga (per esempio "4 Ponder").']);
+    showErrors([t('err.pasteEmpty')]);
     return;
   }
   let groups: Group[];
   let kind: 'csv' | 'text';
   if (looksLikeCSV(text)) {
-    const res = readTable('Testo incollato', text);
+    const res = readTable(t('group.pasted'), text);
     if (!('groups' in res)) {
-      showErrors(['Il testo sembra un CSV ma non contiene carte.']);
+      showErrors([t('err.pasteCsvEmpty')]);
       return;
     }
     groups = res.groups;
@@ -209,18 +220,18 @@ async function handleText(): Promise<void> {
   } else {
     const { rows } = parseTextList(text);
     if (!rows.length) {
-      showErrors(['Il testo incollato non contiene carte. Usa una riga per carta, per esempio "4 Ponder" o "1 Ponder (M12) 73".']);
+      showErrors([t('err.pasteNoCards')]);
       return;
     }
     beginImport();
-    groups = [textGroup(rows, 'Testo incollato')];
+    groups = [textGroup(rows, null)];
     kind = 'text';
   }
   if (kind === 'csv') beginImport();
   showErrors([]);
   addGroups(groups);
   ta.value = '';
-  await summarizeImport(groups.length === 1 ? groups[0].name : 'Testo incollato', kind, groups);
+  await summarizeImport(groups.length === 1 && groups[0].source !== PASTED ? groups[0].name : PASTED, kind, groups);
   refresh();
 }
 
@@ -249,11 +260,13 @@ function renderDataline(): void {
   const m = S.d!.meta;
   const el = $('#dataline');
   el.classList.remove('error');
-  el.replaceChildren(`Tornei fino al ${fmtDate(m.last_tournament)} · ${fmtInt(m.tournaments)} tornei · ${fmtInt(m.decks)} mazzi · dati aggiornati il ${fmtDate(m.generated_at)}`);
+  el.replaceChildren(t('data.line', {
+    last: fmtDate(m.last_tournament), tournaments: fmtInt(m.tournaments), decks: fmtInt(m.decks), generated: fmtDate(m.generated_at),
+  }));
   // allarme calcolato anche nel browser: se i dati non cambiano non c'è un nuovo commit, ma l'avviso deve comparire
   const days = daysBetween(m.last_tournament, new Date().toISOString().slice(0, 10));
   if (m.source.status === 'ferma' || days > STALE_SOURCE_DAYS) {
-    el.append(h('span', { class: 'warn' }, `La fonte dei tornei non riceve nuovi tornei da ${days} giorni: i dati più recenti potrebbero mancare.`));
+    el.append(' ', h('span', { class: 'warn' }, t('data.stale', { days })));
   }
 }
 
@@ -268,16 +281,16 @@ function renderLoad(): void {
   const line = $('#loaded');
   line.hidden = !loaded || S.replacing;
   if (loaded) {
-    line.replaceChildren('Collezione: ', h('b', null, plural(collectionCards(), 'carta', 'carte')), ' · ',
-      h('button', { class: 'linkbtn', type: 'button', id: 'replace' }, 'Sostituisci'));
+    line.replaceChildren(t('load.collection'), h('b', null, cardsWord(collectionCards())), ' · ',
+      h('button', { class: 'linkbtn', type: 'button', id: 'replace' }, t('load.replace')));
   }
 }
 
 function renderFilters(): void {
   const d = S.d!;
   const counts = presetCounts(d, S.opts);
-  $('#period').replaceChildren(...PERIOD_LABELS.map((label, i) => h('option', { value: String(i), selected: S.opts.win === i },
-    `${label} · ${fmtInt(counts[i])} carte`)));
+  $('#period').replaceChildren(...counts.map((n, i) => h('option', { value: String(i), selected: S.opts.win === i },
+    t('period.option', { label: periodLabel(i), n: fmtInt(n) }))));
   ($('#period') as HTMLSelectElement).value = String(S.opts.win);
   ($('#optMin') as HTMLInputElement).value = String(S.opts.minDecks);
   ($('#optLegal') as HTMLInputElement).checked = S.opts.legalOnly;
@@ -288,25 +301,26 @@ function renderFilters(): void {
 function renderResults(): void {
   const R = S.results;
   const coll = hasColl();
-  const period = PERIOD_DESC[S.opts.win];
+  const period = periodDesc(S.opts.win);
   const owned = R.filter((x) => x.owned > 0).length;
   const full = R.filter((x) => x.status === 'owned').length;
   let v: string;
   let sub: string;
   if (!S.groups.length) {
-    v = `${plural(R.length, 'carta giocata', 'carte giocate')} in Pauper`;
-    sub = `Periodo: ${period}. Carica la tua collezione per vedere quali possiedi.`;
+    v = t('res.list', { n: R.length });
+    sub = t('res.listSub', { period });
   } else if (!coll) {
-    v = 'Nessun gruppo incluso nella collezione';
-    sub = 'Includi almeno un Binder in "Binder inclusi", in fondo alla pagina.';
+    v = t('res.noGroups');
+    sub = t('res.noGroupsSub');
   } else {
-    v = `Possiedi ${plural(owned, 'carta giocata', 'carte giocate')} in Pauper`;
-    sub = `Su ${fmtInt(R.length)} nel periodo (${period})`
-      + (S.opts.qty ? `; per ${fmtInt(full)} hai tutte le copie tipiche` : '') + '.';
+    v = t('res.owned', { n: owned });
+    sub = S.opts.qty
+      ? t('res.ownedSubQty', { total: fmtInt(R.length), period, full: fmtInt(full) })
+      : t('res.ownedSub', { total: fmtInt(R.length), period });
   }
   $('#verdict').textContent = v;
   $('#sub').textContent = sub;
-  $('#thQty').textContent = coll ? (S.opts.qty ? 'Tue / tipiche' : 'Tue') : 'Copie tipiche';
+  $('#thQty').textContent = coll ? (S.opts.qty ? t('th.qtyYoursTypical') : t('th.qtyYours')) : t('th.qtyTypical');
   renderRows();
 }
 
@@ -351,7 +365,7 @@ function thumbIds(x: Result): { id: string; owned: boolean }[] {
   const ids: { id: string; owned: boolean }[] = [];
   for (const p of x.prints) {
     const id = p.row.i || (p.print >= 0 ? prints[p.print][0] : '');
-    if (id && !ids.some((t) => t.id === id)) ids.push({ id, owned: true });
+    if (id && !ids.some((x) => x.id === id)) ids.push({ id, owned: true });
   }
   if (!ids.length && ref) ids.push({ id: ref[0], owned: x.prints.length > 0 });
   return ids;
@@ -362,10 +376,10 @@ function fmtPrint(r: Row): string {
   const set = r.s ? r.s.toUpperCase() : r.sn || '';
   if (set) parts.push(set);
   if (r.c) parts.push('#' + r.c);
-  if (isFoil(r.f)) parts.push(/^(true|yes|1|y)$/i.test(r.f) ? 'foil' : r.f.toLowerCase());
+  if (isFoil(r.f)) parts.push(/^(true|yes|1|y)$/i.test(r.f) ? t('print.foil') : r.f.toLowerCase());
   if (r.l && !/^(en|english)$/i.test(r.l)) parts.push(r.l.toLowerCase());
-  if (r.p) parts.push('proxy');
-  return parts.join(' ') || 'printing non indicata';
+  if (r.p) parts.push(t('print.proxy'));
+  return parts.join(' ') || t('print.unknown');
 }
 
 function renderRows(): void {
@@ -375,10 +389,10 @@ function renderRows(): void {
   const rows = S.view.slice(0, S.shown);
   const more = $('#more');
   more.hidden = S.view.length <= rows.length;
-  more.textContent = `Mostra altre ${fmtInt(Math.min(PAGE, S.view.length - rows.length))} (${fmtInt(S.view.length - rows.length)} rimaste)`;
+  more.textContent = t('res.more', { n: fmtInt(Math.min(PAGE, S.view.length - rows.length)), rest: fmtInt(S.view.length - rows.length) });
   if (!rows.length) {
     $('#cardRows').replaceChildren(h('tr', { class: 'nores' }, h('td', { colspan: 5 },
-      S.query || S.seen !== 'all' ? 'Nessuna carta corrisponde ai filtri.' : coll && !S.showMissing ? 'Nessuna carta posseduta in questo periodo.' : 'Nessuna carta.')));
+      S.query || S.seen !== 'all' ? t('res.noMatch') : coll && !S.showMissing ? t('res.noOwned') : t('res.none'))));
     return;
   }
   $('#cardRows').replaceChildren(...rows.map((x) => {
@@ -388,28 +402,28 @@ function renderRows(): void {
     const refId = d.prints.p[x.idx]?.[c.r]?.[0];
     const entry = c.e ? d.cards.sets[c.e] : null;
     const status = coll && x.status !== 'owned'
-      ? h('span', { class: `badge st-${x.status}` }, x.status === 'missing' ? 'mancante' : 'parziale')
+      ? h('span', { class: `badge st-${x.status}` }, x.status === 'missing' ? t('badge.missing') : t('badge.partial'))
       : null;
     const own = x.prints.length
       ? h('span', { class: 'own' }, x.prints.map((p) => `${fmtPrint(p.row)} ×${p.q}`).join(', ')
         + (x.binders.length ? ` · ${x.binders.map((b) => b[0]).join(', ')}` : ''))
       : null;
-    const btn = h('button', { class: 'cardbtn', type: 'button', dataset: { idx: String(x.idx) }, 'aria-haspopup': 'dialog', 'aria-label': `${c.n}: apri la scheda` },
+    const btn = h('button', { class: 'cardbtn', type: 'button', dataset: { idx: String(x.idx) }, 'aria-haspopup': 'dialog', 'aria-label': t('card.open', { name: c.n }) },
       h('span', { class: 'thumbs' },
-        ...thumbs.slice(0, 3).map((t) => h('img', {
-          class: 'thumb' + (t.owned ? ' owned' : ''), src: imageUrl(t.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204,
+        ...thumbs.slice(0, 3).map((th) => h('img', {
+          class: 'thumb' + (th.owned ? ' owned' : ''), src: imageUrl(th.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204,
           dataset: refId ? { fallback: imageUrl(refId, 'small') } : undefined,
         })),
         thumbs.length > 3 ? h('span', { class: 'more-n' }, `+${thumbs.length - 3}`) : null),
       h('span', { class: 'nmwrap' }, h('span', { class: 'nm' }, c.n), status,
-        isNew(c.e) ? h('span', { class: 'badge new' }, 'nuova') : null,
-        c.l === 'b' ? h('span', { class: 'badge banned' }, 'bannata') : null, own));
+        isNew(c.e) ? h('span', { class: 'badge new' }, t('badge.new')) : null,
+        c.l === 'b' ? h('span', { class: 'badge banned' }, t('badge.banned')) : null, own));
     return h('tr', { class: coll ? `r-${x.status}` : '' },
       h('td', { class: 'c-name' }, btn),
-      h('td', { class: 'c-qty num' }, coll ? (S.opts.qty ? `${x.owned} / ${x.need}` : String(x.owned)) : String(x.typical)),
-      h('td', { class: 'c-pct num' }, fmtPct(x.share), h('span', { class: 'muted' }, st ? ` · ${fmtInt(S.opts.side ? st[0] : st[1])}` : '')),
-      h('td', { class: 'c-seen' }, fmtDate(c.z)),
-      h('td', { class: 'c-entry' }, entry && c.e ? `${c.e.toUpperCase()} ${entry[1].slice(0, 4)}` : '—'));
+      h('td', { class: 'c-qty num', 'data-label': t('mobile.qty') }, coll ? (S.opts.qty ? `${x.owned} / ${x.need}` : String(x.owned)) : String(x.typical)),
+      h('td', { class: 'c-pct num', 'data-label': t('mobile.decks') }, fmtPct(x.share), h('span', { class: 'muted' }, st ? ` · ${fmtInt(S.opts.side ? st[0] : st[1])}` : '')),
+      h('td', { class: 'c-seen', 'data-label': t('mobile.last') }, fmtDate(c.z)),
+      h('td', { class: 'c-entry', 'data-label': t('mobile.entry') }, entry && c.e ? `${c.e.toUpperCase()} ${entry[1].slice(0, 4)}` : '—'));
   }));
 }
 
@@ -425,17 +439,17 @@ function renderExtra(): void {
   if (!loaded) return;
 
   const inc = S.groups.filter((g) => S.roles[g.id] === 'coll').length;
-  $('#grpSummary').textContent = `Binder inclusi: ${inc} di ${S.groups.length} · modifica`;
+  $('#grpSummary').textContent = t('grp.summary', { inc, total: S.groups.length });
   $('#groupRows').replaceChildren(...S.groups.map((g) => {
     const role = S.roles[g.id];
     const cards = g.rows.reduce((a, r) => a + r.q, 0);
-    const typ = g.kind === 'text' ? 'testo' : g.type || '';
+    const typ = g.kind === 'text' ? t('group.typeText') : g.type || '';
     return h('tr', null,
-      h('td', { class: 'g-name' }, h('span', { class: 'gname' }, g.name), typ ? h('span', { class: 'gtype' }, typ) : null),
-      h('td', { class: 'g-count count num' }, `${fmtInt(g.rows.length)} voci, ${fmtInt(cards)} carte`),
-      h('td', { class: 'g-role' }, h('div', { class: 'seg', role: 'radiogroup', 'aria-label': `Ruolo di ${g.name}` },
-        seg(g.id, 'coll', 'Inclusa', role), seg(g.id, 'skip', 'Esclusa', role))),
-      h('td', { class: 'g-act' }, h('button', { class: 'btn quiet small', type: 'button', dataset: { remove: g.id } }, 'Rimuovi')));
+      h('td', { class: 'g-name' }, h('span', { class: 'gname' }, groupName(g)), typ ? h('span', { class: 'gtype' }, typ) : null),
+      h('td', { class: 'g-count count num' }, t('grp.count', { entries: fmtInt(g.rows.length), cards: fmtInt(cards) })),
+      h('td', { class: 'g-role' }, h('div', { class: 'seg', role: 'radiogroup', 'aria-label': t('grp.roleAria', { name: groupName(g) }) },
+        seg(g.id, 'coll', t('grp.include'), role), seg(g.id, 'skip', t('grp.exclude'), role))),
+      h('td', { class: 'g-act' }, h('button', { class: 'btn quiet small', type: 'button', dataset: { remove: g.id } }, t('grp.remove'))));
   }));
   ($('#optProxy') as HTMLInputElement).checked = S.opts.proxies;
   $('#optProxyWrap').hidden = !S.groups.some((g) => g.hasProxy && S.roles[g.id] === 'coll');
@@ -444,49 +458,49 @@ function renderExtra(): void {
   const unrec = S.summaries.reduce((a, x) => a + x.s.unrecognized.length, 0);
   const rows = S.summaries.reduce((a, x) => a + x.s.rows, 0);
   $('#impSummary').textContent = S.summaries.length
-    ? `Importazione: ${plural(rows, 'riga', 'righe')}, ${fmtInt(unrec)} non riconosciute`
-    : 'Importazione';
+    ? t('imp.summary', { rows: t('imp.rows', { n: rows }), unrec: fmtInt(unrec) })
+    : t('imp.title');
   $('#importSummary').replaceChildren(...(S.summaries.length ? S.summaries.map(({ source, kind, s }) => {
-    const bits = [plural(s.rows, 'riga letta', 'righe lette'), `${fmtInt(s.inList)} di carte giocate in Pauper`];
-    if (s.notInList) bits.push(`${fmtInt(s.notInList)} di carte mai giocate`);
-    bits.push(`${fmtInt(s.unrecognized.length)} non riconosciute`);
+    const bits = [t('imp.rowsRead', { n: s.rows }), t('imp.inList', { n: fmtInt(s.inList) })];
+    if (s.notInList) bits.push(t('imp.notInList', { n: fmtInt(s.notInList) }));
+    bits.push(t('imp.unrec', { n: fmtInt(s.unrecognized.length) }));
     const shown = s.unrecognized.slice(0, 60);
     return h('div', { class: 'item' },
-      h('b', null, source), ': ', bits.join(', ') + '.',
-      kind === 'text' ? h('p', { class: 'note' }, 'Con il testo non ci sono Binder: tutte le carte incollate contano come possedute.') : null,
-      s.approxPrint ? h('p', { class: 'note' }, `${fmtInt(s.approxPrint)} righe senza set e numero: per l'immagine uso la printing di riferimento.`) : null,
+      h('b', null, source === PASTED ? t('group.pasted') : source), ': ', bits.join(', ') + '.',
+      kind === 'text' ? h('p', { class: 'note' }, t('imp.textNote')) : null,
+      s.approxPrint ? h('p', { class: 'note' }, t('imp.approx', { n: fmtInt(s.approxPrint) })) : null,
       shown.length
-        ? h('details', null, h('summary', null, 'Righe non riconosciute'),
+        ? h('details', null, h('summary', null, t('imp.unrecTitle')),
           h('ul', null, ...shown.map((r) => h('li', null, `${r.q} ${r.n}${r.s ? ` (${r.s.toUpperCase()})` : ''}`))),
-          s.unrecognized.length > shown.length ? h('p', { class: 'note' }, `e altre ${s.unrecognized.length - shown.length}.`) : null,
-          h('p', { class: 'note' }, 'Controlla che il nome sia in inglese e scritto per intero.'))
+          s.unrecognized.length > shown.length ? h('p', { class: 'note' }, t('imp.more', { n: s.unrecognized.length - shown.length })) : null,
+          h('p', { class: 'note' }, t('imp.hint')))
         : null);
-  }) : [h('p', { class: 'note' }, 'Il riepilogo compare dopo un nuovo caricamento.')]));
+  }) : [h('p', { class: 'note' }, t('imp.empty'))]));
 }
 
 async function renderNews(): Promise<void> {
   const root = $('#news');
-  const empty = h('p', { class: 'note' }, 'Nessuna revisione ancora. Quando esce un set che porta carte nel Pauper, dopo 60 giorni qui compare il resoconto: carte nuove nella lista, carte uscite, ban e unban.');
+  const empty = h('p', { class: 'note' }, t('news.empty'));
   type Rev = {
     set: string; nome: string; uscita: string; data: string; sommario: string;
     nuove: [string, number, number][]; entrate: [string, number, number][]; uscite: [string, number][];
     legalita: [string, string, string][];
   };
-  const LEG: Record<string, string> = { l: 'legale', b: 'bannata', n: 'non legale' };
+  const leg = (x: string) => (['l', 'b', 'n'].includes(x) ? t(`legal.${x}` as Key) : x);
   const list_ = (title: string, items: string[]) => items.length
-    ? h('div', null, h('b', null, title), h('ul', null, ...items.map((t) => h('li', null, t))))
+    ? h('div', null, h('b', null, title), h('ul', null, ...items.map((it) => h('li', null, it))))
     : null;
   try {
     const r = await fetch('data/reviews/index.json');
     const list = r.ok ? ((await r.json()) as Rev[]) : [];
     if (!Array.isArray(list) || !list.length) return void root.replaceChildren(empty);
     root.replaceChildren(...list.slice(0, 6).map((x) => h('details', { class: 'review' },
-      h('summary', null, `${x.nome} (${String(x.set).toUpperCase()}) · revisione del ${fmtDate(x.data)}`),
-      h('p', { class: 'note' }, x.sommario),
-      list_('Carte del set nella lista', (x.nuove || []).map(([n, d, p]) => `${n}: ${fmtInt(d)} mazzi (${p}%)`)),
-      list_('Entrate nella lista', (x.entrate || []).map(([n, d, p]) => `${n}: ${fmtInt(d)} mazzi (${p}%)`)),
-      list_('Uscite dalla lista', (x.uscite || []).map(([n]) => n)),
-      list_('Cambi di legalità', (x.legalita || []).map(([n, a, b]) => `${n}: ${LEG[a] || a} → ${LEG[b] || b}`)))));
+      h('summary', null, t('news.item', { name: x.nome, set: String(x.set).toUpperCase(), date: fmtDate(x.data) })),
+      getLang() === 'it' ? h('p', { class: 'note' }, x.sommario) : null,
+      list_(t('news.new'), (x.nuove || []).map(([n, d, p]) => t('news.decks', { name: n, n: fmtInt(d), pct: p }))),
+      list_(t('news.entered'), (x.entrate || []).map(([n, d, p]) => t('news.decks', { name: n, n: fmtInt(d), pct: p }))),
+      list_(t('news.left'), (x.uscite || []).map(([n]) => n)),
+      list_(t('news.legality'), (x.legalita || []).map(([n, a, b]) => `${n}: ${leg(a)} → ${leg(b)}`)))));
   } catch {
     root.replaceChildren(empty);
   }
@@ -500,14 +514,14 @@ function payload(kind: string): string {
   return textList(d, S.results, kind as 'owned' | 'missing', S.opts.qty);
 }
 
-const LABEL: Record<string, string> = { owned: 'carte possedute', missing: 'carte mancanti', csv: 'List riallineata' };
+const LABEL: Record<string, Key> = { owned: 'export.labelOwned', missing: 'export.labelMissing', csv: 'export.labelCsv' };
 
 async function doCopy(kind: string): Promise<void> {
   const text = payload(kind);
-  if (!text.trim()) return toast(`Non ci sono ${LABEL[kind]} da copiare.`);
+  if (!text.trim()) return toast(t('export.nothingCopy', { what: t(LABEL[kind]) }));
   try {
     await navigator.clipboard.writeText(text);
-    return toast(`Copiato: ${LABEL[kind]}.`);
+    return toast(t('export.copied', { what: t(LABEL[kind]) }));
   } catch {
     ($('#copyText') as HTMLTextAreaElement).value = text;
     $('#copyPanel').hidden = false;
@@ -517,15 +531,15 @@ async function doCopy(kind: string): Promise<void> {
 
 function doSave(kind: string): void {
   const text = payload(kind);
-  if (!text.trim()) return toast(`Non ci sono ${LABEL[kind]} da salvare.`);
-  const filename = kind === 'csv' ? 'list-riallineata.csv' : kind === 'owned' ? 'possedute.txt' : 'mancanti.txt';
+  if (!text.trim()) return toast(t('export.nothingSave', { what: t(LABEL[kind]) }));
+  const filename = t(kind === 'csv' ? 'export.fileCsv' : kind === 'owned' ? 'export.fileOwned' : 'export.fileMissing');
   const url = URL.createObjectURL(new Blob([text], { type: kind === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' }));
   const a = h('a', { href: url, download: filename });
   document.body.appendChild(a);
   a.click();
   a.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-  toast(`Scaricato: ${filename}`);
+  toast(t('export.saved', { file: filename }));
 }
 
 /* ---------- scheda ---------- */
@@ -543,12 +557,38 @@ function openFor(btn: HTMLElement, mode: 'hover' | 'click'): void {
 
 /* ---------- tema e viste ---------- */
 
-function applyTheme(t: string | null): void {
+function applyTheme(theme: string | null): void {
   const root = document.documentElement;
-  if (t === 'light' || t === 'dark') root.dataset.theme = t;
+  if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
   else delete root.dataset.theme;
-  const dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  $('#theme').textContent = dark ? 'Tema chiaro' : 'Tema scuro';
+  const dark = theme ? theme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  $('#theme').textContent = dark ? t('theme.toLight') : t('theme.toDark');
+}
+
+/** Testi statici di index.html (data-i18n*), lingua del documento e selettore IT/EN. */
+function applyStatic(): void {
+  document.documentElement.lang = getLang();
+  document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n as Key); });
+  document.querySelectorAll<HTMLElement>('[data-i18n-ph]').forEach((el) => el.setAttribute('placeholder', t(el.dataset.i18nPh as Key)));
+  document.querySelectorAll<HTMLElement>('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', t(el.dataset.i18nAria as Key)));
+  document.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((el) => el.setAttribute('title', t(el.dataset.i18nTitle as Key)));
+  document.querySelectorAll<HTMLElement>('[data-i18n-content]').forEach((el) => el.setAttribute('content', t(el.dataset.i18nContent as Key)));
+  document.querySelectorAll<HTMLElement>('[data-lang]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === getLang())));
+  applyTheme(lsGet('theme'));
+}
+
+function changeLang(l: Lang): void {
+  if (l === getLang()) return;
+  setLang(l);
+  lsSet('lang', l);
+  closeSheet();
+  applyStatic();
+  if (S.d) {
+    renderDataline();
+    render();
+    void renderNews();
+  }
+  if (location.hash === '#informazioni') renderAbout($('#viewAbout'), S.d);
 }
 
 function route(): void {
@@ -589,13 +629,13 @@ function wire(): void {
     clip.hidden = false;
     clip.addEventListener('click', async () => {
       try {
-        const t = await navigator.clipboard.readText();
+        const text = await navigator.clipboard.readText();
         const ta = $('#pasteText') as HTMLTextAreaElement;
-        ta.value = t;
+        ta.value = text;
         ta.focus();
-        if (!t.trim()) toast('Gli appunti sono vuoti.');
+        if (!text.trim()) toast(t('clip.empty'));
       } catch {
-        toast('Il browser non permette di leggere gli appunti: incolla nel riquadro con un tocco prolungato.');
+        toast(t('clip.denied'));
       }
     });
   }
@@ -665,9 +705,9 @@ function wire(): void {
   });
 
   $('#groupRows').addEventListener('change', (e) => {
-    const t = e.target as HTMLInputElement;
-    if (t.name?.startsWith('role-') && t.dataset.gid) {
-      S.roles[t.dataset.gid] = t.value as Role;
+    const el = e.target as HTMLInputElement;
+    if (el.name?.startsWith('role-') && el.dataset.gid) {
+      S.roles[el.dataset.gid] = el.value as Role;
       refresh();
     }
   });
@@ -681,11 +721,13 @@ function wire(): void {
   });
 
   document.addEventListener('click', (e) => {
-    const t = e.target as HTMLElement;
-    const c = t.closest<HTMLElement>('[data-copy]');
+    const el = e.target as HTMLElement;
+    const c = el.closest<HTMLElement>('[data-copy]');
     if (c) return void doCopy(c.dataset.copy!);
-    const s = t.closest<HTMLElement>('[data-save]');
-    if (s) doSave(s.dataset.save!);
+    const s = el.closest<HTMLElement>('[data-save]');
+    if (s) return void doSave(s.dataset.save!);
+    const l = el.closest<HTMLElement>('[data-lang]');
+    if (l) changeLang(l.dataset.lang as Lang);
   });
   $('#copyClose').addEventListener('click', () => {
     $('#copyPanel').hidden = true;
@@ -726,8 +768,8 @@ function wire(): void {
     if (e.key === 'Escape' && !sheet.hidden) closeSheet(true);
   });
   document.addEventListener('pointerdown', (e) => {
-    const t = e.target as HTMLElement;
-    if (!sheet.hidden && !sheet.contains(t) && !t.closest('.cardbtn') && !t.closest('dialog')) closeSheet();
+    const el = e.target as HTMLElement;
+    if (!sheet.hidden && !sheet.contains(el) && !el.closest('.cardbtn') && !el.closest('dialog')) closeSheet();
   });
 
   // cancella i miei dati (conferma in due tempi)
@@ -735,25 +777,28 @@ function wire(): void {
     const b = e.currentTarget as HTMLButtonElement;
     if (!b.classList.contains('warn')) {
       b.classList.add('warn');
-      b.textContent = 'Conferma: cancella collezione e preferenze';
+      b.textContent = t('clear.confirm');
       window.clearTimeout(resetTimer);
       resetTimer = window.setTimeout(() => {
         b.classList.remove('warn');
-        b.textContent = 'Cancella i miei dati';
+        b.textContent = t('clear.button');
       }, 4000);
       return;
     }
     window.clearTimeout(resetTimer);
     b.classList.remove('warn');
-    b.textContent = 'Cancella i miei dati';
+    b.textContent = t('clear.button');
     window.clearTimeout(saveTimer);
     await clearAll();
     Object.assign(S, { groups: [], roles: {}, opts: { ...DEFAULT_OPTS }, showMissing: false, savedAt: null, summaries: [], query: '', replacing: false });
     ($('#search') as HTMLInputElement).value = '';
     showErrors([]);
-    applyTheme(null);
+    // anche la lingua scelta è cancellata: si torna a quella del browser
+    setLang(detectLang(null, navigator.languages || [navigator.language]));
+    applyStatic();
+    if (S.d) renderDataline();
     refresh(false);
-    toast('Dati cancellati da questo dispositivo.');
+    toast(t('clear.done'));
   });
 
   $('#theme').addEventListener('click', () => {
@@ -779,7 +824,8 @@ function wire(): void {
 /* ---------- avvio ---------- */
 
 async function main(): Promise<void> {
-  applyTheme(lsGet('theme'));
+  setLang(detectLang(lsGet('lang'), navigator.languages || [navigator.language]));
+  applyStatic();
   wire();
   route();
   try {
@@ -787,7 +833,7 @@ async function main(): Promise<void> {
   } catch {
     const el = $('#dataline');
     el.classList.add('error');
-    el.textContent = 'Non riesco a caricare la lista delle carte. Ricarica la pagina tra qualche minuto.';
+    el.textContent = t('data.error');
     return;
   }
   renderDataline();

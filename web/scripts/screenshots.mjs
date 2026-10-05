@@ -1,4 +1,4 @@
-// Screenshot di controllo, prima e dopo il caricamento, desktop e mobile -> ../.cache/screenshots/ (ignorata da git).
+// Screenshot di controllo, prima e dopo il caricamento, desktop e mobile, in italiano e in inglese -> ../.cache/screenshots/ (ignorata da git).
 // Richiede il sito in esecuzione: npm run build; npm run preview  (in un'altra finestra)
 // Uso: npm run screenshots [-- percorso\collezione.csv]   (default: collezione sintetica dei test)
 import { mkdirSync } from 'node:fs';
@@ -22,7 +22,12 @@ const settle = async (page) => {
 };
 
 const browser = await chromium.launch();
-for (const [name, opts] of [['desktop', { viewport: { width: 1280, height: 900 } }], ['mobile', { ...devices['iPhone 13'] }]]) {
+const shots = [];
+for (const lang of ['it', 'en']) {
+  const locale = lang === 'it' ? 'it-IT' : 'en-US';
+  shots.push([`desktop-${lang}`, { viewport: { width: 1280, height: 900 }, locale }], [`mobile-${lang}`, { ...devices['iPhone 13'], locale }]);
+}
+for (const [name, opts] of shots) {
   const ctx = await browser.newContext(opts);
   const page = await ctx.newPage();
   await page.goto(URL);

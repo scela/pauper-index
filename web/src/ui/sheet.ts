@@ -5,7 +5,8 @@
 // così artista e copyright restano visibili), niente deformazioni, filtri o watermark.
 
 import type { Opts, Result } from '../lib/compare';
-import { deckShare, typicalCopies, WINDOW_LABELS } from '../lib/compare';
+import { t } from '../i18n';
+import { deckShare, typicalCopies } from '../lib/compare';
 import { imageUrl, type Data } from '../lib/data';
 import { h } from '../lib/dom';
 import { fmtDate, fmtInt, fmtPct, lastSeen } from '../lib/format';
@@ -130,8 +131,8 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
   let face: 'front' | 'back' = 'front';
 
   const img = h('img', { alt: '', width: 488, height: 680, decoding: 'async' });
-  const flip = h('button', { class: 'btn small', type: 'button', hidden: true }, 'Mostra il retro');
-  const tag = h('span', { class: 'tag', hidden: true }, 'Tua');
+  const flip = h('button', { class: 'btn small', type: 'button', hidden: true }, t('sheet.showBack'));
+  const tag = h('span', { class: 'tag', hidden: true }, t('sheet.yours'));
   const dl = h('dl');
   const cardBox = h('div', { class: 'active-card' }, img, flip);
 
@@ -139,17 +140,17 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
     if (!active) return;
     img.src = imageUrl(active.id, 'normal', face);
     if (ref) img.dataset.fallback = imageUrl(ref[0], 'normal');
-    img.alt = `${c.n}, ${active.setName}${face === 'back' ? ' (retro)' : ''}`;
+    img.alt = `${c.n}, ${active.setName}${face === 'back' ? t('sheet.back') : ''}`;
     cardBox.classList.toggle('owned', active.owned);
     tag.hidden = !active.owned;
     flip.hidden = !active.back;
-    flip.textContent = face === 'front' ? 'Mostra il retro' : 'Mostra il fronte';
+    flip.textContent = face === 'front' ? t('sheet.showBack') : t('sheet.showFront');
     const rows: [string, string][] = [
-      ['Set', `${active.setName}${active.date ? ` (${active.date.slice(0, 4)})` : ''}`],
-      ['Numero', active.cn || '—'],
-      ['Artista', active.artist || '—'],
+      [t('sheet.set'), `${active.setName}${active.date ? ` (${active.date.slice(0, 4)})` : ''}`],
+      [t('sheet.number'), active.cn || '—'],
+      [t('sheet.artist'), active.artist || '—'],
     ];
-    if (active.lang && active.lang !== 'en') rows.push(['Lingua', active.lang]);
+    if (active.lang && active.lang !== 'en') rows.push([t('sheet.language'), active.lang]);
     dl.replaceChildren(...rows.flatMap(([k, v]) => [h('dt', null, k), h('dd', null, v)]));
     fan.querySelectorAll<HTMLElement>('.fan-item').forEach((b) => b.classList.toggle('active', b.dataset.id === active!.id));
   };
@@ -159,13 +160,13 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
   });
 
   const shown = items.slice(0, FAN_MAX);
-  const fan = h('div', { class: 'fan', role: 'group', 'aria-label': 'Artwork diversi' });
+  const fan = h('div', { class: 'fan', role: 'group', 'aria-label': t('sheet.artworks') });
   shown.forEach((it, i) => {
     const off = i - (shown.length - 1) / 2;
     const b = h('button', {
       class: 'fan-item' + (it.owned ? ' owned' : ''), type: 'button', dataset: { id: it.id },
       style: { '--r': `${off * 3}deg`, '--y': `${Math.abs(off) * 4}px` },
-      'aria-label': `${it.setName}${it.owned ? ', posseduta' : ''}`,
+      'aria-label': `${it.setName}${it.owned ? t('sheet.ownedAria') : ''}`,
     }, h('img', { src: imageUrl(it.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204, dataset: ref ? { fallback: imageUrl(ref[0], 'small') } : undefined }));
     const select = () => {
       active = it;
@@ -180,39 +181,42 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
 
   const st = c.s[opts.win];
   const share = deckShare(d, c, opts);
+  const period = t(`period.${opts.win}` as 'period.0');
   const stats = h('p', null,
-    `${WINDOW_LABELS[opts.win]}: ${st ? `${fmtPct(share)} dei mazzi (${fmtInt(opts.side ? st[0] : st[1])})` : 'non giocata'}`,
-    st ? ` · copie tipiche ${typicalCopies(c, opts)}` : '',
-    ` · prima apparizione ${fmtDate(c.f)}`);
+    st ? t('sheet.stats', { period, pct: fmtPct(share), n: fmtInt(opts.side ? st[0] : st[1]) }) : t('sheet.notPlayed', { period }),
+    st ? t('sheet.typical', { n: typicalCopies(c, opts) }) : '',
+    t('sheet.first', { date: fmtDate(c.f) }));
 
   const seenList = h('ul', { class: 'seen' });
   for (const [ls, kind] of [[c.lm, 'm'], [c.lp, 'p']] as const) {
     const s = lastSeen(d, ls, kind);
     if (!s) continue;
     const bits = [fmtDate(s.date), s.result, s.copies].filter(Boolean).join(' · ');
-    seenList.appendChild(h('li', null, h('b', null, `Ultima su ${s.kind === 'MTGO' ? 'MTGO' : 'cartaceo'}: `), bits, h('br'),
+    seenList.appendChild(h('li', null, h('b', null, s.kind === 'm' ? t('sheet.lastMtgo') : t('sheet.lastPaper')), bits, h('br'),
       s.uri ? h('a', { href: s.uri, target: '_blank', rel: 'noopener noreferrer' }, s.tournament) : s.tournament));
   }
 
   const owned = res?.prints.length
-    ? h('p', null, `Ne possiedi ${res.owned}${res.binders.length ? ` (${res.binders.map(([b, q]) => `${b}: ${q}`).join(', ')})` : ''}.`)
-    : res ? h('p', null, 'Non la possiedi in nessuna printing.') : null;
+    ? h('p', null, res.binders.length
+      ? t('sheet.ownIn', { n: res.owned, where: res.binders.map(([b, q]) => `${b}: ${q}`).join(', ') })
+      : t('sheet.own', { n: res.owned }))
+    : res ? h('p', null, t('sheet.notOwned')) : null;
 
-  const close = h('button', { class: 'btn quiet small', type: 'button', 'aria-label': 'Chiudi la scheda' }, 'Chiudi');
+  const close = h('button', { class: 'btn quiet small', type: 'button', 'aria-label': t('sheet.closeAria') }, t('sheet.close'));
   close.addEventListener('click', () => closeSheet(true));
 
   el.replaceChildren(
     h('div', { class: 'sheet-head' },
-      h('h3', { id: 'sheetTitle' }, c.n, c.l === 'b' ? h('span', { class: 'badge banned' }, 'bannata') : null), close),
+      h('h3', { id: 'sheetTitle' }, c.n, c.l === 'b' ? h('span', { class: 'badge banned' }, t('badge.banned')) : null), close),
     fan,
     items.length > FAN_MAX
-      ? h('p', { class: 'fan-note' }, `${FAN_MAX} artwork su ${items.length}. `,
-        h('button', { class: 'btn small', type: 'button', onclick: () => input.onShowAll(items, c.n) }, 'Mostra tutte'))
-      : h('p', { class: 'fan-note' }, items.length === 1 ? 'Un solo artwork.' : `${items.length} artwork diversi.`),
+      ? h('p', { class: 'fan-note' }, t('sheet.someOf', { n: FAN_MAX, total: items.length }),
+        h('button', { class: 'btn small', type: 'button', onclick: () => input.onShowAll(items, c.n) }, t('sheet.showAll')))
+      : h('p', { class: 'fan-note' }, items.length === 1 ? t('sheet.one') : t('sheet.many', { n: items.length })),
     h('div', { class: 'sheet-body' },
       cardBox,
       h('div', { class: 'details' }, tag, dl,
-        input.approx ? h('p', { class: 'warnbox' }, 'La printing non era indicata nel testo: l\'immagine è quella di riferimento.') : null,
+        input.approx ? h('p', { class: 'warnbox' }, t('sheet.approx')) : null,
         owned, stats, seenList)),
   );
   el.hidden = false;
@@ -222,13 +226,13 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
 }
 
 export function renderGrid(dialog: HTMLDialogElement, items: FanItem[], title: string): void {
-  const close = h('button', { class: 'btn small', type: 'button' }, 'Chiudi');
+  const close = h('button', { class: 'btn small', type: 'button' }, t('sheet.close'));
   close.addEventListener('click', () => dialog.close());
   dialog.replaceChildren(
-    h('div', { class: 'sheet-head' }, h('h3', { id: 'gridTitle' }, `${title}: tutti gli artwork (${items.length})`), close),
+    h('div', { class: 'sheet-head' }, h('h3', { id: 'gridTitle' }, t('grid.title', { name: title, n: items.length })), close),
     h('div', { class: 'grid' }, ...items.map((it) => h('figure', { class: it.owned ? 'owned' : '' },
       h('img', { src: imageUrl(it.id, 'normal'), alt: `${title}, ${it.setName}`, loading: 'lazy', width: 488, height: 680 }),
-      h('figcaption', null, `${it.setName}${it.date ? ` (${it.date.slice(0, 4)})` : ''} · ${it.cn}${it.artist ? ` · ${it.artist}` : ''}${it.owned ? ' · tua' : ''}`)))),
+      h('figcaption', null, `${it.setName}${it.date ? ` (${it.date.slice(0, 4)})` : ''} · ${it.cn}${it.artist ? ` · ${it.artist}` : ''}${it.owned ? ` · ${t('grid.yours')}` : ''}`)))),
   );
   dialog.showModal();
 }
