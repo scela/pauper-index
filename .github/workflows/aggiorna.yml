@@ -14,11 +14,13 @@ on:
   push:
     branches: [main]
     paths: ['web/**', 'data/**', 'pipeline/**', '.github/workflows/**']
+  pull_request:   # Pull Request (anche di Dependabot): solo i test, nessuna pubblicazione
+    branches: [main]
 
 permissions: {}
 
 concurrency:
-  group: pauper-index
+  group: pauper-index-${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
   cancel-in-progress: false
 
 env:
@@ -29,7 +31,7 @@ env:
 jobs:
   test:
     name: Test
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -62,7 +64,7 @@ jobs:
 
   update:
     name: Aggiorna i dati
-    if: github.event_name != 'push'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -140,7 +142,7 @@ jobs:
   deploy:
     name: Pubblica su GitHub Pages
     needs: [test, update]
-    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.update.result == 'success') }}
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && (needs.test.result == 'success' || needs.update.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -174,7 +176,7 @@ jobs:
   notify:
     name: Avviso di errore
     needs: [test, update, deploy]
-    if: ${{ failure() }}
+    if: ${{ failure() && github.event_name != 'pull_request' }}   # sulle PR l'esito è già nei controlli
     runs-on: ubuntu-latest
     permissions:
       issues: write
