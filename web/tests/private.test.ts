@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { summarize } from '../src/lib/compare';
-import { isFoil, readTable } from '../src/lib/csv';
+import { isFoil, looksLikeCSV, readTable } from '../src/lib/csv';
 import { buildData } from '../src/lib/data';
 import { norm } from '../src/lib/norm';
 import { parseTextList } from '../src/lib/text';
@@ -18,7 +18,10 @@ const DATA = resolve(here, '../../data');
 const read = (f: string) => JSON.parse(readFileSync(resolve(DATA, f), 'utf-8'));
 
 const PRIVATE = resolve(here, '../../reference/private');
-const CSVS = existsSync(PRIVATE) ? readdirSync(PRIVATE).filter((f) => /\.csv$/i.test(f)) : [];
+// Export CSV riconosciuti dal contenuto, qualunque sia l'estensione (per esempio un CSV salvato come .html).
+const CSVS = existsSync(PRIVATE)
+  ? readdirSync(PRIVATE).filter((f) => looksLikeCSV(readFileSync(resolve(PRIVATE, f), 'utf-8').slice(0, 2000)))
+  : [];
 
 describe.skipIf(!CSVS.length)('export CSV reale della collezione (solo locale)', () => {
   it.each(CSVS)('%s: formato riconosciuto e Name in inglese anche per le carte non inglesi', (f) => {

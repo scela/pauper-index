@@ -278,7 +278,6 @@ function renderFilters(): void {
   ($('#period') as HTMLSelectElement).value = String(S.opts.win);
   ($('#optMin') as HTMLInputElement).value = String(S.opts.minDecks);
   ($('#optLegal') as HTMLInputElement).checked = S.opts.legalOnly;
-  ($('#optBasics') as HTMLInputElement).checked = S.opts.noBasics;
   ($('#optSide') as HTMLInputElement).checked = S.opts.side;
   ($('#optQty') as HTMLInputElement).checked = S.opts.qty;
 }
@@ -598,13 +597,12 @@ function wire(): void {
 
   // filtri: ogni modifica aggiorna subito i risultati
   $('#filters').addEventListener('submit', (e) => e.preventDefault());
-  const optBool = (sel: string, key: 'legalOnly' | 'noBasics' | 'side' | 'qty' | 'proxies') =>
+  const optBool = (sel: string, key: 'legalOnly' | 'side' | 'qty' | 'proxies') =>
     $(sel).addEventListener('change', (e) => {
       S.opts[key] = (e.target as HTMLInputElement).checked;
       refresh();
     });
   optBool('#optLegal', 'legalOnly');
-  optBool('#optBasics', 'noBasics');
   optBool('#optSide', 'side');
   optBool('#optQty', 'qty');
   optBool('#optProxy', 'proxies');

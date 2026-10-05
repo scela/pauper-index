@@ -321,7 +321,8 @@ Idee da valutare dopo la prima versione: `docs/IDEE.md`.
 
 **Layout** (rivisto su richiesta dopo la Fase 2: una sola funzione principale):
 1. **In alto**: titolo, riga dei dati ("Dati al …", con l'avviso se la fonte è ferma) e area di caricamento (file CSV o testo incollato). Dopo il caricamento l'area diventa la riga "Collezione: N carte · Sostituisci". "Sostituisci" riapre l'area, e il caricamento successivo **rimpiazza** la collezione.
-2. **Filtri** su una o due righe: periodo (menu con il numero di carte per periodo), minimo mazzi, solo legali, conta anche il side, conta le copie, escludi terre base, ricerca. Ogni modifica aggiorna subito i risultati. Su mobile le opzioni stanno su una riga scorrevole.
+2. **Filtri** su una o due righe: periodo (menu con il numero di carte per periodo), minimo mazzi, solo legali, conta anche il side, conta le copie, ricerca. Ogni modifica aggiorna subito i risultati. Su mobile le opzioni stanno su una riga scorrevole.
+   **Terre base** (Plains, Island, Swamp, Mountain, Forest, Wastes e le sei Snow-Covered, cioè le carte con flag `b` in `cards.json`): **sempre escluse** dalla lista e dai risultati, senza opzione nell'interfaccia (decisione dopo la Fase 2). Restano nei dati della pipeline: serviranno al calcolo dei mazzi costruibili, dove contano come sempre disponibili.
 3. **Risultati**:
    - intestazione "Possiedi N carte giocate in Pauper";
    - di default **solo le carte possedute** (anche parziali), dalle più giocate;

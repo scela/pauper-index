@@ -53,6 +53,15 @@ test('i filtri aggiornano subito i risultati', async ({ page }) => {
   const before = await page.locator('#verdict').innerText();
   await page.fill('#optMin', '500');
   await expect(page.locator('#verdict')).not.toHaveText(before);
+  // terre base (anche Snow-Covered) sempre escluse, senza opzioni nell'interfaccia
+  await expect(page.locator('#optBasics')).toHaveCount(0);
+  await page.fill('#optMin', '1');
+  await page.selectOption('#period', '3');
+  for (const q of ['island', 'snow-covered', 'wastes']) {
+    await page.fill('#search', q);
+    const names = await page.locator('#cardRows .nm').allInnerTexts();
+    expect(names.filter((n) => /^(Plains|Island|Swamp|Mountain|Forest|Wastes|Snow-Covered .+)$/.test(n))).toEqual([]);
+  }
   await page.fill('#search', 'zzzz-nessuna');
   await expect(page.locator('#cardRows')).toContainText('Nessuna carta corrisponde');
 });
@@ -183,6 +192,7 @@ test('Informazioni: avviso Fan Content Policy esatto; in pagina una sola riga', 
   await expect(page.locator('#viewAbout')).toContainText('Nessun account, nessun cookie, nessuna analytics');
   await expect(page.locator('#viewAbout')).toContainText('vengono letti solo nel tuo browser');
   await expect(page.locator('#viewAbout')).toContainText('primi 32 mazzi');
+  await expect(page.locator('#viewAbout')).toContainText('Snow-Covered) non compaiono mai');
   await page.click('#viewAbout a[href="#"]');
   await expect(page.locator('#viewMain')).toBeVisible();
 });

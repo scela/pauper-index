@@ -107,7 +107,7 @@ describe('abbinamento e confronto', () => {
     expect(listIndexes(d, DEFAULT_OPTS)).toEqual([0, 1, 4]); // Gush bannata, Island base
     expect(listIndexes(d, { ...DEFAULT_OPTS, side: false, minDecks: 3 })).toEqual([0, 1]); // Pyroblast: 2 mazzi main
     expect(presetCounts(d, DEFAULT_OPTS)).toEqual([2, 3, 3, 3]);
-    expect(listIndexes(d, { ...DEFAULT_OPTS, legalOnly: false, noBasics: false, win: 3 })).toEqual([0, 1, 2, 3, 4]);
+    expect(listIndexes(d, { ...DEFAULT_OPTS, legalOnly: false, win: 3 })).toEqual([0, 1, 2, 4]); // Island mai inclusa
   });
 
   it('possedute, parziali e mancanti, con e senza "Conta le copie"', () => {

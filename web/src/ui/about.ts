@@ -26,7 +26,8 @@ export function renderAbout(root: HTMLElement, d: Data | null): void {
         h('li', null, 'Contano come tue le carte dei Binder; List e mazzi sono esclusi di default. Puoi cambiarlo in fondo alla pagina, in "Binder inclusi". Con il testo incollato non ci sono Binder: tutte le carte contano come possedute.'),
         h('li', null, 'Una carta è riconosciuta in qualunque printing, lingua o finitura: conta la carta, non la stampa.'),
         h('li', null, '"Conta le copie": la lista non ha quantità, quindi il confronto è con le copie tipiche, cioè la mediana delle copie nei mazzi che giocano la carta nel periodo scelto.'),
-        h('li', null, '"Conta anche il side": include le carte giocate solo in sideboard. "Min. mazzi": quanti mazzi servono perché una carta entri nella lista.'))),
+        h('li', null, '"Conta anche il side": include le carte giocate solo in sideboard. "Min. mazzi": quanti mazzi servono perché una carta entri nella lista.'),
+        h('li', null, 'Le terre base (Plains, Island, Swamp, Mountain, Forest, Wastes e le versioni Snow-Covered) non compaiono mai: sono escluse dalla lista e dai risultati.'))),
 
     h('section', null,
       h('h3', null, 'Avviso'),

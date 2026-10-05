@@ -6,19 +6,17 @@ import { norm, splitFaces } from './norm';
 import type { CardRow, Group, Role, Row } from './types';
 
 export const WINDOW_LABELS = ['Meta attuale', 'Ultimo anno', 'Ultimi 2 anni', 'Storico'];
-export const BASICS_NOTE = 'Plains, Island, Swamp, Mountain, Forest, Wastes e le versioni Snow.';
 
 export interface Opts {
   win: number; // indice in cards.w
   minDecks: number;
   legalOnly: boolean;
-  noBasics: boolean;
   side: boolean; // conta anche i mazzi che la giocano solo in side
   qty: boolean; // "Conta le copie"
   proxies: boolean;
 }
 
-export const DEFAULT_OPTS: Opts = { win: 1, minDecks: 1, legalOnly: true, noBasics: true, side: true, qty: false, proxies: false };
+export const DEFAULT_OPTS: Opts = { win: 1, minDecks: 1, legalOnly: true, side: true, qty: false, proxies: false };
 
 export type Via = 'id' | 'setcn' | 'name' | 'none';
 
@@ -86,7 +84,7 @@ export function inList(c: CardRow, o: Opts): boolean {
   const decks = o.side ? st[0] : st[1];
   if (decks < Math.max(1, o.minDecks)) return false;
   if (o.legalOnly && c.l !== 'l') return false;
-  if (o.noBasics && c.b) return false;
+  if (c.b) return false; // terre base (anche Snow-Covered): sempre escluse
   return true;
 }
 
