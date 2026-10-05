@@ -15,7 +15,9 @@ import { clearAll, idbGet, idbSet, lsGet, lsSet } from './lib/store';
 import { parseTextList } from './lib/text';
 import type { Group, Role, Row } from './lib/types';
 import { collectionIndex, type CollectionIndex, type Owned } from './lib/quick';
+import { buildGroups, displayPrint, memberCodes, printsInSets, rarityHere, type SetGroup, type SetRow } from './lib/sets';
 import { renderAbout } from './ui/about';
+import { initSetPicker } from './ui/setpicker';
 import { initQuick } from './ui/quick';
 import { cancelClose, closeSheet, isHoverBlocked, isOpenFor, openSheet, recentlyClosed, renderGrid, scheduleClose, unblockHover } from './ui/sheet';
 
@@ -59,8 +61,16 @@ const S = {
   allNames: null as Set<string> | null,
   replacing: false,
   cix: null as CollectionIndex | null,
+  // filtro per espansione
+  setGroups: null as Map<string, SetGroup> | null,
+  setFilter: null as string | null,
+  setCodes: null as Set<string> | null,
+  setHidden: false,
+  setOwned: false,
 };
 let quick: { refresh(): void } | null = null;
+let setPicker: { refresh(): void } | null = null;
+let setsLoading: Promise<Map<string, SetGroup> | null> | null = null;
 let toastTimer: number | undefined;
 let resetTimer: number | undefined;
 let hoverTimer: number | undefined;
@@ -249,6 +259,7 @@ function refresh(save = true): void {
   if (!S.d) return;
   S.results = compute(S.d, S.groups, S.roles, S.opts);
   S.cix = collectionIndex(S.d, S.groups, S.roles, S.opts.proxies);
+  applySetFilter();
   S.shown = PAGE;
   render();
   if (save) persist();
@@ -260,6 +271,35 @@ function render(): void {
   renderResults();
   renderExtra();
   quick?.refresh();
+  setPicker?.refresh();
+}
+
+/* ---------- filtro per espansione ---------- */
+
+async function loadSetGroups(): Promise<Map<string, SetGroup> | null> {
+  if (S.setGroups) return S.setGroups;
+  setsLoading ??= fetch('data/sets.json')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((rows: SetRow[] | null) => (S.setGroups = rows ? buildGroups(rows) : null))
+    .catch(() => null);
+  return setsLoading;
+}
+
+const selectedGroup = (): SetGroup | null => (S.setFilter && S.setGroups?.get(S.setFilter)) || null;
+
+/** Con un'espansione scelta, la lista (e gli export) si restringe alle carte stampate in quel gruppo di set. */
+function applySetFilter(): void {
+  const g = selectedGroup();
+  S.setCodes = g ? memberCodes(g, S.setHidden) : null;
+  if (S.setCodes) {
+    const codes = S.setCodes;
+    S.results = S.results.filter((x) => printsInSets(S.d!, x.idx, codes).length > 0);
+  }
+}
+
+function selectSet(code: string | null): void {
+  S.setFilter = code;
+  refresh(false);
 }
 
 function renderDataline(): void {
@@ -301,7 +341,9 @@ function renderFilters(): void {
   ($('#optMin') as HTMLInputElement).value = String(S.opts.minDecks);
   ($('#optLegal') as HTMLInputElement).checked = S.opts.legalOnly;
   ($('#optSide') as HTMLInputElement).checked = S.opts.side;
-  ($('#optQty') as HTMLInputElement).checked = S.opts.qty;
+  ($('#setHidden') as HTMLInputElement).checked = S.setHidden;
+  ($('#setOwned') as HTMLInputElement).checked = S.setOwned;
+  $('#setOwnedWrap').hidden = !(selectedGroup() && hasColl());
 }
 
 function renderResults(): void {
@@ -309,10 +351,13 @@ function renderResults(): void {
   const coll = hasColl();
   const period = periodDesc(S.opts.win);
   const owned = R.filter((x) => x.owned > 0).length;
-  const full = R.filter((x) => x.status === 'owned').length;
   let v: string;
   let sub: string;
-  if (!S.groups.length) {
+  const g = selectedGroup();
+  if (g) {
+    v = t('set.summary', { n: R.length }) + (coll ? t('set.summaryOwned', { n: fmtInt(owned) }) : '');
+    sub = t('set.sub', { name: g.name, year: g.date.slice(0, 4), period });
+  } else if (!S.groups.length) {
     v = t('res.list', { n: R.length });
     sub = t('res.listSub', { period });
   } else if (!coll) {
@@ -320,13 +365,11 @@ function renderResults(): void {
     sub = t('res.noGroupsSub');
   } else {
     v = t('res.owned', { n: owned });
-    sub = S.opts.qty
-      ? t('res.ownedSubQty', { total: fmtInt(R.length), period, full: fmtInt(full) })
-      : t('res.ownedSub', { total: fmtInt(R.length), period });
+    sub = t('res.ownedSub', { total: fmtInt(R.length), period });
   }
   $('#verdict').textContent = v;
   $('#sub').textContent = sub;
-  $('#thQty').textContent = coll ? (S.opts.qty ? t('th.qtyYoursTypical') : t('th.qtyYours')) : t('th.qtyTypical');
+  $('#thQty').textContent = coll ? t('th.qtyYours') : t('th.qtyTypical');
   renderRows();
 }
 
@@ -334,7 +377,8 @@ function filtered(): Result[] {
   const d = S.d!;
   const q = norm(S.query);
   const anchor = d.cards.anchor;
-  const onlyOwned = hasColl() && !S.showMissing;
+  // senza espansione: di default solo le possedute; con un'espansione: tutte (esplorazione), a richiesta solo le possedute
+  const onlyOwned = hasColl() && (S.setCodes ? S.setOwned : !S.showMissing);
   let rows = S.results.filter((x) => {
     if (onlyOwned && x.owned === 0) return false;
     const c = d.cards.c[x.idx];
@@ -364,6 +408,28 @@ function isNew(entry: string | undefined): boolean {
   return age >= 0 && age < NEW_DAYS;
 }
 
+/** Vista per espansione: immagine della stampa di quel set ed etichetta della rarità "qui". */
+function setThumb(x: Result): { thumb: { id: string; owned: boolean }; label: string; common: boolean } | null {
+  const d = S.d!;
+  const codes = S.setCodes!;
+  const prints = d.prints.p[x.idx] || [];
+  const pi = displayPrint(d, x.idx, codes, S.setFilter!);
+  if (pi < 0) return null;
+  const id = prints[pi][0];
+  const inSet = new Set(printsInSets(d, x.idx, codes).map((i) => prints[i][0]));
+  const ownedHere = x.prints.find((p) => inSet.has(p.row.i || (p.print >= 0 ? prints[p.print][0] : '')));
+  const ownedId = ownedHere ? (ownedHere.row.i || prints[ownedHere.print][0]) : '';
+  const r = rarityHere(d, x.idx, codes)!;
+  let label: string;
+  if (r.common) label = t('set.common');
+  else {
+    const rarity = t(`rarity.${r.rarity}` as Key);
+    const entry = r.entrySet ? d.cards.sets[r.entrySet] : null;
+    label = entry ? t('set.notCommon', { rarity, set: entry[0], year: entry[1].slice(0, 4) }) : t('set.notCommonPlain', { rarity });
+  }
+  return { thumb: { id: ownedId || id, owned: !!ownedHere }, label, common: r.common };
+}
+
 function thumbIds(x: Result): { id: string; owned: boolean }[] {
   const d = S.d!;
   const prints = d.prints.p[x.idx] || [];
@@ -388,17 +454,19 @@ function renderRows(): void {
   more.textContent = t('res.more', { n: fmtInt(Math.min(PAGE, S.view.length - rows.length)), rest: fmtInt(S.view.length - rows.length) });
   if (!rows.length) {
     $('#cardRows').replaceChildren(h('tr', { class: 'nores' }, h('td', { colspan: 5 },
-      S.query || S.seen !== 'all' ? t('res.noMatch') : coll && !S.showMissing ? t('res.noOwned') : t('res.none'))));
+      S.query || S.seen !== 'all' ? t('res.noMatch') : S.setCodes ? (S.setOwned ? t('res.noOwned') : t('set.empty'))
+        : coll && !S.showMissing ? t('res.noOwned') : t('res.none'))));
     return;
   }
   $('#cardRows').replaceChildren(...rows.map((x) => {
     const c = d.cards.c[x.idx];
     const st = c.s[S.opts.win];
-    const thumbs = thumbIds(x);
+    const setView = S.setCodes ? setThumb(x) : null;
+    const thumbs = setView ? [setView.thumb] : thumbIds(x);
     const refId = d.prints.p[x.idx]?.[c.r]?.[0];
     const entry = c.e ? d.cards.sets[c.e] : null;
     const status = coll && x.status !== 'owned'
-      ? h('span', { class: `badge st-${x.status}` }, x.status === 'missing' ? t('badge.missing') : t('badge.partial'))
+      ? h('span', { class: `badge st-${x.status}` }, t('badge.missing'))
       : null;
     const own = x.prints.length
       ? h('span', { class: 'own' }, x.prints.map((p) => `${fmtPrint(p.row)} ×${p.q}`).join(', ')
@@ -413,10 +481,11 @@ function renderRows(): void {
         thumbs.length > 3 ? h('span', { class: 'more-n' }, `+${thumbs.length - 3}`) : null),
       h('span', { class: 'nmwrap' }, h('span', { class: 'nm' }, c.n), status,
         isNew(c.e) ? h('span', { class: 'badge new' }, t('badge.new')) : null,
-        c.l === 'b' ? h('span', { class: 'badge banned' }, t('badge.banned')) : null, own));
+        c.l === 'b' ? h('span', { class: 'badge banned' }, t('badge.banned')) : null,
+        setView ? h('span', { class: 'rarity' + (setView.common ? ' is-common' : '') }, setView.label) : null, own));
     return h('tr', { class: coll ? `r-${x.status}` : '' },
       h('td', { class: 'c-name' }, btn),
-      h('td', { class: 'c-qty num', 'data-label': t('mobile.qty') }, coll ? (S.opts.qty ? `${x.owned} / ${x.need}` : String(x.owned)) : String(x.typical)),
+      h('td', { class: 'c-qty num', 'data-label': t('mobile.qty') }, coll ? String(x.owned) : String(x.typical)),
       h('td', { class: 'c-pct num', 'data-label': t('mobile.decks') }, fmtPct(x.share), h('span', { class: 'muted' }, st ? ` · ${fmtInt(S.opts.side ? st[0] : st[1])}` : '')),
       h('td', { class: 'c-seen', 'data-label': t('mobile.last') }, fmtDate(c.z)),
       h('td', { class: 'c-entry', 'data-label': t('mobile.entry') }, entry && c.e ? `${c.e.toUpperCase()} ${entry[1].slice(0, 4)}` : '—'));
@@ -432,6 +501,8 @@ function renderExtra(): void {
   const loaded = S.groups.length > 0;
   $('#extraColl').hidden = !loaded;
   ($('#optMissing') as HTMLInputElement).checked = S.showMissing;
+  // con un'espansione scelta la vista mostra già tutte le carte: l'opzione non serve
+  $('#optMissing').closest('label')!.hidden = !!S.setCodes;
   if (!loaded) return;
 
   const inc = S.groups.filter((g) => S.roles[g.id] === 'coll').length;
@@ -507,7 +578,7 @@ async function renderNews(): Promise<void> {
 function payload(kind: string): string {
   const d = S.d!;
   if (kind === 'csv') return realignedCSV(d, S.results);
-  return textList(d, S.results, kind as 'owned' | 'missing', S.opts.qty);
+  return textList(d, S.results, kind as 'owned' | 'missing');
 }
 
 const LABEL: Record<string, Key> = { owned: 'export.labelOwned', missing: 'export.labelMissing', csv: 'export.labelCsv' };
@@ -664,14 +735,13 @@ function wire(): void {
 
   // filtri: ogni modifica aggiorna subito i risultati
   $('#filters').addEventListener('submit', (e) => e.preventDefault());
-  const optBool = (sel: string, key: 'legalOnly' | 'side' | 'qty' | 'proxies') =>
+  const optBool = (sel: string, key: 'legalOnly' | 'side' | 'proxies') =>
     $(sel).addEventListener('change', (e) => {
       S.opts[key] = (e.target as HTMLInputElement).checked;
       refresh();
     });
   optBool('#optLegal', 'legalOnly');
   optBool('#optSide', 'side');
-  optBool('#optQty', 'qty');
   optBool('#optProxy', 'proxies');
   $('#optMin').addEventListener('input', (e) => {
     const v = parseInt((e.target as HTMLInputElement).value, 10);
@@ -707,6 +777,15 @@ function wire(): void {
   $('#more').addEventListener('click', () => {
     S.shown += PAGE;
     renderRows();
+  });
+  $('#setHidden').addEventListener('change', (e) => {
+    S.setHidden = (e.target as HTMLInputElement).checked;
+    refresh(false);
+  });
+  $('#setOwned').addEventListener('change', (e) => {
+    S.setOwned = (e.target as HTMLInputElement).checked;
+    S.shown = PAGE;
+    renderResults();
   });
   $('#optMissing').addEventListener('change', (e) => {
     S.showMissing = (e.target as HTMLInputElement).checked;
@@ -840,6 +919,14 @@ async function main(): Promise<void> {
   setLang(detectLang(lsGet('lang'), navigator.languages || [navigator.language]));
   applyStatic();
   wire();
+  setPicker = initSetPicker({
+    groups: loadSetGroups, showHidden: () => S.setHidden, selected: selectedGroup, select: selectSet,
+    enableHidden: () => {
+      S.setHidden = true;
+      ($('#setHidden') as HTMLInputElement).checked = true;
+      if (S.setFilter) refresh(false);
+    },
+  });
   quick = initQuick({
     data: () => S.d, opts: () => S.opts, collection: () => (hasColl() ? S.cix : null), openArtworks: openArtworksFor,
   });

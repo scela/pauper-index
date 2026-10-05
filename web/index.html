@@ -75,10 +75,24 @@
       <label class="f-field"><span data-i18n="filters.min">Min. mazzi</span>
         <input type="number" id="optMin" min="1" max="9999" value="1" inputmode="numeric">
       </label>
+      <div class="setwrap" id="setWrap">
+        <div class="f-field setfield">
+          <label for="setInput" data-i18n="set.label">Espansione</label>
+          <div class="qbox setbox">
+            <input id="setInput" type="search" role="combobox" aria-expanded="false" aria-controls="setList" aria-autocomplete="list"
+              autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"
+              data-i18n-ph="set.placeholder" placeholder="Tutte le espansioni">
+            <ul id="setList" class="qlist" role="listbox" data-i18n-aria="set.suggestions" aria-label="Espansioni" hidden></ul>
+          </div>
+        </div>
+        <div class="setopts" id="setOpts">
+          <label class="chk"><input type="checkbox" id="setHidden"> <span data-i18n="set.hidden">Anche promo, Secret Lair, The List e set digitali</span></label>
+          <label class="chk" id="setOwnedWrap" hidden><input type="checkbox" id="setOwned"> <span data-i18n="set.onlyOwned">Solo quelle che possiedi</span></label>
+        </div>
+      </div>
       <div class="chips">
       <label class="chk"><input type="checkbox" id="optLegal" checked> <span data-i18n="filters.legal">Solo legali</span></label>
       <label class="chk"><input type="checkbox" id="optSide" checked> <span data-i18n="filters.side">Conta anche il side</span></label>
-      <label class="chk" data-i18n-title="filters.qtyHelp" title=""><input type="checkbox" id="optQty"> <span data-i18n="filters.qty">Conta le copie</span></label>
       </div>
       <input type="search" class="search" id="search" data-i18n-ph="filters.search" data-i18n-aria="filters.search" placeholder="Cerca una carta" aria-label="Cerca una carta">
     </form>

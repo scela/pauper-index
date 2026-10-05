@@ -27,10 +27,11 @@ export interface CardsFile {
   c: CardRow[];
 }
 
-// [scryfall_id, set, numero, indice artista, gruppo illustrazione, retro 0|1, lingua?]
-export type PrintRow = [string, string, string, number, number, 0 | 1, string?];
+// [scryfall_id, set, numero, indice artista, gruppo illustrazione, retro 0|1, rarità c|u|r|m|s|b, lingua?]
+export type PrintRow = [string, string, string, number, number, 0 | 1, string, string?];
 
 export interface PrintingsFile {
+  // v2: rarità in posizione 6, lingua in posizione 7
   v: number;
   sets: Record<string, [string, string]>;
   artists: string[];

@@ -3,12 +3,9 @@
 import type { Result } from './compare';
 import type { Data } from './data';
 
-export function textList(d: Data, results: Result[], kind: 'owned' | 'missing', qtyMode: boolean): string {
+export function textList(d: Data, results: Result[], kind: 'owned' | 'missing'): string {
   const sel = kind === 'owned' ? results.filter((x) => x.status === 'owned') : results.filter((x) => x.status !== 'owned');
-  const lines = sel.map((x) => {
-    const n = kind === 'owned' ? (qtyMode ? x.need : 1) : qtyMode ? x.need - x.owned : 1;
-    return `${n} ${d.cards.c[x.idx].n}`;
-  });
+  const lines = sel.map((x) => `1 ${d.cards.c[x.idx].n}`);
   return lines.length ? lines.join('\n') + '\n' : '';
 }
 

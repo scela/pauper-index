@@ -105,13 +105,46 @@ def build_printings(db: CardDB, order: list[str], sets_info) -> tuple[dict, list
             g = groups.setdefault(p.illustration_id or p.id, len(groups))
             s = sets_info.get(p.set, {})
             sets_used.setdefault(p.set, [s.get("name", p.set_name), s.get("released_at", p.released_at)])
-            item = [p.id, p.set, p.collector_number, a, g, 1 if p.has_back else 0]
+            item = [p.id, p.set, p.collector_number, a, g, 1 if p.has_back else 0, RARITY.get(p.rarity, "s")]
             if p.lang != "en":
                 item.append(p.lang)
             plist.append(item)
         rows.append(plist)
-    head = {"v": 1, "sets": dict(sorted(sets_used.items())), "artists": list(artists)}
+    head = {"v": 2, "sets": dict(sorted(sets_used.items())), "artists": list(artists)}
     return head, rows
+
+
+RARITY = {"common": "c", "uncommon": "u", "rare": "r", "mythic": "m", "special": "s", "bonus": "b"}
+
+
+def build_sets(db: CardDB, order: list[str], sets_info: dict) -> list[dict]:
+    """Espansioni in cui è stampata almeno una carta giocata (filtro per espansione del sito).
+
+    Una voce per set: codice, nome, data di uscita, tipo Scryfall, set padre, solo digitale.
+    I set padre sono inclusi anche senza carte proprie, per poter raggruppare.
+    """
+    used = {p.set for o in order for p in db.printings.get(o, [])}
+    seen = set()
+    queue = sorted(used)
+    while queue:
+        code = queue.pop()
+        if code in seen or code not in sets_info:
+            continue
+        seen.add(code)
+        parent = sets_info[code].get("parent_set_code")
+        if parent:
+            queue.append(parent)
+    out = []
+    for code in seen:
+        s = sets_info[code]
+        item = {"c": code, "n": s["name"], "d": s.get("released_at", ""), "t": s.get("set_type", "")}
+        if s.get("parent_set_code"):
+            item["p"] = s["parent_set_code"]
+        if s.get("digital"):
+            item["g"] = 1
+        out.append(item)
+    out.sort(key=lambda x: (x["d"], x["c"]), reverse=True)
+    return out
 
 
 def build_names(db: CardDB, order: list[str]) -> dict[str, int]:

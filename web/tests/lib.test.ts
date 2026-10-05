@@ -110,7 +110,7 @@ describe('abbinamento e confronto', () => {
     expect(listIndexes(d, { ...DEFAULT_OPTS, legalOnly: false, win: 3 })).toEqual([0, 1, 2, 4]); // Island mai inclusa
   });
 
-  it('possedute, parziali e mancanti, con e senza "Conta le copie"', () => {
+  it('possedute e mancanti: basta una copia, i proxy contano solo se richiesto', () => {
     const g: Group = { id: 'b', name: 'Binder', type: 'binder', source: 'f', kind: 'csv', hasProxy: true, rows: [
       row({ n: 'Brainstorm', i: ID(1), q: 2 }), row({ n: 'Brainstorm', i: ID(2), q: 1 }),
       row({ n: 'Pyroblast', q: 1, p: 1 }),
@@ -118,10 +118,8 @@ describe('abbinamento e confronto', () => {
     const roles = { b: 'coll' as const };
     let res = compute(d, [g], roles, DEFAULT_OPTS);
     expect(res.map((r) => [r.idx, r.status, r.owned])).toEqual([[0, 'owned', 3], [1, 'missing', 0], [4, 'missing', 0]]);
-    res = compute(d, [g], roles, { ...DEFAULT_OPTS, qty: true, proxies: true });
-    // copie tipiche (mediana) nell'ultimo anno: Brainstorm 4, Delver 4, Pyroblast 2; il proxy ora conta
-    expect(res.map((r) => [r.idx, r.status, r.owned, r.need])).toEqual(
-      [[0, 'partial', 3, 4], [1, 'missing', 0, 4], [4, 'partial', 1, 2]]);
+    res = compute(d, [g], roles, { ...DEFAULT_OPTS, proxies: true });
+    expect(res.map((r) => [r.idx, r.status, r.owned, r.need])).toEqual([[0, 'owned', 3, 1], [1, 'missing', 0, 1], [4, 'owned', 1, 1]]);
     expect(res[0].prints.map((p) => p.q)).toEqual([2, 1]);
     expect(compute(d, [g], { b: 'skip' }, DEFAULT_OPTS).every((r) => r.status === 'missing')).toBe(true);
   });
@@ -130,13 +128,13 @@ describe('abbinamento e confronto', () => {
     const g: Group = { id: 'b', name: 'B', type: 'binder', source: 'f', kind: 'csv', hasProxy: false, rows: [
       row({ n: 'Brainstorm', s: 'MMQ', c: '58', i: ID(2), q: 1, f: 'foil', l: 'it' }),
     ] };
-    const res = compute(d, [g], { b: 'coll' }, { ...DEFAULT_OPTS, qty: true });
-    expect(textList(d, res, 'missing', true)).toBe('3 Brainstorm\n4 Delver of Secrets // Insectile Aberration\n2 Pyroblast\n');
-    expect(textList(d, compute(d, [g], { b: 'coll' }, DEFAULT_OPTS), 'owned', false)).toBe('1 Brainstorm\n');
+    const res = compute(d, [g], { b: 'coll' }, DEFAULT_OPTS);
+    expect(textList(d, res, 'missing')).toBe('1 Delver of Secrets // Insectile Aberration\n1 Pyroblast\n');
+    expect(textList(d, res, 'owned')).toBe('1 Brainstorm\n');
     const csv = realignedCSV(d, res).split('\r\n');
     expect(csv[0]).toBe('Name,Set code,Collector number,Foil,Language,Scryfall ID,Quantity');
-    expect(csv[1]).toBe(`Brainstorm,MMQ,58,foil,it,${ID(2)},4`);
-    expect(csv[2]).toBe(`Delver of Secrets // Insectile Aberration,ISD,51,normal,en,${ID(3)},4`);
+    expect(csv[1]).toBe(`Brainstorm,MMQ,58,foil,it,${ID(2)},1`);
+    expect(csv[2]).toBe(`Delver of Secrets // Insectile Aberration,ISD,51,normal,en,${ID(3)},1`);
   });
 
   it('URL immagini solo da Scryfall e solo con ID validi', () => {

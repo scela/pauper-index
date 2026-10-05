@@ -52,11 +52,11 @@ export function fanItems(d: Data, idx: number, res: Result | null): FanItem[] {
   const items: FanItem[] = [];
   for (const list of groups.values()) {
     const owned = list.find((p) => ownedIds.has(p[0]));
-    const pick = owned || [...list].reverse().find((p) => !p[6]) || list[list.length - 1];
+    const pick = owned || [...list].reverse().find((p) => !p[7]) || list[list.length - 1];
     const s = d.prints.sets[pick[1]];
     items.push({
       id: pick[0], set: pick[1], cn: pick[2], artist: d.prints.artists[pick[3]] || '', setName: s?.[0] || pick[1].toUpperCase(),
-      date: s?.[1] || '', back: pick[5] === 1, owned: !!owned, lang: pick[6] || 'en',
+      date: s?.[1] || '', back: pick[5] === 1, owned: !!owned, lang: pick[7] || 'en',
     });
   }
   const seen = new Set(items.map((i) => i.id));

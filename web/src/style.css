@@ -68,6 +68,9 @@ h1 a{color:inherit;text-decoration:none}
 .qlist li[aria-selected="true"]{background:var(--accent-soft)}
 .qlist .qtag{flex:none;font-size:.75rem;color:var(--muted)}
 .qlist .qnone{color:var(--muted);cursor:default}
+.qlist li:has(.qaction){flex-direction:column;align-items:flex-start;gap:2px}
+.qlist .qnone-hint{color:var(--muted);font-size:.8125rem}
+.qlist .qaction{color:var(--accent);font-weight:500}
 .qres{display:flex;gap:14px;align-items:flex-start;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface)}
 .qres.is-owned{border-color:var(--accent)}
 .qimg{all:unset;flex:none;cursor:pointer;border-radius:7px}
@@ -108,6 +111,15 @@ textarea{font:inherit;font-size:16px;width:100%;min-height:64px;resize:vertical;
 .f-field{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
 .f-field select,.f-field input,.res-tools select,select{font:inherit;font-size:.875rem;min-height:34px;padding:4px 6px;border:1px solid var(--line-strong);border-radius:var(--r-s);background:var(--surface);color:var(--ink)}
 .f-field input{width:4.5em}
+.setwrap{display:flex;flex-direction:column;gap:4px}
+.setfield .setbox{position:relative}
+#setInput{font:inherit;font-size:.875rem;min-height:34px;width:min(260px,70vw);padding:4px 8px;border:1px solid var(--line-strong);border-radius:var(--r-s);background:var(--surface);color:var(--ink)}
+.setwrap.has-set #setInput{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);font-weight:500}
+.setwrap .qlist{min-width:min(360px,90vw);right:auto}
+.setopts{display:none;flex-wrap:wrap;gap:4px 14px;font-size:.8125rem}
+.setwrap.open .setopts,.setwrap.has-set .setopts{display:flex}
+.rarity{display:block;font-size:.8125rem;color:var(--muted);margin-top:1px}
+.rarity.is-common{color:var(--accent)}
 .chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
 .chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
 .chk input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
@@ -139,7 +151,6 @@ table{width:100%;border-collapse:collapse}
 .badge{display:inline-block;font-size:.6875rem;font-weight:600;padding:0 6px;border-radius:999px;border:1px solid currentColor;margin-left:6px;vertical-align:2px;text-transform:uppercase;letter-spacing:.02em}
 .badge.new{color:var(--accent)}
 .badge.banned,.badge.st-missing{color:var(--danger)}
-.badge.st-partial{color:var(--warn-ink);background:var(--warn-bg);border-color:transparent}
 .cards .nores td{color:var(--muted);text-align:center;padding:24px 8px}
 .btn.more{margin:12px auto 0;display:flex}
 

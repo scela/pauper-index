@@ -378,3 +378,63 @@ test('controllo rapido con la collezione: possesso anche per printing straniere 
   await page.selectOption('#period', '0');
   await expect(res).toContainText(tr('periodDesc.0'));
 });
+
+async function pickSet(page: Page, query: string, name: string): Promise<void> {
+  const input = page.locator('#setInput');
+  await input.click();
+  await input.fill(query);
+  await page.locator('#setList [role="option"]', { hasText: name }).first().click();
+  await expect(page.locator('#setWrap')).toHaveClass(/has-set/);
+}
+
+test('espansione: riepilogo, rarità "qui" e set d’ingresso, senza collezione', async ({ page }) => {
+  await setup(page);
+  await expect(page.locator('label[for="setInput"]')).toHaveText(tr('set.label'));
+  await page.locator('#setInput').click();
+  await expect(page.locator('#setList [role="option"]').first()).toBeVisible(); // elenco intero, dal più recente
+  await pickSet(page, 'masters 25', 'Masters 25');
+  const n = Number((await page.locator('#verdict').innerText()).replace(/[.,]/g, '').match(/\d+/)?.[0]);
+  expect(n).toBeGreaterThan(0);
+  await expect(page.locator('#verdict')).toHaveText(tr('set.summary', { n }));
+  await expect(page.locator('#sub')).toContainText('Masters 25 (2018)');
+  await page.fill('#search', 'lightning bolt');
+  const row = page.locator('#cardRows tr').first();
+  await expect(row).toContainText('Lightning Bolt');
+  await expect(row.locator('.rarity')).toHaveText(tr('set.notCommon', { rarity: tr('rarity.u'), set: 'Limited Edition Alpha', year: '1993' }));
+  await page.fill('#search', '');
+  await expect(page.locator('#cardRows .rarity.is-common').first()).toHaveText(tr('set.common'));
+  // togliere il filtro con Esc
+  await page.locator('#setInput').click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#setWrap')).not.toHaveClass(/has-set/);
+  await expect(page.locator('#verdict')).toContainText(translate(L, 'res.list', { n: 2 }).replace(/^2 /, ''));
+});
+
+test('espansione: set nascosti attivabili; con la collezione "ne possiedi" e "solo quelle che possiedi"', async ({ page }) => {
+  await setup(page);
+  const input = page.locator('#setInput');
+  await input.click();
+  await input.fill('secret lair drop');
+  await expect(page.locator('#setList')).toContainText(tr('set.noResults'));
+  // l'elenco propone di cercare anche tra i set nascosti (l'opzione sotto il campo è coperta dall'elenco)
+  await page.locator('#setList [role="option"]', { hasText: tr('set.searchHidden') }).click();
+  await expect(page.locator('#setList [role="option"]', { hasText: 'Secret Lair Drop' })).toBeVisible();
+  await expect(page.locator('#setHidden')).toBeChecked();
+  await input.press('Escape');
+  await page.mouse.click(5, 5);
+
+  await uploadCollection(page);
+  await pickSet(page, 'ice age', 'Ice Age');
+  // Brainstorm (stampa di Ice Age) e Counterspell (posseduta in Alpha, stampata anche in Ice Age): conta la carta
+  await expect(page.locator('#verdict')).toContainText(tr('set.summaryOwned', { n: 2 }).trim());
+  await expect(page.locator('label:has(#optMissing)')).toBeHidden();
+  // di default si vedono anche le mancanti (esplorazione)
+  await expect(page.locator('#cardRows')).toContainText(tr('badge.missing'));
+  await page.locator('label:has(#setOwned)').click();
+  await expect(page.locator('#cardRows tr')).toHaveCount(2);
+  const brainstorm = page.locator('#cardRows tr', { hasText: 'Brainstorm' });
+  const counterspell = page.locator('#cardRows tr', { hasText: 'Counterspell' });
+  await expect(brainstorm.locator('img.thumb.owned')).toHaveCount(1); // la stampa di Ice Age è tua
+  await expect(counterspell.locator('img.thumb.owned')).toHaveCount(0); // possiedi Counterspell, ma non di Ice Age
+});

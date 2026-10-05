@@ -75,3 +75,20 @@ def test_card_names_for_quick_check(db):
     assert names["Brainstorm"] == "l" and names["Gush"] == "b" and names["Rare Thing"] == "n"
     assert "Goblin" not in names  # token
     assert list(names) == sorted(names, key=str.casefold)
+
+
+def test_printings_have_rarity_and_sets_file(db):
+    from pauper_index.outputs import build_printings, build_sets
+    order = [oid("Fire // Ice"), oid("Brainstorm")]
+    sets_info = {
+        "apc": {"name": "Apocalypse", "released_at": "2001-06-04", "set_type": "expansion"},
+        "mh2": {"name": "Modern Horizons 2", "released_at": "2021-06-18", "set_type": "draft_innovation"},
+        "ice": {"name": "Ice Age", "released_at": "1995-06-03", "set_type": "expansion"},
+        "mmq": {"name": "Mercadian Masques", "released_at": "1999-10-04", "set_type": "expansion"},
+        "pmh2": {"name": "MH2 Promos", "released_at": "2021-06-18", "set_type": "promo", "parent_set_code": "mh2"},
+    }
+    _, rows = build_printings(db, order, sets_info)
+    assert [p[6] for p in rows[0]] == ["u", "c"]  # Fire // Ice: non comune in APC, comune in MH2
+    sets = build_sets(db, order, sets_info)
+    assert [s["c"] for s in sets] == ["mh2", "apc", "mmq", "ice"]  # dal più recente
+    assert sets[0] == {"c": "mh2", "n": "Modern Horizons 2", "d": "2021-06-18", "t": "draft_innovation"}

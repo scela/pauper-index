@@ -21,11 +21,11 @@ export function makeData(): Data {
     c,
   };
   const p: PrintRow[][] = [
-    [[ID(1), 'ice', '61', 0, 0, 0], [ID(2), 'mmq', '58', 1, 1, 0]],
-    [[ID(3), 'isd', '51', 2, 0, 1]],
-    [[ID(4), 'mmq', '69', 3, 0, 0]],
-    [[ID(5), 'lea', '288', 4, 0, 0]],
-    [[ID(6), 'ice', '212', 5, 0, 0], [ID(7), 'a25', '149', 6, 1, 0]],
+    [[ID(1), 'ice', '61', 0, 0, 0, 'c'], [ID(2), 'mmq', '58', 1, 1, 0, 'c']],
+    [[ID(3), 'isd', '51', 2, 0, 1, 'c']],
+    [[ID(4), 'mmq', '69', 3, 0, 0, 'c']],
+    [[ID(5), 'lea', '288', 4, 0, 0, 'c']],
+    [[ID(6), 'ice', '212', 5, 0, 0, 'c'], [ID(7), 'a25', '149', 6, 1, 0, 'u']],
   ];
   const prints: PrintingsFile = { v: 1, sets: { ice: ['Ice Age', '1995-06-03'], mmq: ['Mercadian Masques', '1999-10-04'] }, artists: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], p };
   const names: Record<string, number> = {

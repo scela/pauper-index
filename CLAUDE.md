@@ -208,7 +208,7 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
   - `r`: indice della printing di riferimento in `printings.json`.
 
 **`printings.json`**: `{v, sets: {codice: [nome, uscita]}, artists: [...], p}`
-- `p[i]`: printing della carta i di `cards.json`, nella forma `[scryfall_id, set, numero, indice artista, gruppo illustrazione, retro 0|1, (lingua se non en)]`.
+- `p[i]`: printing della carta i di `cards.json`, nella forma `[scryfall_id, set, numero, indice artista, gruppo illustrazione, retro 0|1, rarità c|u|r|m|s|b, (lingua se non en)]` (versione 2: la rarità è stata aggiunta con il filtro per espansione).
 - Il gruppo illustrazione numera gli `illustration_id` distinti della carta, e serve al ventaglio.
 - **Scostamento dalla spec**: non è una mappa id → carta, perché il frontend se la costruisce da qui. Così gli UUID non sono duplicati e i dati per le immagini stanno in un solo file.
 - URL delle immagini: `cards.scryfall.io/{small|normal|large}/{front|back}/{id[0]}/{id[1]}/{id}.jpg`.
@@ -218,6 +218,8 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 **`allnames.json`** (aggiunto in Fase 2): array dei nomi normalizzati di **tutte** le carte giocabili, circa 36.000 voci (250 KB compressi). Il frontend lo scarica solo quando il testo incollato contiene righe senza Scryfall ID e non presenti nella lista. Così distingue "carta mai giocata in Pauper" da "nome non riconosciuto".
 
 **`cardnames.json`** (aggiunto con la funzione 2): `[[nome, legalità l|b|n], …]` di tutte le carte giocabili in carta o su MTGO (escluse quelle solo Arena), ordinate per nome. Circa 33.800 voci, 246 KB compressi. Serve ai suggerimenti del controllo rapido; si scarica solo al primo uso del campo.
+
+**`sets.json`** (aggiunto con la funzione 3): `[{c, n, d, t, p?, g?}]`, cioè codice, nome, uscita, `set_type`, set padre, `g: 1` se solo digitale. Contiene i set in cui è stampata almeno una carta giocata, più i loro set padre, dal più recente. Circa 500 set, **8 KB compressi**; si scarica al primo uso del filtro.
 
 **`meta.json`**: generazione, ultimo torneo, totali per finestra, date dei bulk, commit della fonte, stato (`ok`/`ferma`), deduplica, statistiche di risoluzione.
 
@@ -323,7 +325,7 @@ Idee da valutare dopo la prima versione: `docs/IDEE.md`.
 
 **Layout** (rivisto su richiesta dopo la Fase 2: una sola funzione principale):
 1. **In alto**: titolo, riga dei dati ("Dati al …", con l'avviso se la fonte è ferma) e area di caricamento (file CSV o testo incollato). Dopo il caricamento l'area diventa la riga "Collezione: N carte · Sostituisci". "Sostituisci" riapre l'area, e il caricamento successivo **rimpiazza** la collezione.
-2. **Filtri** su una o due righe: periodo (menu con il numero di carte per periodo), minimo mazzi, solo legali, conta anche il side, conta le copie, ricerca. Ogni modifica aggiorna subito i risultati. Su mobile le opzioni stanno su una riga scorrevole.
+2. **Filtri** su una o due righe: periodo (menu con il numero di carte per periodo), minimo mazzi, espansione, solo legali, conta anche il side, ricerca. Ogni modifica aggiorna subito i risultati. Su mobile le opzioni stanno su una riga scorrevole.
    **Terre base** (Plains, Island, Swamp, Mountain, Forest, Wastes e le sei Snow-Covered, cioè le carte con flag `b` in `cards.json`): **sempre escluse** dalla lista e dai risultati, senza opzione nell'interfaccia (decisione dopo la Fase 2). Restano nei dati della pipeline: serviranno al calcolo dei mazzi costruibili, dove contano come sempre disponibili.
 3. **Risultati**:
    - intestazione "Possiedi N carte giocate in Pauper";
@@ -366,7 +368,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 
   Le righe con uno Scryfall ID sconosciuto (printing in altre lingue) si abbinano per nome, ma la miniatura usa il loro ID.
 - **Riepilogo dell'importazione**: righe lette, carte della lista, carte mai giocate in Pauper (Scryfall ID o nome in `allnames.json`), righe non riconosciute (elencate), righe senza set e numero (immagine di riferimento, segnalata anche nella scheda).
-- **"Conta le copie"**: confronto con la mediana delle copie (main+side, oppure solo main se "Conta anche il side" è spento) nella finestra scelta.
+- **"Conta le copie"**: opzione **tolta** su richiesta dell'utente (dopo la funzione 2). Una carta è posseduta se ne hai almeno una copia; export "1 Nome" e List riallineata con quantità 1. Le copie tipiche (mediana) restano solo come informazione, nella scheda e nel controllo rapido.
 - **Ventaglio**: un artwork per `illustration_id`, preferendo la printing posseduta, poi la più recente in inglese. Al massimo 7, più "Mostra tutte" che apre una griglia in un `<dialog>`. Le carte sono **distanziate e ruotate di pochi gradi, senza sovrapporsi**, per non coprire artista e copyright (regole di Scryfall). La carta attiva è mostrata intera e più grande.
 - **Persistenza**: IndexedDB (database `pauper-index`) per la collezione; localStorage solo per tema, ordinamento e filtro, con prefisso `pauper-index:`. "Cancella i miei dati" elimina il database e **solo** le chiavi `pauper-index:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
 - **Tabella**: pagine da 100 righe ("Mostra altre"). Ordinamento per percentuale di mazzi, nome, ultima apparizione (recente o meno recente). Filtro "viste negli ultimi 6 mesi / non viste da oltre 6 mesi", rispetto alla data dei dati.
@@ -446,6 +448,18 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Correzioni alla scheda della tabella**, trovate con questa funzione:
   - Esc chiude solo lo strato più in alto (prima la griglia "Mostra tutte", poi la scheda);
   - dopo una chiusura esplicita, né il ritorno del focus né il mouse fermo sulla riga riaprono la scheda; si riapre solo uscendo e rientrando con il mouse.
+
+## Filtro per espansione (funzione 3)
+
+- **Campo "Espansione"** nella barra dei filtri (`#setInput`, combobox come il controllo rapido): ricerca per nome o codice, anche dei set collegati, con le espansioni dalla più recente. Al focus mostra l'elenco intero. Esc chiude l'elenco; un secondo Esc (o la × del campo) toglie il filtro.
+- **Gruppi** (`lib/sets.ts`): il set principale è l'antenato senza padre lungo `parent_set_code`, come per le revisioni. Per esempio DMU raggruppa DMC e, se attivati, le promo PDMU.
+- **Nascosti di default, attivabili con un'opzione sotto il campo** (`isHiddenSet`): set di tipo promo, memorabilia, token e alchemy, set solo digitali, Secret Lair, The List, e i set il cui padre è Secret Lair o The List. Se la ricerca non trova nulla tra i set visibili, l'elenco propone "Cerca anche tra promo, Secret Lair…", perché l'opzione sotto il campo è coperta dall'elenco aperto.
+- **Vista per espansione**:
+  - la lista (con i filtri attivi) si restringe alle carte con almeno una stampa nei set del gruppo, **a qualsiasi rarità**: la legalità è della carta. Anche gli export seguono la selezione;
+  - riepilogo in testa: "In questo set: N carte giocate in Pauper", più " · ne possiedi M" con la collezione. M conta le carte possedute **in qualsiasi stampa**; la stampa di quel set, se è tua, ha il bordo sulla miniatura;
+  - immagine: la stampa del set principale (preferendo la comune), poi la comune, poi la prima;
+  - etichetta: "Comune qui", oppure "{Rarità} qui · comune in {set d'ingresso} ({anno})". Basta una stampa comune nel gruppo perché la carta sia "comune qui";
+  - senza collezione si esplora; con la collezione si vedono **tutte** le carte, con "mancante" sulle altre, e c'è l'opzione "Solo quelle che possiedi". L'opzione "Mostra anche le mancanti" in fondo si nasconde, perché qui non serve.
 
 ## Regola sui test (decisa dall'utente)
 

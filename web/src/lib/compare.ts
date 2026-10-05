@@ -11,11 +11,10 @@ export interface Opts {
   minDecks: number;
   legalOnly: boolean;
   side: boolean; // conta anche i mazzi che la giocano solo in side
-  qty: boolean; // "Conta le copie"
   proxies: boolean;
 }
 
-export const DEFAULT_OPTS: Opts = { win: 1, minDecks: 1, legalOnly: true, side: true, qty: false, proxies: false };
+export const DEFAULT_OPTS: Opts = { win: 1, minDecks: 1, legalOnly: true, side: true, proxies: false };
 
 export type Via = 'id' | 'setcn' | 'name' | 'none';
 
@@ -127,7 +126,7 @@ export interface Result {
   need: number;
   typical: number;
   share: number;
-  status: 'owned' | 'partial' | 'missing';
+  status: 'owned' | 'missing';
   prints: OwnedPrint[];
   binders: [string, number][];
 }
@@ -163,8 +162,8 @@ export function compute(d: Data, groups: Group[], roles: Record<string, Role>, o
     const e = coll.get(idx);
     const owned = e ? e.total : 0;
     const typical = typicalCopies(c, o);
-    const need = o.qty ? typical : 1;
-    const status = owned >= need ? 'owned' : owned > 0 ? 'partial' : 'missing';
+    const need = 1; // una copia basta (l'opzione "Conta le copie" è stata tolta)
+    const status = owned > 0 ? 'owned' : 'missing';
     return {
       idx, owned, need, typical, share: deckShare(d, c, o), status,
       prints: e ? [...e.prints.values()].sort((a, b) => b.q - a.q) : [],

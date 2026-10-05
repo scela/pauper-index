@@ -53,6 +53,12 @@ for (const [name, opts] of shots) {
   await page.keyboard.press('Enter');
   await settle(page);
   await page.screenshot({ path: `${OUT}/${name}-5-controllo-risultato.png` });
+  await page.click('#setInput');
+  await page.fill('#setInput', 'masters 25');
+  await page.locator('#setList [role="option"]').first().click();
+  await page.locator('#verdict').scrollIntoViewIfNeeded();
+  await settle(page);
+  await page.screenshot({ path: `${OUT}/${name}-6-espansione.png` });
   console.log(`${name}: ok`);
   await ctx.close();
 }
