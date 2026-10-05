@@ -11,7 +11,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
 ## Stato
 
 - [x] Fase 0: setup e ispezione dei formati
-- [ ] Fase 1: pipeline in locale, test, confronto con la baseline
+- [x] Fase 1: pipeline in locale, test, confronto con la baseline
 - [ ] Fase 2: frontend
 - [ ] Fase 3: GitHub Actions e deploy
 - [ ] Fase 4: rifinitura e README
@@ -79,7 +79,7 @@ Nell'albero tutti i file Pauper contengono `pauper` minuscolo o con l'iniziale m
 
 **Selezione**:
 - `pauper` nel nome del file, senza distinzione di maiuscole;
-- esclusione di cube, limited, draft, sealed e 2HG **solo sul nome del file**, mai sul percorso.
+- esclusione di cube, limited, draft, sealed e 2HG **solo sul nome del file e come parola intera** (separata da `-`, `_`, spazio o punto), mai sul percorso. "pauper-1k-ticketpalooza-**cubecon**-dmv" è un torneo Pauper constructed giocato alla convention CubeCon (`Formats: "Pauper"`, 306 mazzi in due eventi) e non va escluso. Al 2026-10-05 nessun file viene escluso.
 
 **Schema JSON** (uguale in tutte le cartelle):
 ```
@@ -94,11 +94,48 @@ Nell'albero tutti i file Pauper contengono `pauper` minuscolo o con l'iniziale m
 **Duplicati**:
 - Le cartelle di archivio replicano gli stessi tornei MTGO, e `mtgo.com_limited_data` replica alcuni tornei di melee.gg e CardsRealm.
 - Lo stesso `Uri` **non** basta come chiave. I tornei a squadre hanno un file per posto con lo stesso Uri e mazzi diversi, e alcune League MTGO o eventi melee ricorrenti riusano l'Uri con contenuti diversi.
-- Regola di deduplica: vedi le decisioni in sospeso.
+- Regola di deduplica: vedi "Deduplica" più sotto.
+
+**Cosa contengono i dati MTGO** (verificato in Fase 1):
+- **League**: da sempre solo le liste 5-0 (`Result` nella forma `5-0`); `Standings` è vuoto.
+- **Challenge, dal 2024-06-20**: solo i primi 32 mazzi, anche quando gli iscritti erano di più (per esempio `Standings` con 67 righe e 32 mazzi). Prima, la mediana era di 64 mazzi per Challenge.
+
+Quindi le percentuali MTGO recenti sovrastimano i mazzi vincenti. Va spiegato nella pagina Informazioni.
+
+**Stato del progetto**: il README della fonte lo dichiara non più mantenuto attivamente (scraper melee.gg rotto dal 2025-03-19 secondo il README; nei fatti i file melee arrivano ancora). L'allarme "fonte ferma" è **prioritario**.
+
+**`Result`**: due forme, `"Nth Place"` (`1st`, `2nd`, `3rd`, `9th`…) oppure il record `"W-L"` (League, `5-0`). Si normalizza in `{rank: N}` o `{record: "5-0"}`, e il valore grezzo si conserva se non corrisponde a nessuna delle due forme.
+
+**Privacy**: `AnchorUri` contiene il nome del giocatore in tutti i link mtgo.com (`#deck_<giocatore>`) e in molti magic.wizards.com (`#<giocatore>_…`). Gli altri link (melee, moxfield, cardsrealm) puntano a pagine personali. **Non si salva mai `AnchorUri`**: solo `Tournament.Uri`.
+
+**MTGO o cartaceo**: si classifica in base all'host di `Tournament.Uri`. `mtgo.com`, `magic.wizards.com` e `manatraders.com` (Manatraders Series, giocate su MTGO) contano come MTGO; tutto il resto conta come "cartaceo e altre piattaforme".
+
+## Deduplica (approvata)
+
+1. **File identici**: se due file hanno lo stesso multinsieme di mazzi (main e side), se ne tiene uno solo. Hanno la precedenza le cartelle attive, poi l'archivio.
+2. **Stesso mazzo nello stesso giorno, con tolleranza di ±1 giorno**: si applica **solo dentro una famiglia di copie della stessa fonte**:
+   - famiglia MTGO: `mtgo.com_limited_data` > `mtgo.com` > `mtgo.com_before_new_data_model` > `magic.wizards.com`;
+   - famiglia melee: `melee.gg` > `melee.gg_manual_scraping`;
+   - le altre cartelle sono famiglie a sé.
+
+   Un file di `mtgo.com_limited_data` il cui `Tournament.Uri` non è mtgo.com (copie di melee o CardsRealm) appartiene alla famiglia del suo host.
+
+   Un mazzo si scarta solo se lo stesso mazzo è già stato tenuto **da un'altra cartella della stessa famiglia**, entro ±1 giorno, e quel mazzo non è già stato abbinato a un altro mazzo della stessa cartella. In pratica vale il massimo per cartella, non la somma. **Mai tra fonti diverse.**
+
+   I mazzi identici dentro lo stesso file sono giocatori diversi e si contano tutti.
+3. **Log** in `data/reviews/dedup.json`: unioni per coppia di cartelle e per anno.
 
 ## Scryfall (verificato in Fase 0)
 
 - `GET https://api.scryfall.com/bulk-data` con User-Agent descrittivo e `Accept: application/json`.
+- **Limiti di frequenza** (scryfall.com/docs/api/rate-limits):
+  - `/cards/search`, `/cards/named`, `/cards/random` e `/cards/collection`: **500 ms** tra una richiesta e l'altra; tutti gli altri endpoint: 100 ms. I 50–100 ms della spec valgono solo per i secondi.
+  - Un 429 blocca l'accesso per 30 secondi, e insistere può portare al ban. Il client usa 550 ms per gli endpoint lenti; dopo un 429 aspetta 35 secondi e si arrende dopo due tentativi.
+  - I file su `*.scryfall.io` (bulk e immagini) non hanno limiti di frequenza.
+- **Regole d'uso dei dati**:
+  - niente loghi Scryfall né endorsement implicito;
+  - niente paywall;
+  - non "ripubblicare o fare da proxy" ai dati senza aggiungere valore. Noi pubblichiamo solo il sottoinsieme che serve al confronto.
 - Ogni voce ha `type`, `updated_at`, `jsonl_download_uri` e `compressed_size`. **Non** ci sono più `download_uri` né `size`.
 - I file sono **JSONL compressi con gzip** (un oggetto per riga): si leggono in streaming con `gzip` e `json` della libreria standard, senza `ijson`.
 
@@ -109,6 +146,68 @@ Nell'albero tutti i file Pauper contengono `pauper` minuscolo o con l'iniziale m
 | `all_cards` | 395 MB | tutte le lingue | non usato |
 
 - In `default_cards`, 83 printing non hanno `oracle_id` al livello principale (reversible card: l'id sta in `card_faces`).
+- **Nomi alternativi solo nelle printing**: le printing MTGO di OM1 hanno un `printed_name` diverso (per esempio "Darval, Whose Web Protects" = "Spider-Man, Web-Slinger"). L'indice dei nomi usa quindi anche `printed_name` e `flavor_name` di `default_cards`.
+- **Layout `prepare`** (set SOS): la seconda faccia porta il nome di una carta esistente (per esempio "Harmonized Trio // Brainstorm"). Priorità nell'indice: nome completo di una carta giocabile > nome di una faccia > `printed_name`/`flavor_name`. Si escludono gli `art_series`.
+- **Nomi in altre lingue**: `GET /cards/search?q=lang:any !"<nome>"` trova il nome stampato in qualsiasi lingua, anche senza accenti. Con le virgolette ma senza `!` non funziona.
+- **Immagini**: `https://cards.scryfall.io/{small|normal|large}/{front|back}/{id[0]}/{id[1]}/{id}.jpg?{ts}`. Funzionano anche senza `?ts`, quindi l'URL si ricava dallo Scryfall ID di qualsiasi printing, anche di quelle non presenti in `default_cards` (lingue diverse).
+
+## Pipeline: comandi
+
+```powershell
+.\.venv\Scripts\python -m celho_pipeline build      # aggiorna fonte e bulk, ricalcola, scrive data/
+.\.venv\Scripts\python -m celho_pipeline sets       # data/reviews/set-ingresso.md
+.\.venv\Scripts\python -m celho_pipeline baseline   # data/reviews/baseline-2026-09-14.md
+#   --offline: niente rete (usa cache e fuzzy_matches.csv); --no-fetch: non aggiorna la fonte
+.\.venv\Scripts\python -m pytest pipeline; .\.venv\Scripts\ruff check pipeline
+```
+
+Tempi in locale: build offline circa 26 s; prima build online circa 90 s (circa 120 richieste Scryfall a 0,55 s, poi in cache).
+
+## Output della pipeline (`data/`)
+
+Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff leggibili.
+
+**`cards.json`**: `{v, anchor, w, tot, sets, t, c}`
+- `anchor`: data dell'ultimo mazzo; le finestre sono ancorate qui.
+- `w`: `[61, 365, 730, 0]`, dove 0 = storico.
+- `tot[i]`: `[mazzi, tornei]` della finestra i.
+- `sets`: `{codice: [nome, uscita, set_type]}` dei set d'ingresso.
+- `t`: tornei citati dalle ultime apparizioni, `[data, nome, Tournament.Uri, "m"|"p"]`.
+- `c`: una carta per riga, ordinate per nome:
+  - `o` oracle_id; `n` nome; `l` legalità `l|b|n`; `b` 1 se terra base; `e` set d'ingresso (solo per le carte legali o bannate);
+  - `s[i]`: `0` oppure `[mazzi main+side, mazzi main, copie totali, mediana copie main+side, mediana copie main]`;
+  - `f` / `z`: prima e ultima apparizione;
+  - `lm` / `lp`: ultima apparizione MTGO e cartacea, `[indice in t, risultato (rank intero o "5-0"), copie main, copie side]`;
+  - `r`: indice della printing di riferimento in `printings.json`.
+
+**`printings.json`**: `{v, sets: {codice: [nome, uscita]}, artists: [...], p}`
+- `p[i]`: printing della carta i di `cards.json`, nella forma `[scryfall_id, set, numero, indice artista, gruppo illustrazione, retro 0|1, (lingua se non en)]`.
+- Il gruppo illustrazione numera gli `illustration_id` distinti della carta, e serve al ventaglio.
+- **Scostamento dalla spec**: non è una mappa id → carta, perché il frontend se la costruisce da qui. Così gli UUID non sono duplicati e i dati per le immagini stanno in un solo file.
+- URL delle immagini: `cards.scryfall.io/{small|normal|large}/{front|back}/{id[0]}/{id[1]}/{id}.jpg`.
+
+**`names.json`**: `{nome normalizzato: indice carta}` (nome, facce, `printed_name`/`flavor_name`), senza le chiavi ambigue. La normalizzazione è `names.norm`; i vettori di prova sono in `pipeline/tests/fixtures/norm_vectors.json`.
+
+**`meta.json`**: generazione, ultimo torneo, totali per finestra, date dei bulk, commit della fonte, stato (`ok`/`ferma`), deduplica, statistiche di risoluzione.
+
+**`reviews/`** (non mostrato nel sito: contiene testo grezzo delle decklist):
+- `unresolved.csv`, `risoluzione.csv` (ogni match non esatto, con il numero di mazzi);
+- `dedup.json`;
+- `set-ingresso.md`;
+- `baseline-2026-09-14.md`.
+
+**`manual/`**:
+- `aliases.csv` (`sorgente,corretto`);
+- `exclude.csv` (`nome,motivo`);
+- `fuzzy_matches.csv`: esiti delle ricerche online, generato e committato. Si può correggere a mano: si cambia `esito` (`accettato` o altro) e la CI non rifà la ricerca.
+
+**Dimensioni** (2026-10-05):
+
+| File | Grezzo | gzip |
+|---|---|---|
+| `cards.json` | 1,22 MB | 0,35 MB |
+| `printings.json` | 1,46 MB | 0,70 MB |
+| `names.json` | 0,13 MB | 0,05 MB |
 
 ## Decisioni prese
 
@@ -124,8 +223,70 @@ Nell'albero tutti i file Pauper contengono `pauper` minuscolo o con l'iniziale m
   - niente Google Fonts (servire il font dal sito o usare quello di sistema);
   - IndexedDB al posto di `localStorage`;
   - i ruoli diventano "mie carte" e "ignora".
-- Set d'ingresso: prima printing `rarity == common` con `games` che contiene `paper` o `mtgo`, esclusi i `set_type` memorabilia e token. Si raggruppa per `parent_set_code`, da valutare sull'elenco reale.
+- **Set d'ingresso** (validato in Fase 1): prima printing con
+  - `rarity == common`;
+  - `games` che contiene `paper` o `mtgo`;
+  - `released_at` ≤ oggi.
+
+  Si escludono le printing di set `memorabilia` o `token`, con `border_color == silver` o con `security_stamp == acorn`. I set `funny` **non** si escludono in blocco: le common di Unfinity senza acorn sono legali. Il set d'ingresso si assegna solo alle carte che Scryfall dà legali o bannate; la legalità di Scryfall resta la fonte autorevole. Con questa regola nessuna carta legale resta senza set d'ingresso.
+- **Set rilevante**: si raggruppa per `parent_set_code`, così om1 + spe + spm fanno un gruppo e fdn + j25 un altro. Elenco da approvare (vedi le decisioni in sospeso).
+
+- Ultima apparizione: due record separati, MTGO e cartaceo. Ognuno contiene data, nome del torneo, tipo di fonte, piazzamento normalizzato, copie in main e in side, `Tournament.Uri`. Mai `AnchorUri` né `Player`.
+
+## Requisiti aggiuntivi (decisi dopo la Fase 0)
+
+### Immagini delle carte (dati in Fase 1, interfaccia in Fase 2)
+- **Miniature nei risultati**:
+  - per le carte possedute: la printing posseduta, ricavata dallo Scryfall ID dell'export; se le printing possedute sono più di una, si mostrano tutte;
+  - per le carte mancanti: la printing di riferimento.
+- **Ventaglio** al passaggio del cursore, al tocco o con il focus da tastiera:
+  - mostra le printing con artwork diversi, raggruppate per `illustration_id`;
+  - se gli artwork sono più di 7, ne mostra 7 più un pulsante "Mostra tutte" che apre una griglia;
+  - la carta attiva è sempre interamente visibile;
+  - sotto la carta attiva: set, anno, numero di collezione, artista e ultima apparizione;
+  - le printing possedute sono segnate con un bordo o un'etichetta.
+- **Regole di Scryfall sulle immagini**:
+  - non coprire né tagliare artista e copyright;
+  - non deformare, non desaturare, non ricolorare: niente carte in grigio per quelle mancanti;
+  - niente watermark.
+- **Caricamento**: dal CDN `cards.scryfall.io`, formato `small` nella lista e `normal`/`large` nel ventaglio, sempre lazy. Per le bifronte si mostra il fronte, con la possibilità di girarla.
+- **Dati salvati dalla pipeline** per le printing delle carte giocate: id, set, numero, `illustration_id`, data, artista, facce, percorso delle immagini. Si misurano le dimensioni; se crescono troppo, i dettagli delle printing si caricano solo quando servono.
+
+### Legale e trasparenza (sito gratuito, usato anche da amici)
+- **Pagina "Informazioni"**, raggiungibile da ogni schermata, con:
+  - il testo **esatto** della Fan Content Policy di Wizards, letto da `company.wizards.com/en/legal/fancontentpolicy`;
+  - la non affiliazione con Wizards, ManaBox e Scryfall;
+  - i crediti (Scryfall, MTGODecklistCache e i siti di origine);
+  - i limiti dei dati (vedi "Cosa contengono i dati MTGO") e la data dell'aggiornamento;
+  - come segnalare un errore.
+- **Nessun logo né simbolo** di Wizards (simboli di mana compresi), ManaBox o Scryfall.
+- **Nota privacy**: nessun account, nessun cookie, nessuna analytics; la collezione resta nel browser; GitHub Pages può registrare dati tecnici di accesso; le immagini arrivano dai server di Scryfall.
+
+### Sicurezza
+- **Mai `innerHTML` con dati esterni** (CSV, nomi, report): si usa `textContent` o un escaping centralizzato. Va aggiunto un test con un CSV malevolo.
+- **CSP con meta tag**:
+  - nessuno script esterno;
+  - `connect-src 'self'`;
+  - `img-src 'self' https://cards.scryfall.io`;
+  - font serviti dal sito stesso.
+- Dipendenze npm e Python al minimo, con lockfile.
+- Actions di terze parti fissate per SHA; Dependabot attivo.
+- Permessi minimi nei workflow; nessun segreto.
+- Pulsante **"Cancella i miei dati"**, che svuota IndexedDB e localStorage.
+- Il report dei non risolti (testo grezzo delle decklist) **non va mostrato nel sito**.
+
+### Uso da parte di altri
+- Deve funzionare con l'export di qualsiasi utente ManaBox: singoli Binder o collezione intera, qualsiasi lingua, con messaggi chiari se il file non viene riconosciuto.
+- Manifest per "Aggiungi a schermata Home".
+
+### Ultima apparizione (dati in Fase 1, interfaccia in Fase 2)
+- I dati sono descritti nelle decisioni prese.
+- Interfaccia: l'ultima apparizione si mostra sotto la carta, nel ventaglio e nella scheda. Si può ordinare e filtrare per data (per esempio "non più vista da oltre 6 mesi").
+
+Idee da valutare dopo la prima versione: `docs/IDEE.md`.
 
 ## Decisioni in sospeso
 
-- Regola di deduplica dei tornei e dei mazzi tra cartelle: proposta nel report della Fase 0.
+- **Set rilevanti**: elenco degli ultimi 2 anni in `data/reviews/set-ingresso.md`, da approvare (revisione per gruppo o per set).
+- **Tolleranza per le League dell'archivio**: in `mtgo.com_before_new_data_model` le League sono raccolte settimanali delle liste 5-0 di `mtgo.com`, datate dal giorno della pubblicazione: da −6 a +8 giorni rispetto all'originale. Con ±1 giorno restano circa 9.200 duplicati (2018–2023, solo nello storico). Proposta: `league_tolerance=8` in `dedup.dedupe`. Oggi resta ±1, come approvato.
+- **Snapshot e report di revisione**: rimandati alla Fase 3, insieme al workflow.

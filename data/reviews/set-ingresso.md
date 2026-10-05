@@ -1,0 +1,195 @@
+# Set d'ingresso: validazione della regola
+
+Generato il 2026-10-05. Regola: prima printing `common` con `games` che contiene `paper` o `mtgo`, uscita entro oggi; escluse le printing di set memorabilia o token, con bordo argentato o con timbro acorn (Unfinity).
+
+- Carte legali o bannate senza printing d'ingresso: **0** (giocate: 0)
+- Carte con printing d'ingresso ma `not_legal`: **155**
+
+## Legali o bannate senza printing d'ingresso
+
+
+## Con printing d'ingresso ma non legali
+
+- A Container of Booster Packs (unk, funny)
+- Aggressive Detective (unk, funny)
+- Ancestral Hot Dog Minotaur (sunf, funny)
+- Applied Aeronautics (ust, funny)
+- Artifact Unknown Shores (unk, funny)
+- Auto-Key (ust, funny)
+- Azra Matchthrower (unk, funny)
+- Believe in the Cleave (unk, funny)
+- Blended Twistling (unk, funny)
+- Boomflinger (ust, funny)
+- Burn the Phyresis (unk, funny)
+- Buzz Buggy (ust, funny)
+- Carnival Elephant Meteor (sunf, funny)
+- Catch-Up Mechanic (unk, funny)
+- Chic // Ago (unk, funny)
+- Clown Extruder (unf, funny)
+- Color Pie (unk, funny)
+- Command Mine (unk, funny)
+- Command Power Plant (unk, funny)
+- Common Curve Filler (unk, funny)
+- Contortionist Otter Storm (sunf, funny)
+- Cool Fluffy Loxodon (sunf, funny)
+- Costume Shop (unf, funny)
+- Cursed Firebreathing Yogurt (sunf, funny)
+- Cursed Rack (ren, masters)
+- Deep-Fried Plague Myr (sunf, funny)
+- Demon Detective (unk, funny)
+- Demonic Tourist Laser (sunf, funny)
+- Dictation Quillograph (ust, funny)
+- Division Table (ust, funny)
+- Drake with Set's Mechanic (unk, funny)
+- Drive to Work (unk, funny)
+- Drop Tower (unf, funny)
+- Educated Detective (unk, funny)
+- Eldrazi Guacamole Tightrope (sunf, funny)
+- Elemental Time Flamingo (sunf, funny)
+- Emerin, Shivan Angel (unk, funny)
+- Establishing Shot (unk, funny)
+- Eternal Acrobat Toast (sunf, funny)
+- Familiar Beeble Mascot (sunf, funny)
+- Fast // Furious (unk, funny)
+- Fear (split card) // Loathing (unk, funny)
+- Fear of Going 0-2 Drop (unk, funny)
+- Fear of Unsleeved Decks (unk, funny)
+- Foam Weapons Kiosk (unf, funny)
+- Fortune Teller (unf, funny)
+- Garruk's Lost Wolf // Hey, Has Anyone Seen Garruk? (unk, funny)
+- Geek Lotus Warrior (sunf, funny)
+- Giant Mana Cake (sunf, funny)
+- Goblin Coward Parade (sunf, funny)
+- Growing Detective (unk, funny)
+- Happy Dead Squirrel (sunf, funny)
+- Head Banger (ust, funny)
+- I'm Going On An Adventure! (unk, funny)
+- Illuminating Detective (unk, funny)
+- Incisor Steed (unk, funny)
+- Inflation Station (ust, funny)
+- Investi-Gate (unk, funny)
+- Irrefutable Evidence (unk, funny)
+- Item Crate (unk, funny)
+- Jetpack Death Seltzer (sunf, funny)
+- Join the Winning Team (unk, funny)
+- Joraga Peach (unk, funny)
+- Karlov's Crossbow (unk, funny)
+- Kiddie Coaster (unf, funny)
+- Lackey Recycler (ust, funny)
+- Leisure Bicycle (unk, funny)
+- Life at Stake (unk, funny)
+- Literal Delver of Secrets (unk, funny)
+- Long-Term Phyresis Study (unk, funny)
+- Mandatory Friendship Shackles (ust, funny)
+- Mark Ritual (unk, funny)
+- May of the Machine (unk, funny)
+- May the Mana Be with You (unk, funny)
+- Melira's Snacks (unk, funny)
+- Merfolk Surveyor (unk, funny)
+- Misunderstood Trapeze Elf (sunf, funny)
+- More of That Strange Oil... (unk, funny)
+- My Deck is About a Seven (unk, funny)
+- Mystic Doom Sandwich (sunf, funny)
+- Narrow-Minded Baloney Fireworks (sunf, funny)
+- Naturalize the Phyresis (unk, funny)
+- Night Brushwagg Ringmaster (sunf, funny)
+- Notorious Sliver War (sunf, funny)
+- Now THIS Is Aether Racing (unk, funny)
+- One Does Not (unk, funny)
+- Peel Out (unk, funny)
+- Phyrexian Esthetician (unk, funny)
+- Phyrexian Midway Bamboozle (sunf, funny)
+- Phyrexian Ornithopter (unk, funny)
+- Pick-a-Beeble (unf, funny)
+- Playable Delusionary Hydra (sunf, funny)
+- Point to the Scoreboard (unk, funny)
+- Potatoes (unk, funny)
+- Primal Elder Kitty (sunf, funny)
+- Quick-Stick Lick Trick (ust, funny)
+- Red Mana (sld, box)
+- Reverse Ninja (unk, funny)
+- Sap Sucker (ust, funny)
+- Sassy Gremlin Blood (sunf, funny)
+- Shadowmoor Draw Spell (unk, funny)
+- Shedding Snake (unk, funny)
+- Simic Slaw (unk, funny)
+- Slimy Burrito Illusion (sunf, funny)
+- Snazzy Aether Homunculus (sunf, funny)
+- Sojourner's Enforcermite (unk, funny)
+- Space Fungus Snickerdoodle (sunf, funny)
+- Spare Changeling (unk, funny)
+- Spinny Ride (unf, funny)
+- Spooky Clown Mox (sunf, funny)
+- Squid Fire Knight (sunf, funny)
+- Squishy Sphinx Ninja (sunf, funny)
+- Sticker sheet (sld, box)
+- Sticky Kavu Daredevil (sunf, funny)
+- Storm Counter (sld, box)
+- Syr Konrad's Squire (unk, funny)
+- Take the High Ground (unk, funny)
+- Tarkir Omenpath (unk, funny)
+- Taught by Bruce Tarl (unk, funny)
+- Taught by Narset (unk, funny)
+- Taught by Serra (unk, funny)
+- Taught by Surrak (unk, funny)
+- Taught by Vito (unk, funny)
+- That's No Moonmist (unk, funny)
+- The Forgotten Place (unk, funny)
+- Toe-Breaking Helmet (unk, funny)
+- Top-Secret Tunnel (ust, funny)
+- Trained Blessed Mind (sunf, funny)
+- Tread Mill (ust, funny)
+- Trendy Circus Pirate (sunf, funny)
+- Twiddlestick Charger (ust, funny)
+- Unassuming Gelatinous Serpent (sunf, funny)
+- Unclaimed Bird (unk, funny)
+- Unclaimed Blessing (unk, funny)
+- Unclaimed Cat (unk, funny)
+- Unclaimed Tanadon (unk, funny)
+- Underdog Racer (unk, funny)
+- Unglued Pea-Brained Dinosaur (sunf, funny)
+- Unhinged Beast Hunt (sunf, funny)
+- Unicycling Automaton (unk, funny)
+- Unique Charmed Pants (sunf, funny)
+- Unknown Event Shores (unk, funny)
+- Unsanctioned Ancient Juggler (sunf, funny)
+- Unstable Robot Dragon (sunf, funny)
+- Urza's Dark Cannonball (sunf, funny)
+- Vampire Champion Fury (sunf, funny)
+- Weird Angel Flame (sunf, funny)
+- Werewolf Lightning Mage (sunf, funny)
+- Wicked // Cursed (plst, masters)
+- Wild Ogre Bupkis (sunf, funny)
+- Wistful Puppeteer (unk, funny)
+- Wrinkly Monkey Shenanigans (sunf, funny)
+- Yawgmoth Merfolk Soul (sunf, funny)
+- Your Mana Rock (unk, funny)
+- Zombie Cheese Magician (sunf, funny)
+
+## Set degli ultimi 2 anni (soglia 5 carte)
+
+`ingresso` = carte che entrano nel Pauper con quel set; `gruppo` = somma sul `parent_set_code`.
+
+| uscita | set | nome | tipo | digitale | ingresso | giocate | gruppo | tot. gruppo | rilevante (set) | rilevante (gruppo) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 2024-11-15 | fdn | Foundations | core |  | 46 | 22 | fdn | 60 | **sì** | **sì** |
+| 2024-11-15 | j25 | Foundations Jumpstart | draft_innovation |  | 14 | 3 | fdn | 60 | **sì** | **sì** |
+| 2025-01-24 | inr | Innistrad Remastered | masters |  | 16 | 7 | inr | 16 | **sì** | **sì** |
+| 2025-02-14 | dft | Aetherdrift | expansion |  | 78 | 32 | dft | 78 | **sì** | **sì** |
+| 2025-04-11 | tdm | Tarkir: Dragonstorm | expansion |  | 78 | 38 | tdm | 78 | **sì** | **sì** |
+| 2025-06-13 | fin | Final Fantasy | expansion |  | 89 | 49 | fin | 89 | **sì** | **sì** |
+| 2025-08-01 | eoe | Edge of Eternities | expansion |  | 78 | 33 | eoe | 78 | **sì** | **sì** |
+| 2025-09-23 | om1 | Through the Omenpaths | expansion | sì | 64 | 33 | spm | 69 | **sì** | **sì** |
+| 2025-09-26 | spe | Marvel's Spider-Man Eternal | eternal |  | 5 | 0 | spm | 69 | **sì** | **sì** |
+| 2025-09-26 | spm | Marvel's Spider-Man | expansion |  | 0 | 0 | spm | 69 |  | **sì** |
+| 2025-11-21 | tla | Avatar: The Last Airbender | expansion |  | 89 | 44 | tla | 124 | **sì** | **sì** |
+| 2025-11-21 | tle | Avatar: The Last Airbender Eternal | eternal |  | 35 | 5 | tla | 124 | **sì** | **sì** |
+| 2026-01-23 | ecl | Lorwyn Eclipsed | expansion |  | 78 | 36 | ecl | 78 | **sì** | **sì** |
+| 2026-03-06 | tmc | Teenage Mutant Ninja Turtles Eternal | eternal |  | 8 | 1 | tmt | 72 | **sì** | **sì** |
+| 2026-03-06 | tmt | Teenage Mutant Ninja Turtles | expansion |  | 64 | 29 | tmt | 72 | **sì** | **sì** |
+| 2026-04-24 | sos | Secrets of Strixhaven | expansion |  | 80 | 46 | sos | 80 | **sì** | **sì** |
+| 2026-06-26 | msc | Marvel Super Heroes Commander | commander |  | 66 | 9 | msh | 150 | **sì** | **sì** |
+| 2026-06-26 | msh | Marvel Super Heroes | expansion |  | 84 | 27 | msh | 150 | **sì** | **sì** |
+| 2026-08-14 | hob | The Hobbit | expansion |  | 64 | 21 | hob | 64 | **sì** | **sì** |
+| 2026-09-02 | slz | The Zeta Set | box |  | 12 | 8 | slz | 12 | **sì** | **sì** |
+| 2026-10-02 | fra | Reality Fracture | expansion |  | 78 | 4 | fra | 78 | **sì** | **sì** |

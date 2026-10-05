@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-10-05T10:15:04+00:00",
+  "last_tournament": "2026-10-04",
+  "tournaments": 7326,
+  "decks": 164604,
+  "windows": [
+    {
+      "days": 61,
+      "decks": 5790,
+      "tournaments": 237
+    },
+    {
+      "days": 365,
+      "decks": 32848,
+      "tournaments": 1178
+    },
+    {
+      "days": 730,
+      "decks": 51900,
+      "tournaments": 1951
+    },
+    {
+      "days": null,
+      "decks": 164604,
+      "tournaments": 7326
+    }
+  ],
+  "cards": 5037,
+  "scryfall": {
+    "oracle_cards": "2026-10-05T09:01:54.697+00:00",
+    "default_cards": "2026-10-05T09:05:54.625+00:00"
+  },
+  "source": {
+    "commit": "aba62d6091b463396ab1308d2682f1f7cf96b5a3",
+    "commit_date": "2026-10-05T05:16:51+02:00",
+    "url": "https://github.com/Jiliac/MTGODecklistCache.git",
+    "status": "ok",
+    "days_since_last_tournament": 1
+  },
+  "dedup": {
+    "before": {
+      "tournaments": 8596,
+      "decks": 206836,
+      "tornei_senza_mazzi": 0
+    },
+    "after": {
+      "tournaments": 7326,
+      "decks": 164604
+    }
+  },
+  "resolution": {
+    "distinct_names": 5259,
+    "methods": {
+      "alias": 22,
+      "alt": 15,
+      "exact": 5048,
+      "excluded": 4,
+      "face": 54,
+      "foreign": 108,
+      "unresolved": 8
+    },
+    "unresolved_occurrences": 8,
+    "occurrences": 4129790,
+    "unresolved_pct": 0.0002
+  }
+}

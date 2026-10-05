@@ -1,0 +1,345 @@
+{
+  "prima": {
+    "tournaments": 8596,
+    "decks": 206836,
+    "tornei_senza_mazzi": 0
+  },
+  "dopo": {
+    "tournaments": 7326,
+    "decks": 164604
+  },
+  "regola1_file_identici": [
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "magic.wizards.com",
+      "anno": 2014,
+      "tornei": 8,
+      "mazzi": 81
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "magic.wizards.com",
+      "anno": 2015,
+      "tornei": 23,
+      "mazzi": 475
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "magic.wizards.com",
+      "anno": 2016,
+      "tornei": 2,
+      "mazzi": 8
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2015,
+      "tornei": 25,
+      "mazzi": 73
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2017,
+      "tornei": 32,
+      "mazzi": 1024
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2018,
+      "tornei": 56,
+      "mazzi": 1792
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2019,
+      "tornei": 58,
+      "mazzi": 1728
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2020,
+      "tornei": 101,
+      "mazzi": 3059
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2021,
+      "tornei": 120,
+      "mazzi": 3459
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2022,
+      "tornei": 97,
+      "mazzi": 2984
+    },
+    {
+      "scartata": "melee.gg",
+      "tenuta": "melee.gg",
+      "anno": 2024,
+      "tornei": 1,
+      "mazzi": 16
+    },
+    {
+      "scartata": "melee.gg",
+      "tenuta": "melee.gg",
+      "anno": 2025,
+      "tornei": 3,
+      "mazzi": 22
+    },
+    {
+      "scartata": "melee.gg",
+      "tenuta": "melee.gg",
+      "anno": 2026,
+      "tornei": 3,
+      "mazzi": 65
+    },
+    {
+      "scartata": "melee.gg_manual_scraping",
+      "tenuta": "melee.gg",
+      "anno": 2022,
+      "tornei": 1,
+      "mazzi": 32
+    },
+    {
+      "scartata": "melee.gg_manual_scraping",
+      "tenuta": "melee.gg",
+      "anno": 2023,
+      "tornei": 4,
+      "mazzi": 182
+    },
+    {
+      "scartata": "mtgo.com",
+      "tenuta": "mtgo.com",
+      "anno": 2019,
+      "tornei": 3,
+      "mazzi": 3
+    },
+    {
+      "scartata": "mtgo.com",
+      "tenuta": "mtgo.com",
+      "anno": 2024,
+      "tornei": 8,
+      "mazzi": 179
+    },
+    {
+      "scartata": "mtgo.com_limited_data",
+      "tenuta": "melee.gg",
+      "anno": 2026,
+      "tornei": 24,
+      "mazzi": 586
+    },
+    {
+      "scartata": "mtgo.com_limited_data",
+      "tenuta": "mtgo.com_limited_data",
+      "anno": 2024,
+      "tornei": 3,
+      "mazzi": 60
+    },
+    {
+      "scartata": "mtgo.com_limited_data",
+      "tenuta": "mtgo.com_limited_data",
+      "anno": 2025,
+      "tornei": 22,
+      "mazzi": 608
+    },
+    {
+      "scartata": "mtgo.com_limited_data",
+      "tenuta": "mtgo.com_limited_data",
+      "anno": 2026,
+      "tornei": 11,
+      "mazzi": 340
+    }
+  ],
+  "regola2_mazzi_ripetuti": [
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com",
+      "anno": 2017,
+      "mazzi": 115
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com",
+      "anno": 2018,
+      "mazzi": 796
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com",
+      "anno": 2019,
+      "mazzi": 247
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com",
+      "anno": 2020,
+      "mazzi": 363
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com",
+      "anno": 2021,
+      "mazzi": 324
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com",
+      "anno": 2022,
+      "mazzi": 389
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2018,
+      "mazzi": 496
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2019,
+      "mazzi": 428
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2020,
+      "mazzi": 626
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2021,
+      "mazzi": 653
+    },
+    {
+      "scartata": "magic.wizards.com",
+      "tenuta": "mtgo.com_before_new_data_model",
+      "anno": 2022,
+      "mazzi": 673
+    },
+    {
+      "scartata": "melee.gg_manual_scraping",
+      "tenuta": "melee.gg",
+      "anno": 2023,
+      "mazzi": 24
+    },
+    {
+      "scartata": "mtgo.com",
+      "tenuta": "mtgo.com_limited_data",
+      "anno": 2024,
+      "mazzi": 2
+    },
+    {
+      "scartata": "mtgo.com_before_new_data_model",
+      "tenuta": "mtgo.com",
+      "anno": 2015,
+      "mazzi": 154
+    },
+    {
+      "scartata": "mtgo.com_before_new_data_model",
+      "tenuta": "mtgo.com",
+      "anno": 2017,
+      "mazzi": 1024
+    },
+    {
+      "scartata": "mtgo.com_before_new_data_model",
+      "tenuta": "mtgo.com",
+      "anno": 2018,
+      "mazzi": 2068
+    },
+    {
+      "scartata": "mtgo.com_before_new_data_model",
+      "tenuta": "mtgo.com",
+      "anno": 2019,
+      "mazzi": 1996
+    },
+    {
+      "scartata": "mtgo.com_before_new_data_model",
+      "tenuta": "mtgo.com",
+      "anno": 2020,
+      "mazzi": 3426
+    },
+    {
+      "scartata": "mtgo.com_before_new_data_model",
+      "tenuta": "mtgo.com",
+      "anno": 2021,
+      "mazzi": 3961
+    },
+    {
+      "scartata": "mtgo.com_before_new_data_model",
+      "tenuta": "mtgo.com",
+      "anno": 2022,
+      "mazzi": 3963
+    },
+    {
+      "scartata": "mtgo.com_before_new_data_model",
+      "tenuta": "mtgo.com",
+      "anno": 2023,
+      "mazzi": 3728
+    }
+  ],
+  "regola2_tornei_svuotati": [
+    {
+      "cartella": "magic.wizards.com",
+      "anno": 2018,
+      "tornei": 25
+    },
+    {
+      "cartella": "magic.wizards.com",
+      "anno": 2019,
+      "tornei": 3
+    },
+    {
+      "cartella": "magic.wizards.com",
+      "anno": 2020,
+      "tornei": 1
+    },
+    {
+      "cartella": "mtgo.com_before_new_data_model",
+      "anno": 2015,
+      "tornei": 44
+    },
+    {
+      "cartella": "mtgo.com_before_new_data_model",
+      "anno": 2017,
+      "tornei": 32
+    },
+    {
+      "cartella": "mtgo.com_before_new_data_model",
+      "anno": 2018,
+      "tornei": 53
+    },
+    {
+      "cartella": "mtgo.com_before_new_data_model",
+      "anno": 2019,
+      "tornei": 55
+    },
+    {
+      "cartella": "mtgo.com_before_new_data_model",
+      "anno": 2020,
+      "tornei": 100
+    },
+    {
+      "cartella": "mtgo.com_before_new_data_model",
+      "anno": 2021,
+      "tornei": 125
+    },
+    {
+      "cartella": "mtgo.com_before_new_data_model",
+      "anno": 2022,
+      "tornei": 117
+    },
+    {
+      "cartella": "mtgo.com_before_new_data_model",
+      "anno": 2023,
+      "tornei": 110
+    }
+  ]
+}
