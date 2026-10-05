@@ -20,7 +20,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
 - [x] Fase 0: setup e ispezione dei formati
 - [x] Fase 1: pipeline in locale, test, confronto con la baseline
 - [x] Fase 2: frontend
-- [ ] Fase 3: GitHub Actions e deploy (in corso)
+- [x] Fase 3: GitHub Actions e deploy (sito: https://scela.github.io/pauper-index/, repo: https://github.com/scela/pauper-index)
 - [ ] Fase 4: rifinitura e README
 
 ## Struttura
@@ -403,3 +403,9 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - Nel sito si pubblica dalla cartella reviews **solo** `index.json`.
 
 ## Decisioni in sospeso
+
+## Repository e privacy dei commit
+
+- Repository pubblico https://github.com/scela/pauper-index, sito https://scela.github.io/pauper-index/ (Pages da GitHub Actions, HTTPS obbligatorio).
+- Email dei commit: **solo** l'indirizzo noreply `132697821+scela@users.noreply.github.com`, impostato nella configurazione **locale** del repository. Prima del primo push la storia è stata riscritta (con l'autorizzazione dell'utente) per togliere l'email personale; i commit del bot usano `41898282+github-actions[bot]@users.noreply.github.com`.
+- Prima di ogni push che tocca file nuovi: nessun file di `reference/private/` e nessuna riga dei file privati nei commit.
