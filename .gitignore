@@ -1,0 +1,24 @@
+# Dati personali (export ManaBox della collezione): mai nel repo
+reference/private/
+
+# Cache locali: clone della fonte, bulk Scryfall, cache HTTP
+.cache/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+web/dist/
+test-results/
+playwright-report/
+
+# Varie
+*.log
+.DS_Store
+Thumbs.db

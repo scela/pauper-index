@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ce l'ho? Confronto tra List e collezione ManaBox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F3; --surface:#F8F9FB; --ink:#18202B; --muted:#586272; --line:#CBD2DA; --line-strong:#97A3B0;
+  --accent:#2F5FA8; --accent-ink:#FFFFFF; --accent-soft:#DCE5F3; --danger:#9E3A2B;
+  --r-s:4px; --r-m:8px;
+  --font:"Geist", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1B2028; --surface:#232A34; --ink:#E5E9EF; --muted:#9CA6B4; --line:#363F4B; --line-strong:#56616F;
+    --accent:#7FA4E6; --accent-ink:#121821; --accent-soft:#2A3850; --danger:#E3907F;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1B2028; --surface:#232A34; --ink:#E5E9EF; --muted:#9CA6B4; --line:#363F4B; --line-strong:#56616F;
+  --accent:#7FA4E6; --accent-ink:#121821; --accent-soft:#2A3850; --danger:#E3907F;
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:clamp(20px,4vw,48px) clamp(16px,4vw,40px) 72px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none !important}
+
+/* header */
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+h1{font-size:clamp(2.5rem,7vw,4rem);line-height:.95;letter-spacing:-0.035em;font-weight:700;margin:0}
+.lede{color:var(--muted);max-width:52ch;margin:12px 0 0;font-size:1.0625rem}
+section{padding:28px 0;border-top:1px solid var(--line)}
+h2{font-size:1.125rem;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em}
+.hint{color:var(--muted);font-size:.9375rem;margin:0 0 16px;max-width:66ch}
+.num{font-variant-numeric:tabular-nums}
+
+/* buttons */
+.btn{font:inherit;font-size:.9375rem;font-weight:500;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;min-height:40px;border-radius:var(--r-s);border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--ink)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.quiet{border-color:transparent;background:transparent;color:var(--muted);padding-inline:8px}
+.btn.quiet:hover{color:var(--ink)}
+.btn.warn{color:var(--danger);border-color:var(--danger)}
+.btn svg{width:16px;height:16px;flex:none}
+
+/* load */
+.load{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px}
+.drop{position:relative;display:grid;align-content:center;justify-items:start;gap:6px;min-height:150px;padding:24px;border:1.5px dashed var(--line-strong);border-radius:var(--r-m);background:var(--surface);cursor:pointer;transition:border-color .15s,background-color .15s}
+.drop:hover,.drop.over{border-color:var(--accent)}
+.drop.over{background:var(--accent-soft)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.drop strong{font-size:1.0625rem;font-weight:600}
+.drop span{color:var(--muted);font-size:.9375rem}
+.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.paste{display:grid;gap:8px;align-content:start}
+.paste label{font-size:.9375rem;font-weight:500}
+textarea{font:inherit;font-size:.875rem;width:100%;min-height:96px;resize:vertical;padding:10px 12px;border:1px solid var(--line-strong);border-radius:var(--r-s);background:var(--surface);color:var(--ink)}
+.paste .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.errors{margin:12px 0 0;padding:0;list-style:none;color:var(--danger);font-size:.9375rem}
+.errors li+li{margin-top:4px}
+.privacy{color:var(--muted);font-size:.875rem;margin:14px 0 0}
+
+/* groups */
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+.groups th,.groups td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.groups th{font-weight:500;color:var(--muted);font-size:.875rem}
+.gname{font-weight:500}
+.gtype{display:inline-block;margin-left:8px;color:var(--muted);font-size:.8125rem}
+.groups .count{color:var(--muted);font-size:.875rem;white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:var(--r-s);overflow:hidden;background:var(--surface)}
+.seg label{position:relative;display:block}
+.seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.seg > label > span{display:block;padding:6px 11px;font-size:.875rem;white-space:nowrap;border-left:1px solid var(--line-strong)}
+.seg label:first-child > span{border-left:0}
+.seg input:checked+span{background:var(--ink);color:var(--bg)}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:-3px}
+.memo{color:var(--muted);font-size:.875rem;margin:12px 0 0}
+
+/* options */
+.opts{display:flex;flex-wrap:wrap;gap:12px 28px;margin-top:20px}
+.opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;max-width:34ch}
+.opt input{appearance:none;-webkit-appearance:none;flex:none;width:36px;height:20px;margin:2px 0 0;border-radius:10px;background:var(--line-strong);position:relative;cursor:pointer;transition:background-color .15s}
+.opt input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:transform .15s}
+.opt input:checked{background:var(--accent)}
+.opt input:checked::after{transform:translateX(16px)}
+.opt b{display:block;font-weight:500;font-size:.9375rem}
+.opt small{display:block;color:var(--muted);font-size:.8125rem;line-height:1.4}
+
+/* empty */
+.empty ol{margin:8px 0 0;padding-left:1.25em;max-width:66ch}
+.empty li{margin:6px 0}
+.empty .msg{font-weight:500;margin:0 0 8px}
+
+/* verdict + box */
+.verdict{font-size:clamp(1.5rem,3.6vw,2.25rem);line-height:1.15;letter-spacing:-0.02em;font-weight:600;margin:0 0 20px;max-width:30ch}
+.box{display:flex;flex-wrap:wrap;gap:3px;padding:14px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);touch-action:manipulation}
+.tick{width:8px;height:18px;border-radius:2px;border:1px solid var(--line-strong);cursor:default}
+.tick.owned{background:var(--accent);border-color:var(--accent)}
+.tick.partial{background:linear-gradient(to top,var(--accent) 50%,transparent 50%);border-color:var(--accent)}
+.box.dense{gap:2px}
+.box.dense .tick{width:6px;height:14px}
+.box.animate .tick.owned,.box.animate .tick.partial{animation:fill .45s ease-out both;animation-delay:var(--d,0ms)}
+@keyframes fill{from{opacity:0;transform:scaleY(.25)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.box.animate .tick{animation:none}}
+.boxmeta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:.875rem;color:var(--muted)}
+.legend{display:flex;gap:16px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:8px;height:14px;border-radius:2px;border:1px solid var(--line-strong)}
+.legend i.owned{background:var(--accent);border-color:var(--accent)}
+.legend i.partial{background:linear-gradient(to top,var(--accent) 50%,transparent 50%);border-color:var(--accent)}
+.caption{min-height:1.5em}
+
+/* export */
+.export{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-items:center;margin:24px 0 0}
+.export .lbl{font-size:.9375rem;font-weight:500}
+.export .btns{display:flex;flex-wrap:wrap;gap:8px}
+.export .note{grid-column:2;color:var(--muted);font-size:.8125rem;margin:-2px 0 0;max-width:70ch}
+.dl{display:none !important}
+.can-dl .dl{display:inline-flex !important}
+.can-dl .nodl{display:none !important}
+.can-dl .note.dl{display:block !important}
+
+/* toolbar + cards table */
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:28px 0 12px}
+.search{font:inherit;font-size:.9375rem;min-height:40px;width:min(280px,100%);padding:8px 12px;border:1px solid var(--line-strong);border-radius:var(--r-s);background:var(--surface);color:var(--ink)}
+.cards{font-size:.9375rem}
+.cards th{font-weight:500;color:var(--muted);font-size:.875rem;text-align:left;padding:8px;border-bottom:1px solid var(--line-strong)}
+.cards td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.cards .c-name{font-weight:500}
+.cards .c-qty{text-align:right;white-space:nowrap}
+.cards th.c-qty{text-align:right}
+.cards .c-list,.cards .c-own{color:var(--muted);font-size:.875rem}
+.cards .where{font-size:.8125rem;margin-top:2px}
+.cards .more{font-size:.8125rem}
+.st{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:.875rem}
+.st::before{content:"";display:inline-block;width:8px;height:14px;border-radius:2px;border:1px solid var(--line-strong)}
+.st-owned::before{background:var(--accent);border-color:var(--accent)}
+.st-partial::before{background:linear-gradient(to top,var(--accent) 50%,transparent 50%);border-color:var(--accent)}
+.cards .nores td{color:var(--muted);text-align:center;padding:24px 8px}
+
+/* toast + copy panel */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r-s);font-size:.9375rem;max-width:calc(100% - 32px);opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+.copy-panel{position:fixed;inset:auto 16px calc(16px + env(safe-area-inset-bottom,0px)) 16px;max-width:640px;margin:0 auto;background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-m);padding:16px;display:grid;gap:10px;box-shadow:0 12px 32px -12px rgba(16,24,40,.35)}
+.copy-panel textarea{min-height:160px}
+
+@media (max-width:760px){
+  .load{grid-template-columns:1fr}
+  .export{grid-template-columns:1fr}
+  .export .note{grid-column:1}
+}
+@media (max-width:640px){
+  .groups thead{display:none}
+  .groups tr{display:grid;grid-template-columns:1fr auto;gap:6px 8px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .groups td{padding:0;border:0}
+  .groups td.g-role{grid-column:1/-1}
+  .groups td.g-count{grid-column:1}
+  .groups td.g-act{grid-column:2;grid-row:1}
+  .cards thead{display:none}
+  .cards tr{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .cards td{padding:0;border:0}
+  .cards td.c-status{grid-column:2;grid-row:1;justify-self:end}
+  .cards td.c-qty{grid-column:2;grid-row:2;justify-self:end;font-size:.875rem;color:var(--muted)}
+  .cards td.c-list,.cards td.c-own{grid-column:1}
+  .cards td.c-list::before{content:"Nella List: "}
+  .cards td.c-own::before{content:"Tue: "}
+  .cards .nores{display:block}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Ce l'ho?</h1>
+      <p class="lede">Confronta una List di ManaBox con i tuoi Binder e scopri quali carte possiedi, in qualunque set, numero o finitura.</p>
+    </div>
+    <button class="btn quiet" id="reset" hidden>Svuota tutto</button>
+  </header>
+
+  <section aria-labelledby="h-load">
+    <h2 id="h-load">Carica gli export</h2>
+    <p class="hint">Puoi caricare la List e i Binder come file separati, oppure l'export dell'intera collezione: qui sotto scegli cosa conta come lista e cosa come carte tue.</p>
+    <div class="load">
+      <label class="drop" id="drop">
+        <input type="file" id="files" multiple accept=".csv,.txt,text/csv,text/plain">
+        <strong>Trascina qui i file CSV o tocca per sceglierli</strong>
+        <span>Export di ManaBox in formato CSV. Anche più file insieme.</span>
+      </label>
+      <div class="paste">
+        <label for="pasteText">Oppure incolla una lista di carte</label>
+        <textarea id="pasteText" placeholder="4 Ponder&#10;4 Lightning Bolt (M10) 146&#10;2 Counterspell"></textarea>
+        <div class="row"><button class="btn" id="pasteAdd">Aggiungi come lista</button></div>
+      </div>
+    </div>
+    <ul class="errors" id="errors" aria-live="polite"></ul>
+    <p class="privacy">I file vengono letti solo in questo browser e non vengono inviati da nessuna parte. L'ultimo caricamento resta salvato su questo dispositivo.</p>
+  </section>
+
+  <section aria-labelledby="h-assign" id="assign" hidden>
+    <h2 id="h-assign">Cosa conta</h2>
+    <p class="hint">Una sola lista da controllare (o più, che vengono unite) e uno o più gruppi con le carte che possiedi davvero.</p>
+    <div class="tablewrap">
+      <table class="groups">
+        <thead><tr><th>Gruppo</th><th>Contenuto</th><th>Ruolo</th><th><span class="sr" hidden>Azioni</span></th></tr></thead>
+        <tbody id="groupRows"></tbody>
+      </table>
+    </div>
+    <div class="opts">
+      <label class="opt"><input type="checkbox" id="optQty"><span><b>Conta le copie</b><small>Confronta con la quantità indicata nella List invece di chiedere una sola copia.</small></span></label>
+      <label class="opt"><input type="checkbox" id="optBasics"><span><b>Escludi le terre base</b><small>Plains, Island, Swamp, Mountain, Forest, Wastes.</small></span></label>
+      <label class="opt" id="optProxyWrap" hidden><input type="checkbox" id="optProxy"><span><b>Conta i proxy</b><small>Le carte segnate come proxy nei tuoi Binder valgono come possedute.</small></span></label>
+    </div>
+    <p class="memo" id="memo"></p>
+  </section>
+
+  <section class="empty" id="empty" aria-labelledby="h-empty">
+    <h2 id="h-empty">Come ottenere i file da ManaBox</h2>
+    <p class="msg" id="emptyMsg"></p>
+    <ol>
+      <li>Apri la List da controllare, tocca il menu in alto a destra ed esportala in CSV.</li>
+      <li>Fai lo stesso con ogni Binder che contiene carte tue, oppure esporta l'intera collezione dal menu in alto a destra della scheda Collection.</li>
+      <li>Carica i file qui sopra e controlla i ruoli assegnati.</li>
+    </ol>
+  </section>
+
+  <section id="results" aria-labelledby="verdict" hidden>
+    <p class="verdict" id="verdict"></p>
+    <div class="box" id="box" role="img"></div>
+    <div class="boxmeta">
+      <div class="legend" id="legend"></div>
+      <div class="caption" id="caption" aria-live="polite">Passa sopra un segmento o toccalo per vedere la carta.</div>
+    </div>
+
+    <div class="export">
+      <span class="lbl">Copia</span>
+      <div class="btns">
+        <button class="btn" data-copy="owned">Possedute</button>
+        <button class="btn" data-copy="missing">Mancanti</button>
+        <button class="btn nodl" data-copy="csv">List riallineata (CSV)</button>
+      </div>
+      <span class="lbl dl">Scarica</span>
+      <div class="btns dl">
+        <button class="btn" data-save="owned">Possedute .txt</button>
+        <button class="btn" data-save="missing">Mancanti .txt</button>
+        <button class="btn primary" data-save="csv">List riallineata .csv</button>
+      </div>
+      <p class="note">Le liste di testo usano il formato "1 Nome carta", importabile in ManaBox e in Cardmarket. La List riallineata usa, per ogni carta che possiedi, una printing presente nei tuoi Binder: importala come nuova List e il filtro "In Collection" la riconoscerà.</p>
+    </div>
+
+    <div class="toolbar">
+      <div class="seg" role="radiogroup" aria-label="Mostra" id="tabs"></div>
+      <input type="search" class="search" id="search" placeholder="Cerca una carta" aria-label="Cerca una carta">
+    </div>
+    <div class="tablewrap">
+      <table class="cards">
+        <thead><tr><th>Carta</th><th>Stato</th><th class="c-qty">Copie</th><th>Nella List</th><th>Nei tuoi Binder</th></tr></thead>
+        <tbody id="cardRows"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="copy-panel" id="copyPanel" hidden>
+  <p style="margin:0;font-weight:500">Il browser non permette la copia automatica: seleziona il testo e copialo.</p>
+  <textarea id="copyText" readonly></textarea>
+  <div><button class="btn" id="copyClose">Chiudi</button></div>
+</div>
+
+<script>
+/*CORE-START*/
+const BASICS = new Set(['plains','island','swamp','mountain','forest','wastes']);
+
+function norm(name){
+  return String(name || '').split('//')[0]
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u2019`\u00b4]/g, "'")
+    .replace(/\s+/g, ' ').trim().toLowerCase();
+}
+function truthy(v){ return /^(true|yes|y|1|si|s\u00ec|proxy|x)$/i.test(String(v || '').trim()); }
+function isFoil(v){ v = String(v || '').trim(); return v !== '' && !/^(normal|false|no|0|nonfoil|non-foil|n)$/i.test(v); }
+function baseName(f){ return String(f || '').replace(/\.[^.]+$/, ''); }
+
+function detectDelim(text){
+  const line = (text.replace(/^\uFEFF/, '').split(/\r?\n/, 1)[0]) || '';
+  let best = ',', max = -1;
+  for (const d of [',', ';', '\t']){
+    let n = 0, q = false;
+    for (const ch of line){ if (ch === '"') q = !q; else if (ch === d && !q) n++; }
+    if (n > max){ max = n; best = d; }
+  }
+  return best;
+}
+function parseCSV(text){
+  text = text.replace(/^\uFEFF/, '');
+  const d = detectDelim(text), rows = [];
+  let row = [], f = '', q = false, i = 0;
+  while (i < text.length){
+    const ch = text[i];
+    if (q){
+      if (ch === '"'){ if (text[i + 1] === '"'){ f += '"'; i += 2; continue; } q = false; i++; continue; }
+      f += ch; i++; continue;
+    }
+    if (ch === '"' && f === ''){ q = true; i++; continue; }
+    if (ch === d){ row.push(f); f = ''; i++; continue; }
+    if (ch === '\r'){ i++; continue; }
+    if (ch === '\n'){ row.push(f); rows.push(row); row = []; f = ''; i++; continue; }
+    f += ch; i++;
+  }
+  if (f !== '' || row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim() !== ''));
+}
+function looksCSV(fname, text){
+  if (/\.csv$/i.test(fname || '')) return true;
+  const line = (text.replace(/^\uFEFF/, '').split(/\r?\n/, 1)[0]) || '';
+  return line.split(detectDelim(text)).length >= 3;
+}
+
+const COLS = {
+  name: ['name', 'card name', 'cardname', 'card'],
+  set: ['set code', 'setcode', 'set', 'edition code'],
+  setName: ['set name', 'edition'],
+  num: ['collector number', 'card number', 'collector #', 'number', 'cn'],
+  foil: ['foil', 'finish', 'printing'],
+  qty: ['quantity', 'qty', 'count', 'amount'],
+  lang: ['language', 'lang'],
+  sid: ['scryfall id', 'scryfall_id', 'scryfallid'],
+  binder: ['binder name', 'binder', 'list name', 'folder name', 'folder'],
+  btype: ['binder type']
+};
+function mapHeaders(h){
+  const low = h.map(x => String(x).trim().toLowerCase());
+  const m = {};
+  for (const k in COLS){
+    for (const c of COLS[k]){ const i = low.indexOf(c); if (i >= 0){ m[k] = i; break; } }
+  }
+  const p = low.findIndex(x => x.includes('proxy'));
+  if (p >= 0) m.proxy = p;
+  return m;
+}
+
+// -> {groups} | {error, headers}
+function readTable(fname, text){
+  const rows = parseCSV(text);
+  if (!rows.length) return { error: 'empty', headers: [] };
+  const m = mapHeaders(rows[0]);
+  if (m.name === undefined) return { error: 'noname', headers: rows[0] };
+  const by = new Map();
+  for (const r of rows.slice(1)){
+    const g = c => (c === undefined ? '' : String(r[c] || '').trim());
+    const name = g(m.name);
+    if (!name) continue;
+    const gname = (m.binder !== undefined && g(m.binder)) || baseName(fname) || 'File';
+    const id = gname.toLowerCase();
+    if (!by.has(id)) by.set(id, { id, name: gname, type: m.btype !== undefined ? g(m.btype).toLowerCase() : '', source: fname, rows: [], hasProxy: m.proxy !== undefined });
+    const q = parseInt(g(m.qty), 10);
+    by.get(id).rows.push({
+      n: name, s: g(m.set), sn: m.set === undefined ? g(m.setName) : '', c: g(m.num), f: g(m.foil),
+      q: Number.isFinite(q) && q > 0 ? q : 1, l: g(m.lang), i: g(m.sid),
+      p: m.proxy !== undefined && truthy(g(m.proxy)) ? 1 : 0
+    });
+  }
+  const groups = [...by.values()];
+  if (!groups.length) return { error: 'norows', headers: rows[0] };
+  return { groups };
+}
+
+function readTextList(fname, text){
+  const rows = [];
+  for (let line of text.replace(/^\uFEFF/, '').split(/\r?\n/)){
+    line = line.trim();
+    if (!line || line.startsWith('//') || line.startsWith('#')) continue;
+    if (/^(deck|sideboard|commander|companion|maybeboard|mainboard|about)\s*:?\s*$/i.test(line)) continue;
+    line = line.replace(/^SB:\s*/i, '');
+    let q = 1, rest = line;
+    const m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
+    if (m){ q = parseInt(m[1], 10) || 1; rest = m[2]; }
+    rest = rest.replace(/\s+\*[A-Za-z]+\*\s*$/, '');
+    let s = '', c = '';
+    const pm = rest.match(/^(.+?)\s+\(([A-Za-z0-9]{2,6})\)(?:\s+(\S+))?\s*$/);
+    if (pm){ rest = pm[1]; s = pm[2]; c = pm[3] || ''; }
+    rest = rest.trim();
+    if (!rest) continue;
+    rows.push({ n: rest, s, sn: '', c, f: '', q, l: '', i: '', p: 0 });
+  }
+  if (!rows.length) return null;
+  const nm = fname ? baseName(fname) : 'Lista incollata';
+  return [{ id: nm.toLowerCase(), name: nm, type: 'list', source: fname || 'testo', rows, hasProxy: false, pasted: true }];
+}
+
+function defaultRole(g){
+  const t = g.type || '';
+  if (/pauper/i.test(g.name)) return 'list';
+  if (t.includes('deck')) return 'skip';
+  if (t.includes('list')) return 'skip';
+  if (t.includes('binder')) return 'coll';
+  if (g.pasted) return 'list';
+  return null;
+}
+
+function samePrint(a, b){ return (a.s || '').toLowerCase() === (b.s || '').toLowerCase() && (a.c || '') === (b.c || ''); }
+function printKey(r){ return [(r.s || '').toLowerCase(), (r.c || '').toLowerCase(), isFoil(r.f) ? r.f.toLowerCase() : '', (r.l || '').toLowerCase(), r.p].join('|'); }
+
+function compute(groups, roles, opts){
+  const list = new Map(), coll = new Map();
+  for (const g of groups){
+    if (roles[g.id] !== 'list') continue;
+    for (const r of g.rows){
+      const k = norm(r.n);
+      if (!k || (opts.basics && BASICS.has(k))) continue;
+      const e = list.get(k);
+      if (!e) list.set(k, { key: k, name: r.n, need: r.q, lp: r, extra: 0 });
+      else { e.need = Math.max(e.need, r.q); if (!samePrint(e.lp, r)) e.extra++; }
+    }
+  }
+  for (const g of groups){
+    if (roles[g.id] !== 'coll') continue;
+    for (const r of g.rows){
+      if (r.p && !opts.proxies) continue;
+      const k = norm(r.n);
+      if (!list.has(k)) continue;
+      let e = coll.get(k);
+      if (!e){ e = { total: 0, prints: new Map(), binders: new Map() }; coll.set(k, e); }
+      e.total += r.q;
+      const pk = printKey(r), pe = e.prints.get(pk);
+      if (pe) pe.q += r.q; else e.prints.set(pk, { r, q: r.q });
+      e.binders.set(g.name, (e.binders.get(g.name) || 0) + r.q);
+    }
+  }
+  const out = [];
+  for (const e of list.values()){
+    const c = coll.get(e.key);
+    const owned = c ? c.total : 0;
+    const needEff = opts.qty ? e.need : 1;
+    const status = owned >= needEff ? 'owned' : owned > 0 ? 'partial' : 'missing';
+    out.push(Object.assign({}, e, { owned, needEff, status, prints: c ? [...c.prints.values()] : [], binders: c ? [...c.binders.entries()] : [] }));
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+  return out;
+}
+
+function bestPrint(x){
+  if (!x.prints.length) return null;
+  const exact = x.prints.find(p => samePrint(p.r, x.lp));
+  if (exact) return exact.r;
+  return x.prints.slice().sort((a, b) => b.q - a.q)[0].r;
+}
+
+function textList(results, kind, qtyMode){
+  const sel = kind === 'owned'
+    ? results.filter(x => x.status === 'owned')
+    : results.filter(x => x.status !== 'owned');
+  return sel.map(x => {
+    const n = kind === 'owned' ? (qtyMode ? x.needEff : 1) : (qtyMode ? x.needEff - x.owned : 1);
+    return n + ' ' + x.name;
+  }).join('\n') + (sel.length ? '\n' : '');
+}
+
+function csvCell(v){ v = String(v == null ? '' : v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function realignedCSV(results){
+  const head = ['Name', 'Set code', 'Collector number', 'Foil', 'Language', 'Scryfall ID', 'Quantity'];
+  const rows = results.map(x => { const r = bestPrint(x) || x.lp; return [r.n, r.s, r.c, r.f, r.l, r.i, x.need]; });
+  return [head].concat(rows).map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
+/*CORE-END*/
+
+(function(){
+  'use strict';
+  const STORE = 'celho:v1';
+  const S = { groups: [], roles: {}, opts: { qty: false, proxies: false, basics: true }, filter: 'all', query: '', savedAt: null, results: [], order: [] };
+  let downloads = null, animateNext = false, toastTimer = null, resetTimer = null;
+
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function fmtPrint(r){
+    const parts = [];
+    const set = r.s ? r.s.toUpperCase() : (r.sn || '');
+    if (set) parts.push(set);
+    if (r.c) parts.push('#' + r.c);
+    if (isFoil(r.f)) parts.push(/^(true|yes|1|y)$/i.test(r.f) ? 'foil' : r.f.toLowerCase());
+    if (r.l && !/^(en|english)$/i.test(r.l)) parts.push(r.l.toLowerCase());
+    if (r.p) parts.push('proxy');
+    return parts.join(' ') || 'printing non indicata';
+  }
+  const STATUS = { owned: 'Posseduta', partial: 'Parziale', missing: 'Mancante' };
+
+  /* persistence */
+  function persist(){
+    const memo = $('#memo');
+    try {
+      S.savedAt = Date.now();
+      localStorage.setItem(STORE, JSON.stringify({ v: 1, groups: S.groups, roles: S.roles, opts: S.opts, savedAt: S.savedAt }));
+      memo.textContent = '';
+    } catch (e) {
+      memo.textContent = 'I file sono troppo grandi per essere ricordati da questo browser: la prossima volta dovrai ricaricarli.';
+    }
+  }
+  function restore(){
+    try {
+      const raw = localStorage.getItem(STORE);
+      if (!raw) return false;
+      const d = JSON.parse(raw);
+      if (!d || d.v !== 1 || !Array.isArray(d.groups)) return false;
+      S.groups = d.groups; S.roles = d.roles || {}; S.opts = Object.assign(S.opts, d.opts || {}); S.savedAt = d.savedAt || null;
+      return S.groups.length > 0;
+    } catch (e) { return false; }
+  }
+  function clearStore(){ try { localStorage.removeItem(STORE); } catch (e) {} }
+
+  /* data in */
+  function addGroups(gs){
+    for (const g of gs){
+      const i = S.groups.findIndex(x => x.id === g.id);
+      if (i >= 0) S.groups[i] = g; else S.groups.push(g);
+      if (!S.roles[g.id]){
+        let r = defaultRole(g);
+        if (!r) r = S.groups.some(x => S.roles[x.id] === 'list') ? 'coll' : 'list';
+        S.roles[g.id] = r;
+      }
+    }
+  }
+  function showErrors(list){
+    $('#errors').innerHTML = list.map(e => '<li>' + esc(e) + '</li>').join('');
+  }
+  async function handleFiles(files){
+    const errs = [];
+    let added = 0;
+    for (const f of files){
+      let text;
+      try { text = await f.text(); } catch (e) { errs.push(f.name + ': impossibile leggere il file.'); continue; }
+      if (looksCSV(f.name, text)){
+        const res = readTable(f.name, text);
+        if (res.groups){ addGroups(res.groups); added++; continue; }
+        if (res.error === 'noname'){
+          errs.push(f.name + ': nella prima riga non c\u2019\u00e8 una colonna con il nome della carta. Intestazioni lette: ' + res.headers.slice(0, 8).join(', ') + '.');
+        } else {
+          errs.push(f.name + ': il file non contiene carte.');
+        }
+        continue;
+      }
+      const gs = readTextList(f.name, text);
+      if (gs){ addGroups(gs); added++; } else errs.push(f.name + ': non trovo righe nel formato "4 Nome carta".');
+    }
+    showErrors(errs);
+    if (added){ animateNext = true; refresh(); }
+  }
+
+  /* render */
+  function refresh(save = true){
+    S.results = compute(S.groups, S.roles, S.opts);
+    render();
+    if (save) persist();
+  }
+  function seg(id, val, label, role){
+    return '<label><input type="radio" name="role-' + esc(id) + '" value="' + val + '" data-gid="' + esc(id) + '"' + (role === val ? ' checked' : '') + '><span>' + label + '</span></label>';
+  }
+  function renderGroups(){
+    const has = S.groups.length > 0;
+    $('#assign').hidden = !has;
+    $('#reset').hidden = !has;
+    if (!has) return;
+    $('#groupRows').innerHTML = S.groups.map(g => {
+      const role = S.roles[g.id];
+      const cards = g.rows.reduce((a, r) => a + r.q, 0);
+      const typ = g.pasted ? 'testo' : (g.type || '');
+      return '<tr><td class="g-name"><span class="gname">' + esc(g.name) + '</span>' + (typ ? '<span class="gtype">' + esc(typ) + '</span>' : '') + '</td>'
+        + '<td class="g-count count num">' + g.rows.length + ' voci, ' + cards + ' carte</td>'
+        + '<td class="g-role"><div class="seg" role="radiogroup" aria-label="Ruolo di ' + esc(g.name) + '">'
+        + seg(g.id, 'list', 'Da controllare', role) + seg(g.id, 'coll', 'Le mie carte', role) + seg(g.id, 'skip', 'Ignora', role)
+        + '</div></td>'
+        + '<td class="g-act"><button class="btn quiet" data-remove="' + esc(g.id) + '">Rimuovi</button></td></tr>';
+    }).join('');
+    $('#optQty').checked = S.opts.qty;
+    $('#optBasics').checked = S.opts.basics;
+    $('#optProxy').checked = S.opts.proxies;
+    $('#optProxyWrap').hidden = !S.groups.some(g => g.hasProxy && S.roles[g.id] === 'coll');
+    if (S.savedAt && !$('#memo').textContent){
+      const d = new Date(S.savedAt);
+      $('#memo').textContent = 'Ultimo aggiornamento: ' + d.toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '. Per aggiornare un Binder ricarica il suo export: sostituisce quello vecchio.';
+    }
+  }
+  function renderResults(){
+    const hasList = S.groups.some(g => S.roles[g.id] === 'list');
+    const hasColl = S.groups.some(g => S.roles[g.id] === 'coll');
+    if (!hasList || !hasColl){
+      $('#results').hidden = true; $('#empty').hidden = false;
+      $('#emptyMsg').textContent = !S.groups.length ? '' : (!hasList ? 'Manca la lista da controllare: imposta un gruppo su \u201cDa controllare\u201d.' : 'Mancano le tue carte: imposta almeno un gruppo su \u201cLe mie carte\u201d.');
+      return;
+    }
+    $('#empty').hidden = true; $('#results').hidden = false;
+    const R = S.results, tot = R.length;
+    const own = R.filter(x => x.status === 'owned').length;
+    const par = R.filter(x => x.status === 'partial').length;
+    const mis = tot - own - par;
+
+    let v;
+    if (!tot) v = 'La lista da controllare non contiene carte.';
+    else if (S.opts.qty) v = 'Hai tutte le copie per ' + own + ' carte su ' + tot + (par ? ', e una parte delle copie per altre ' + par + '.' : '.');
+    else v = 'Possiedi ' + own + ' delle ' + tot + ' carte della lista, in qualunque printing.';
+    $('#verdict').textContent = v;
+
+    const order = R.filter(x => x.status === 'owned').concat(R.filter(x => x.status === 'partial'), R.filter(x => x.status === 'missing'));
+    S.order = order;
+    const box = $('#box');
+    const span = 600;
+    box.className = 'box' + (tot > 400 ? ' dense' : '') + (animateNext ? ' animate' : '');
+    box.setAttribute('aria-label', own + ' carte possedute' + (par ? ', ' + par + ' parziali' : '') + ', ' + mis + ' mancanti su ' + tot);
+    box.innerHTML = order.map((x, i) => '<span class="tick ' + x.status + '" data-i="' + i + '"' + (animateNext && x.status !== 'missing' ? ' style="--d:' + Math.round(i / Math.max(tot, 1) * span) + 'ms"' : '') + '></span>').join('');
+    animateNext = false;
+
+    $('#legend').innerHTML = '<span><i class="owned"></i>Possedute ' + own + '</span>'
+      + (S.opts.qty ? '<span><i class="partial"></i>Parziali ' + par + '</span>' : '')
+      + '<span><i></i>Mancanti ' + mis + '</span>';
+
+    if (!S.opts.qty && S.filter === 'partial') S.filter = 'all';
+    const tabs = [['all', 'Tutte', tot], ['owned', 'Possedute', own]].concat(S.opts.qty ? [['partial', 'Parziali', par]] : [], [['missing', 'Mancanti', mis]]);
+    $('#tabs').innerHTML = tabs.map(t => '<label><input type="radio" name="tab" value="' + t[0] + '"' + (S.filter === t[0] ? ' checked' : '') + '><span>' + t[1] + ' <span class="num">' + t[2] + '</span></span></label>').join('');
+    renderRows();
+  }
+  function renderRows(){
+    const q = norm(S.query);
+    const rows = S.results.filter(x => (S.filter === 'all' || x.status === S.filter) && (!q || x.key.includes(q)));
+    if (!rows.length){
+      $('#cardRows').innerHTML = '<tr class="nores"><td colspan="5">Nessuna carta corrisponde.</td></tr>';
+      return;
+    }
+    $('#cardRows').innerHTML = rows.map(x => {
+      const prints = x.prints.length
+        ? x.prints.map(p => esc(fmtPrint(p.r)) + ' \u00d7' + p.q).join(', ')
+        : 'nessuna';
+      const where = x.binders.length ? '<div class="where">' + x.binders.map(b => esc(b[0])).join(', ') + '</div>' : '';
+      const qty = S.opts.qty ? x.owned + ' / ' + x.needEff : String(x.owned);
+      return '<tr><td class="c-name">' + esc(x.name) + '</td>'
+        + '<td class="c-status"><span class="st st-' + x.status + '">' + STATUS[x.status] + '</span></td>'
+        + '<td class="c-qty num">' + qty + '</td>'
+        + '<td class="c-list">' + esc(fmtPrint(x.lp)) + (x.extra ? ' <span class="more">(+' + x.extra + ' altre)</span>' : '') + '</td>'
+        + '<td class="c-own">' + prints + where + '</td></tr>';
+    }).join('');
+  }
+  function render(){ renderGroups(); renderResults(); }
+
+  /* output */
+  function toast(msg){
+    const t = $('#toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+  function payload(kind){
+    if (kind === 'csv') return realignedCSV(S.results);
+    return textList(S.results, kind, S.opts.qty);
+  }
+  async function copyText(text){
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+    return ok;
+  }
+  const LABEL = { owned: 'carte possedute', missing: 'carte mancanti', csv: 'List riallineata' };
+  async function doCopy(kind){
+    const text = payload(kind);
+    if (!text.trim()){ toast('Non ci sono ' + LABEL[kind] + ' da copiare.'); return; }
+    if (await copyText(text)){ toast('Copiato: ' + LABEL[kind] + '.'); return; }
+    $('#copyText').value = text; $('#copyPanel').hidden = false; $('#copyText').focus(); $('#copyText').select();
+  }
+  async function doSave(kind){
+    if (!downloads) return;
+    const text = payload(kind);
+    if (!text.trim()){ toast('Non ci sono ' + LABEL[kind] + ' da salvare.'); return; }
+    const filename = kind === 'csv' ? 'list-riallineata.csv' : (kind === 'owned' ? 'possedute.txt' : 'mancanti.txt');
+    try {
+      const res = await downloads.save({ filename, data: text });
+      if (res && res.status === 'saved') toast('Salvato: ' + filename);
+    } catch (e) {
+      const code = e && e.code;
+      if (code === 'declined') return;
+      if (code === 'rate_limited'){ toast('C\u2019\u00e8 gi\u00e0 un salvataggio in attesa di conferma.'); return; }
+      toast('Il salvataggio non \u00e8 disponibile qui: usa Copia.');
+      if (['unavailable', 'not_granted', 'capability_disabled', 'capability_removed'].includes(code)){ downloads = null; document.documentElement.classList.remove('can-dl'); }
+    }
+  }
+
+  /* events */
+  const drop = $('#drop');
+  $('#files').addEventListener('change', e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) handleFiles(fs); });
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'dragend'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('over');
+    const fs = [...(e.dataTransfer && e.dataTransfer.files || [])];
+    if (fs.length) handleFiles(fs);
+  });
+  $('#pasteAdd').addEventListener('click', () => {
+    const text = $('#pasteText').value;
+    const gs = readTextList('', text);
+    if (!gs){ showErrors(['Il testo incollato non contiene carte. Usa una riga per carta, per esempio "4 Ponder".']); return; }
+    showErrors([]);
+    addGroups(gs);
+    $('#pasteText').value = '';
+    animateNext = true; refresh();
+  });
+  $('#groupRows').addEventListener('change', e => {
+    const t = e.target;
+    if (t.name && t.name.startsWith('role-')){ S.roles[t.dataset.gid] = t.value; refresh(); }
+  });
+  $('#groupRows').addEventListener('click', e => {
+    const b = e.target.closest('[data-remove]');
+    if (!b) return;
+    const id = b.dataset.remove;
+    S.groups = S.groups.filter(g => g.id !== id);
+    delete S.roles[id];
+    refresh();
+  });
+  $('#optQty').addEventListener('change', e => { S.opts.qty = e.target.checked; refresh(); });
+  $('#optBasics').addEventListener('change', e => { S.opts.basics = e.target.checked; refresh(); });
+  $('#optProxy').addEventListener('change', e => { S.opts.proxies = e.target.checked; refresh(); });
+  $('#tabs').addEventListener('change', e => { if (e.target.name === 'tab'){ S.filter = e.target.value; renderRows(); } });
+  $('#search').addEventListener('input', e => { S.query = e.target.value; renderRows(); });
+  document.addEventListener('click', e => {
+    const c = e.target.closest('[data-copy]'); if (c){ doCopy(c.dataset.copy); return; }
+    const s = e.target.closest('[data-save]'); if (s){ doSave(s.dataset.save); }
+  });
+  $('#copyClose').addEventListener('click', () => { $('#copyPanel').hidden = true; });
+  function showCap(e){
+    const t = e.target.closest('.tick'); if (!t) return;
+    const x = S.order[+t.dataset.i]; if (!x) return;
+    let s;
+    if (x.status === 'owned') s = 'posseduta' + (x.prints[0] ? ' (' + fmtPrint(x.prints[0].r) + ')' : '');
+    else if (x.status === 'partial') s = x.owned + ' copie su ' + x.needEff;
+    else s = 'mancante';
+    $('#caption').textContent = x.name + ': ' + s;
+  }
+  $('#box').addEventListener('pointerover', showCap);
+  $('#box').addEventListener('click', showCap);
+  $('#reset').addEventListener('click', e => {
+    const b = e.currentTarget;
+    if (!b.classList.contains('warn')){
+      b.classList.add('warn'); b.textContent = 'Conferma: svuota tutto';
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => { b.classList.remove('warn'); b.textContent = 'Svuota tutto'; }, 4000);
+      return;
+    }
+    clearTimeout(resetTimer);
+    b.classList.remove('warn'); b.textContent = 'Svuota tutto';
+    S.groups = []; S.roles = {}; S.results = []; S.savedAt = null; S.filter = 'all'; S.query = '';
+    $('#search').value = ''; $('#memo').textContent = ''; showErrors([]);
+    clearStore();
+    render();
+  });
+
+  /* downloads capability: light up when available */
+  (async () => {
+    try {
+      if (window.claude && typeof window.claude.use === 'function'){
+        const d = await window.claude.use('downloads');
+        if (d){ downloads = d; document.documentElement.classList.add('can-dl'); }
+      }
+    } catch (e) {}
+  })();
+
+  if (restore()) animateNext = true;
+  refresh(false);
+})();
+</script>
+</body>
+</html>
