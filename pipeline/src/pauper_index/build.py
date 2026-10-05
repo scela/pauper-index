@@ -119,6 +119,7 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     outputs.write_lines_json(config.DATA / "printings.json", phead, "p", prows)
     outputs.write_json(config.DATA / "names.json", outputs.build_names(db, order))
     outputs.write_json(config.DATA / "allnames.json", outputs.build_all_names(db))
+    outputs.write_json(config.DATA / "cardnames.json", outputs.build_card_names(db))
 
     # report
     unresolved_ids = {i for i, r in enumerate(ctx.resolutions) if r.method in UNRESOLVED_METHODS}
@@ -172,7 +173,7 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     outputs.write_json(config.DATA / "meta.json", meta, pretty=True)
 
     sizes = [outputs.size_info(config.DATA / f)
-             for f in ("cards.json", "printings.json", "names.json", "allnames.json", "meta.json")]
+             for f in ("cards.json", "printings.json", "names.json", "allnames.json", "cardnames.json", "meta.json")]
     names_hist = distinct_names(kept)
     names_y1 = distinct_names(kept, y1)
     summary = {

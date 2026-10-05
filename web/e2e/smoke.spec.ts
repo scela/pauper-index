@@ -213,6 +213,27 @@ test('scheda con ventaglio: tastiera, carta attiva visibile, Esc', async ({ page
   }
   await page.keyboard.press('Escape');
   await expect(sheet).toBeHidden();
+  // il focus torna sulla riga ma la scheda resta chiusa
+  await expect(btn).toBeFocused();
+  await page.waitForTimeout(500);
+  await expect(sheet).toBeHidden();
+});
+
+test('scheda chiusa con Esc dopo un clic: non si riapre sotto il cursore', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'solo con il mouse');
+  await setup(page);
+  await uploadCollection(page);
+  await page.locator('#cardRows .cardbtn').first().click();
+  const sheet = page.locator('#sheet');
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await page.waitForTimeout(700);
+  await expect(sheet).toBeHidden();
+  // uscendo e rientrando con il mouse la scheda si riapre
+  await page.mouse.move(5, 5);
+  await page.locator('#cardRows .cardbtn').first().hover();
+  await expect(sheet).toBeVisible();
 });
 
 test('CSV malevolo: nessuno script eseguito, testo mostrato alla lettera', async ({ page }) => {
@@ -278,4 +299,82 @@ test('Novità: mostra le revisioni dall\'indice pubblico', async ({ page }) => {
   await expect(rev).toContainText(tr('news.item', { name: 'The Hobbit', set: 'HOB', date: fmtDate('2026-10-13', L) }));
   await expect(rev).toContainText(tr('news.decks', { name: "Giant's Boulder", n: 638, pct: 1.94 }));
   await expect(rev).toContainText(`Some Card: ${tr('legal.l')} → ${tr('legal.b')}`);
+});
+
+test('controllo rapido: carta giocata senza collezione, tastiera', async ({ page }) => {
+  await setup(page);
+  const input = page.locator('#quickInput');
+  await expect(page.locator('#quickLabel')).toHaveText(tr('quick.label'));
+  await expect(input).toHaveAttribute('placeholder', tr('quick.placeholder'));
+  await input.fill('brainst');
+  const list = page.locator('#quickList');
+  await expect(list).toBeVisible();
+  await expect(input).toHaveAttribute('aria-expanded', 'true');
+  await expect(list.locator('[role="option"]').first()).toContainText('Brainstorm');
+  await expect(list.locator('[role="option"]').first()).toHaveAttribute('aria-selected', 'true');
+  await input.press('Enter');
+  await expect(list).toBeHidden();
+  await expect(input).toHaveValue('Brainstorm');
+  const res = page.locator('#quickResult');
+  await expect(res.locator('.qtitle')).toContainText('Brainstorm');
+  await expect(res).toContainText(tr('quick.legal.l'));
+  await expect(res).toContainText(tr('periodDesc.1'));
+  await expect(res).toContainText(tr('sheet.lastMtgo').trim());
+  await expect(res).toContainText(tr('quick.noCollection'));
+  await expect(res.locator('.qimg img')).toHaveCount(1);
+  // tutti gli artwork: apre la scheda
+  await res.locator('.qres .btn').click();
+  await expect(page.locator('#sheet')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#sheet')).toBeHidden();
+  // frecce ed Esc
+  await input.fill('light');
+  await expect(page.locator('#quickList [role="option"]').first()).toHaveAttribute('aria-selected', 'true');
+  await input.press('ArrowDown');
+  await expect(page.locator('#quickList [role="option"]').nth(1)).toHaveAttribute('aria-selected', 'true');
+  await input.press('Escape');
+  await expect(page.locator('#quickList')).toBeHidden();
+});
+
+test('controllo rapido: carta mai giocata e nome esatto senza scegliere', async ({ page }) => {
+  await setup(page);
+  const input = page.locator('#quickInput');
+  await input.click();
+  await input.fill('black lot');
+  const opt = page.locator('#quickList [role="option"]', { hasText: 'Black Lotus' });
+  await expect(opt).toContainText(tr('quick.tagNever'));
+  await opt.click();
+  const res = page.locator('#quickResult');
+  await expect(res.locator('.qtitle')).toContainText('Black Lotus');
+  await expect(res).toContainText(tr('quick.never'));
+  await expect(res).toContainText(tr('quick.legal.n'));
+  await expect(res.locator('.qimg')).toHaveCount(0);
+  // nome esatto: risultato già mentre si scrive
+  await input.fill('Gush');
+  await expect(res.locator('.qtitle')).toContainText('Gush');
+  await expect(res).toContainText(tr('quick.legal.b'));
+  await input.fill('zzqq');
+  await expect(page.locator('#quickList')).toContainText(tr('quick.noResults'));
+});
+
+test('controllo rapido con la collezione: possesso anche per printing straniere e carte mai giocate', async ({ page }) => {
+  await setup(page);
+  await uploadCollection(page);
+  const input = page.locator('#quickInput');
+  const res = page.locator('#quickResult');
+  await input.fill('Lightning Bolt');
+  await expect(res).toContainText(tr('quick.owned', { n: 1 }));
+  await expect(res).toContainText('LEA #161 it ×1');
+  await expect(res.locator('.qres')).toHaveClass(/is-owned/);
+  await input.fill('Kor Skyfisher'); // solo nel mazzo, che è escluso
+  await expect(res).toContainText(tr('quick.notOwned'));
+  await input.click();
+  await input.fill('black lotu');
+  await page.locator('#quickList [role="option"]', { hasText: 'Black Lotus' }).click();
+  await expect(res).toContainText(tr('quick.never'));
+  await expect(res).toContainText(tr('quick.owned', { n: 1 }));
+  // cambio di periodo: il risultato si aggiorna
+  await input.fill('Brainstorm');
+  await page.selectOption('#period', '0');
+  await expect(res).toContainText(tr('periodDesc.0'));
 });

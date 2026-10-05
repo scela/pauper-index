@@ -67,3 +67,11 @@ def test_relevant_sets_threshold_and_grouping():
     assert not rows["new"]["rilevante_set"] and rows["new"]["rilevante_gruppo"]
     assert rows["new"]["giocate"] == 1
     assert rows["old"]["carte_ingresso"] == 1  # la bannata conta, la not_legal no
+
+
+def test_card_names_for_quick_check(db):
+    from pauper_index.outputs import build_card_names
+    names = dict(build_card_names(db))
+    assert names["Brainstorm"] == "l" and names["Gush"] == "b" and names["Rare Thing"] == "n"
+    assert "Goblin" not in names  # token
+    assert list(names) == sorted(names, key=str.casefold)

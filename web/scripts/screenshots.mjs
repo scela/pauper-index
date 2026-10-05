@@ -44,6 +44,15 @@ for (const [name, opts] of shots) {
   await page.locator('#cardRows .cardbtn').first().click();
   await settle(page);
   await page.screenshot({ path: `${OUT}/${name}-3-scheda.png` });
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.fill('#quickInput', 'lightning bo');
+  await page.waitForSelector('#quickList:not([hidden])');
+  await settle(page);
+  await page.screenshot({ path: `${OUT}/${name}-4-controllo-suggerimenti.png` });
+  await page.keyboard.press('Enter');
+  await settle(page);
+  await page.screenshot({ path: `${OUT}/${name}-5-controllo-risultato.png` });
   console.log(`${name}: ok`);
   await ctx.close();
 }

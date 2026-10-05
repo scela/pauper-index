@@ -23,7 +23,7 @@ export function renderAbout(root: HTMLElement, d: Data | null): void {
     h('h2', null, t('about.title')),
     h('p', null, t('about.intro')),
 
-    h('section', null, h('h3', null, t('about.how')), h('ul', null, ...items('about.how', 6))),
+    h('section', null, h('h3', null, t('about.how')), h('ul', null, ...items('about.how', 7))),
 
     h('section', null,
       h('h3', null, t('about.notice')),

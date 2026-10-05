@@ -144,6 +144,23 @@ def build_all_names(db: CardDB) -> list[str]:
     return sorted(keys)
 
 
+def build_card_names(db: CardDB) -> list[list[str]]:
+    """[nome, legalità l|b|n] di tutte le carte giocabili in carta o su MTGO, ordinate per nome.
+
+    Serve ai suggerimenti del controllo rapido (anche per le carte mai giocate in Pauper).
+    Escluse le carte solo Arena (per esempio le versioni ribilanciate "A-").
+    """
+    out = []
+    for oid, c in db.cards.items():
+        if not c.playable:
+            continue
+        if not any(p.games & {"paper", "mtgo"} for p in db.printings.get(oid, ())):
+            continue
+        out.append([c.name, c.pauper[0]])
+    out.sort(key=lambda x: (x[0].casefold(), x[0]))
+    return out
+
+
 def write_json(path: Path, obj, pretty: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(obj, ensure_ascii=False, indent=2) if pretty else dumps(obj)

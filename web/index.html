@@ -35,6 +35,17 @@
   <main id="contenuto">
   <div id="viewMain">
 
+    <section class="quick" id="quick" aria-labelledby="quickLabel">
+      <label class="quick-label" id="quickLabel" for="quickInput" data-i18n="quick.label">Controllo rapido di una carta</label>
+      <div class="qbox">
+        <input id="quickInput" type="search" role="combobox" aria-expanded="false" aria-controls="quickList" aria-autocomplete="list"
+          autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"
+          data-i18n-ph="quick.placeholder" placeholder="Scrivi il nome di una carta">
+        <ul id="quickList" class="qlist" role="listbox" data-i18n-aria="quick.suggestions" aria-label="Suggerimenti" hidden></ul>
+      </div>
+      <div id="quickResult" aria-live="polite"></div>
+    </section>
+
     <section class="loadsec" id="loadArea" data-i18n-aria="load.aria" aria-label="Carica la collezione">
       <div class="load">
         <label class="drop" id="drop">

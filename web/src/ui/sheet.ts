@@ -66,6 +66,25 @@ export function fanItems(d: Data, idx: number, res: Result | null): FanItem[] {
 
 let current: { anchor: HTMLElement; idx: number; mode: 'hover' | 'click' } | null = null;
 let hideTimer: number | undefined;
+let closedAt = 0;
+let hoverBlocked: HTMLElement | null = null;
+
+/**
+ * Dopo una chiusura esplicita (Esc, "Chiudi") il passaggio del cursore non riapre la scheda della
+ * stessa carta finché il mouse non esce dalla riga (altrimenti si riaprirebbe da sola sotto il cursore).
+ */
+export function isHoverBlocked(el: HTMLElement): boolean {
+  return hoverBlocked === el;
+}
+
+export function unblockHover(el: HTMLElement): void {
+  if (hoverBlocked === el) hoverBlocked = null;
+}
+
+/** Vero subito dopo una chiusura: il focus che torna sulla riga non deve riaprire la scheda. */
+export function recentlyClosed(): boolean {
+  return Date.now() - closedAt < 400;
+}
 
 function sheetEl(): HTMLElement {
   return document.getElementById('sheet')!;
@@ -80,7 +99,11 @@ export function closeSheet(returnFocus = false): void {
   if (el.hidden) return;
   el.hidden = true;
   el.replaceChildren();
-  if (returnFocus && current) current.anchor.focus();
+  closedAt = Date.now();
+  if (returnFocus && current) {
+    hoverBlocked = current.anchor;
+    current.anchor.focus();
+  }
   current = null;
 }
 

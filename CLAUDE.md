@@ -217,6 +217,8 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 
 **`allnames.json`** (aggiunto in Fase 2): array dei nomi normalizzati di **tutte** le carte giocabili, circa 36.000 voci (250 KB compressi). Il frontend lo scarica solo quando il testo incollato contiene righe senza Scryfall ID e non presenti nella lista. Così distingue "carta mai giocata in Pauper" da "nome non riconosciuto".
 
+**`cardnames.json`** (aggiunto con la funzione 2): `[[nome, legalità l|b|n], …]` di tutte le carte giocabili in carta o su MTGO (escluse quelle solo Arena), ordinate per nome. Circa 33.800 voci, 246 KB compressi. Serve ai suggerimenti del controllo rapido; si scarica solo al primo uso del campo.
+
 **`meta.json`**: generazione, ultimo torneo, totali per finestra, date dei bulk, commit della fonte, stato (`ok`/`ferma`), deduplica, statistiche di risoluzione.
 
 **`reviews/`** (non mostrato nel sito: contiene testo grezzo delle decklist):
@@ -425,6 +427,32 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Test**:
   - `tests/i18n.test.ts`: stesse chiavi, nessun testo vuoto, stessi segnaposto, formattazione, scelta della lingua;
   - Playwright con quattro progetti (`desktop-it`, `desktop-en`, `mobile-it`, `mobile-en`, scelti con `locale`), con i testi attesi presi dagli stessi dizionari.
+
+## Controllo rapido di una carta (funzione 2)
+
+- **Campo in cima alla pagina** (`#quickInput`): schema ARIA *combobox*, con `aria-expanded`, `aria-activedescendant` e opzioni `role="option"`. Si usa con frecce, Invio (sceglie la prima o quella attiva), Esc (chiude i suggerimenti; al secondo Esc svuota il campo) o tocco. Al focus il testo viene selezionato, così la carta successiva si scrive sopra. Testo a 16 px (niente zoom su iPhone), righe dei suggerimenti alte almeno 44 px.
+- **Suggerimenti** (`lib/quick.ts`, `suggest`), in ordine:
+  1. il nome inizia con la ricerca;
+  2. una parola (anche di una faccia) inizia con la ricerca;
+  3. tutte le parole cercate sono inizi di parola ("light bol");
+  4. la ricerca compare ovunque (da 3 caratteri).
+
+  A parità vengono prima le carte giocate, poi i nomi più corti; al massimo 8. Prima che arrivi `cardnames.json` si suggeriscono solo le carte giocate. Un **nome esatto** mostra il risultato subito, senza scegliere.
+- **Risultato**:
+  - *carta giocata*: immagine (la printing posseduta se c'è, altrimenti quella di riferimento), legalità, percentuale e numero di mazzi nel periodo scelto con le copie tipiche, ultima apparizione MTGO e cartacea con il link al torneo, set d'ingresso, "Tutti gli artwork" (apre la scheda con il ventaglio);
+  - *carta mai giocata*: "Mai giocata in Pauper" con la legalità;
+  - *con la collezione*: copie possedute, printing e Binder, da `collectionIndex`. Il possesso è **per carta e per nome**, quindi vale anche per carte escluse dai filtri o mai giocate.
+- **Aggiornamento**: il risultato si aggiorna quando cambiano filtri, lingua o collezione.
+- **Correzioni alla scheda della tabella**, trovate con questa funzione:
+  - Esc chiude solo lo strato più in alto (prima la griglia "Mostra tutte", poi la scheda);
+  - dopo una chiusura esplicita, né il ritorno del focus né il mouse fermo sulla riga riaprono la scheda; si riapre solo uscendo e rientrando con il mouse.
+
+## Regola sui test (decisa dall'utente)
+
+- Se un test fallisce perché il comportamento è cambiato **di proposito**, si può aggiornare il test.
+- Se fallisce per un comportamento che **potrebbe essere un difetto**, si corregge il codice, non il test.
+- Se non è chiaro quale dei due casi sia, ci si ferma e si chiede all'utente.
+- In ogni report vanno elencati i test modificati, ciascuno con il motivo in una riga.
 
 ## Dependabot
 

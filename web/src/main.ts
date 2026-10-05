@@ -1,21 +1,23 @@
 import './style.css';
 
 import {
-  compute, DEFAULT_OPTS, defaultRole, presetCounts, summarize,
+  compute, deckShare, DEFAULT_OPTS, defaultRole, presetCounts, summarize, typicalCopies,
   type ImportSummary, type Opts, type Result,
 } from './lib/compare';
 import { detectLang, fmtDateTime, getLang, setLang, t, type Key, type Lang } from './i18n';
-import { baseName, isFoil, looksLikeCSV, readTable } from './lib/csv';
+import { baseName, looksLikeCSV, readTable } from './lib/csv';
 import { imageUrl, loadData, type Data } from './lib/data';
 import { $, h } from './lib/dom';
 import { realignedCSV, textList } from './lib/exports';
-import { daysBetween, fmtDate, fmtInt, fmtPct } from './lib/format';
+import { daysBetween, fmtDate, fmtInt, fmtPct, fmtPrint } from './lib/format';
 import { norm } from './lib/norm';
 import { clearAll, idbGet, idbSet, lsGet, lsSet } from './lib/store';
 import { parseTextList } from './lib/text';
 import type { Group, Role, Row } from './lib/types';
+import { collectionIndex, type CollectionIndex, type Owned } from './lib/quick';
 import { renderAbout } from './ui/about';
-import { cancelClose, closeSheet, isOpenFor, openSheet, renderGrid, scheduleClose } from './ui/sheet';
+import { initQuick } from './ui/quick';
+import { cancelClose, closeSheet, isHoverBlocked, isOpenFor, openSheet, recentlyClosed, renderGrid, scheduleClose, unblockHover } from './ui/sheet';
 
 const PAGE = 100;
 const NEW_DAYS = 60;
@@ -56,7 +58,9 @@ const S = {
   summaries: [] as SummaryItem[],
   allNames: null as Set<string> | null,
   replacing: false,
+  cix: null as CollectionIndex | null,
 };
+let quick: { refresh(): void } | null = null;
 let toastTimer: number | undefined;
 let resetTimer: number | undefined;
 let hoverTimer: number | undefined;
@@ -244,6 +248,7 @@ function showErrors(list: string[]): void {
 function refresh(save = true): void {
   if (!S.d) return;
   S.results = compute(S.d, S.groups, S.roles, S.opts);
+  S.cix = collectionIndex(S.d, S.groups, S.roles, S.opts.proxies);
   S.shown = PAGE;
   render();
   if (save) persist();
@@ -254,6 +259,7 @@ function render(): void {
   renderFilters();
   renderResults();
   renderExtra();
+  quick?.refresh();
 }
 
 function renderDataline(): void {
@@ -371,16 +377,6 @@ function thumbIds(x: Result): { id: string; owned: boolean }[] {
   return ids;
 }
 
-function fmtPrint(r: Row): string {
-  const parts: string[] = [];
-  const set = r.s ? r.s.toUpperCase() : r.sn || '';
-  if (set) parts.push(set);
-  if (r.c) parts.push('#' + r.c);
-  if (isFoil(r.f)) parts.push(/^(true|yes|1|y)$/i.test(r.f) ? t('print.foil') : r.f.toLowerCase());
-  if (r.l && !/^(en|english)$/i.test(r.l)) parts.push(r.l.toLowerCase());
-  if (r.p) parts.push(t('print.proxy'));
-  return parts.join(' ') || t('print.unknown');
-}
 
 function renderRows(): void {
   const d = S.d!;
@@ -553,6 +549,21 @@ function openFor(btn: HTMLElement, mode: 'hover' | 'click'): void {
     d, opts: S.opts, idx, res: hasColl() ? res : null, approx,
     onShowAll: (items, title) => renderGrid($('#gridDialog') as HTMLDialogElement, items, title),
   }, mode);
+}
+
+/** Scheda degli artwork dal controllo rapido: anche per carte fuori dalla lista con i filtri attuali. */
+function openArtworksFor(anchor: HTMLElement, idx: number, owned: Owned | null): void {
+  const d = S.d!;
+  const c = d.cards.c[idx];
+  const res: Result | null = hasColl() ? {
+    idx, owned: owned?.total || 0, need: 1, typical: typicalCopies(c, S.opts), share: deckShare(d, c, S.opts),
+    status: owned && owned.total > 0 ? 'owned' : 'missing', prints: owned?.prints || [], binders: owned?.binders || [],
+  } : null;
+  const approx = !!res && res.prints.length > 0 && res.prints.every((p) => !p.exact);
+  openSheet(anchor, {
+    d, opts: S.opts, idx, res, approx,
+    onShowAll: (items, title) => renderGrid($('#gridDialog') as HTMLDialogElement, items, title),
+  }, 'click');
 }
 
 /* ---------- tema e viste ---------- */
@@ -742,18 +753,19 @@ function wire(): void {
     if (!b) return;
     cancelClose();
     window.clearTimeout(hoverTimer);
-    if (isOpenFor(Number(b.dataset.idx))) return;
+    if (isOpenFor(Number(b.dataset.idx)) || isHoverBlocked(b)) return;
     hoverTimer = window.setTimeout(() => openFor(b, 'hover'), 220);
   });
   rows.addEventListener('mouseout', (e) => {
-    const b = (e.target as HTMLElement).closest('.cardbtn');
+    const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
     if (!b || b.contains(e.relatedTarget as Node)) return;
+    unblockHover(b);
     window.clearTimeout(hoverTimer);
     scheduleClose();
   });
   rows.addEventListener('focusin', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
-    if (b && b.matches(':focus-visible') && !isOpenFor(Number(b.dataset.idx))) openFor(b, 'hover');
+    if (b && b.matches(':focus-visible') && !isOpenFor(Number(b.dataset.idx)) && !recentlyClosed()) openFor(b, 'hover');
   });
   rows.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
@@ -765,11 +777,12 @@ function wire(): void {
   sheet.addEventListener('mouseenter', cancelClose);
   sheet.addEventListener('mouseleave', scheduleClose);
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !sheet.hidden) closeSheet(true);
+    // Esc chiude solo lo strato più in alto: se la griglia "Mostra tutte" è aperta, la chiude il browser
+    if (e.key === 'Escape' && !sheet.hidden && !($('#gridDialog') as HTMLDialogElement).open) closeSheet(true);
   });
   document.addEventListener('pointerdown', (e) => {
     const el = e.target as HTMLElement;
-    if (!sheet.hidden && !sheet.contains(el) && !el.closest('.cardbtn') && !el.closest('dialog')) closeSheet();
+    if (!sheet.hidden && !sheet.contains(el) && !el.closest('.cardbtn, .qimg, .qres .btn') && !el.closest('dialog')) closeSheet();
   });
 
   // cancella i miei dati (conferma in due tempi)
@@ -827,6 +840,9 @@ async function main(): Promise<void> {
   setLang(detectLang(lsGet('lang'), navigator.languages || [navigator.language]));
   applyStatic();
   wire();
+  quick = initQuick({
+    data: () => S.d, opts: () => S.opts, collection: () => (hasColl() ? S.cix : null), openArtworks: openArtworksFor,
+  });
   route();
   try {
     S.d = await loadData();

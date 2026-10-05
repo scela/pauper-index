@@ -8,7 +8,7 @@ const DATA = resolve(here, '../data');
 
 // Solo questi file di data/ vanno nel sito. I report interni (unresolved.csv, risoluzione.csv,
 // dedup.json, set-ingresso.md, baseline-*.md) contengono testo grezzo delle decklist e restano nel repo.
-const PUBLIC_DATA = ['cards.json', 'printings.json', 'names.json', 'allnames.json', 'meta.json'];
+const PUBLIC_DATA = ['cards.json', 'printings.json', 'names.json', 'allnames.json', 'cardnames.json', 'meta.json'];
 // Dalle revisioni solo l'indice pubblico (senza nomi grezzi non risolti).
 const PUBLIC_REVIEWS = /^index\.json$/;
 
