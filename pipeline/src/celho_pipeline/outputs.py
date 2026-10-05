@@ -132,6 +132,18 @@ def build_names(db: CardDB, order: list[str]) -> dict[str, int]:
     return dict(sorted(out.items()))
 
 
+def build_all_names(db: CardDB) -> list[str]:
+    """Nomi normalizzati di tutte le carte giocabili (anche mai giocate in Pauper).
+
+    Serve al frontend per distinguere, nel testo incollato, una carta mai giocata da un nome non riconosciuto.
+    """
+    keys = set()
+    for k, levels in db.index.items():
+        if min(levels) <= LV_ALT:
+            keys.add(k)
+    return sorted(keys)
+
+
 def write_json(path: Path, obj, pretty: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(obj, ensure_ascii=False, indent=2) if pretty else dumps(obj)

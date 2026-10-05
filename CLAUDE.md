@@ -12,7 +12,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
 
 - [x] Fase 0: setup e ispezione dei formati
 - [x] Fase 1: pipeline in locale, test, confronto con la baseline
-- [ ] Fase 2: frontend
+- [x] Fase 2: frontend
 - [ ] Fase 3: GitHub Actions e deploy
 - [ ] Fase 4: rifinitura e README
 
@@ -38,6 +38,11 @@ Sviluppo su Windows 11 (PowerShell, Git for Windows); la CI gira su Ubuntu.
 ```powershell
 python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -e "pipeline[dev]"   # Fase 1
 .\.venv\Scripts\python -m pytest pipeline
+cd web; npm ci                       # Fase 2 (lockfile: web/package-lock.json)
+npm run dev                          # sviluppo su http://localhost:5173 (senza CSP)
+npm run build; npm run preview       # build di produzione con CSP su http://localhost:4173
+npm test                             # Vitest (logica, sicurezza, test locali su reference/private)
+npx playwright install chromium; npm run e2e   # smoke test desktop + mobile sulla build
 ```
 
 ## Convenzioni
@@ -203,6 +208,8 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 
 **`names.json`**: `{nome normalizzato: indice carta}` (nome, facce, `printed_name`/`flavor_name`), senza le chiavi ambigue. La normalizzazione è `names.norm`; i vettori di prova sono in `pipeline/tests/fixtures/norm_vectors.json`.
 
+**`allnames.json`** (aggiunto in Fase 2): array dei nomi normalizzati di **tutte** le carte giocabili, circa 36.000 voci (250 KB compressi). Il frontend lo scarica solo quando il testo incollato contiene righe senza Scryfall ID e non presenti nella lista. Così distingue "carta mai giocata in Pauper" da "nome non riconosciuto".
+
 **`meta.json`**: generazione, ultimo torneo, totali per finestra, date dei bulk, commit della fonte, stato (`ok`/`ferma`), deduplica, statistiche di risoluzione.
 
 **`reviews/`** (non mostrato nel sito: contiene testo grezzo delle decklist):
@@ -302,6 +309,41 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 - Interfaccia: l'ultima apparizione si mostra sotto la carta, nel ventaglio e nella scheda. Si può ordinare e filtrare per data (per esempio "non più vista da oltre 6 mesi").
 
 Idee da valutare dopo la prima versione: `docs/IDEE.md`.
+
+## Frontend (Fase 2)
+
+**Struttura di `web/`** (Vite + TypeScript, nessun framework):
+- `src/lib/`: logica pura e testata:
+  - `norm` (porting esatto di `names.norm`);
+  - `csv` (dal prototipo) e `text` (testo incollato);
+  - `data` (caricamento e indici);
+  - `compare` (abbinamento, definizione della lista, confronto);
+  - `exports`, `format`, `store`;
+  - `dom`: `h()`, l'unico modo di creare elementi; il testo passa sempre da `textContent`.
+- `src/ui/`: `sheet` (scheda e ventaglio), `about` (Informazioni). `src/main.ts`: stato, eventi, rendering.
+- `tests/`: Vitest. `private.test.ts` gira solo se trova `reference/private/esempio-testo.txt` e stampa solo conteggi. `e2e/`: Playwright, progetti desktop e "mobile" (iPhone 13 emulato su Chromium). `tests/fixtures/`: dati sintetici.
+- `vite.config.ts`, con un plugin che:
+  - in sviluppo serve `/data/*` da `../data`;
+  - in build copia in `dist/data/` **solo** `cards`, `printings`, `names`, `allnames`, `meta` e `reviews/<set>.(json|md)` / `reviews/index.json`. I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`) restano fuori dal sito;
+  - inietta la CSP (meta tag) **solo in build**, perché il dev server di Vite usa stili inline.
+
+**Decisioni**:
+- **Font di sistema** al posto di Geist: nessuna richiesta esterna e nessun file di font da servire.
+- **CSP**: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://cards.scryfall.io data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'`. `<meta name="referrer" content="no-referrer">`, così le richieste di immagini a Scryfall non rivelano la pagina.
+- **Ruoli dei gruppi**: solo "Le mie carte" o "Ignora". Binder di tipo `deck` o `list` sono su "Ignora" di default; il testo incollato è un gruppo "Testo incollato" che conta come posseduto.
+- **Abbinamento di una riga**:
+  1. Scryfall ID (`printings.json`);
+  2. set + numero;
+  3. nome (`names.json`, poi faccia frontale, poi `A/B` → `A // B`).
+
+  Le righe con uno Scryfall ID sconosciuto (printing in altre lingue) si abbinano per nome, ma la miniatura usa il loro ID.
+- **Riepilogo dell'importazione**: righe lette, carte della lista, carte mai giocate in Pauper (Scryfall ID o nome in `allnames.json`), righe non riconosciute (elencate), righe senza set e numero (immagine di riferimento, segnalata anche nella scheda).
+- **"Conta le copie"**: confronto con la mediana delle copie (main+side, oppure solo main se "Conta anche il side" è spento) nella finestra scelta.
+- **Ventaglio**: un artwork per `illustration_id`, preferendo la printing posseduta, poi la più recente in inglese. Al massimo 7, più "Mostra tutte" che apre una griglia in un `<dialog>`. Le carte sono **distanziate e ruotate di pochi gradi, senza sovrapporsi**, per non coprire artista e copyright (regole di Scryfall). La carta attiva è mostrata intera e più grande.
+- **Persistenza**: IndexedDB (database `celho`) per la collezione; localStorage solo per tema, ordinamento e filtro, con prefisso `celho:`. "Cancella i miei dati" elimina il database e **solo** le chiavi `celho:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
+- **Tabella**: pagine da 100 righe ("Mostra altre"). Ordinamento per percentuale di mazzi, nome, ultima apparizione (recente o meno recente). Filtro "viste negli ultimi 6 mesi / non viste da oltre 6 mesi", rispetto alla data dei dati.
+- **Link "Segnala un errore"**: usa `VITE_REPO_URL` al momento della build (da impostare nella Fase 3); senza, mostra un testo generico.
+- **Icone**: `public/icon.svg` più PNG generate con `npm run icons` (Chromium di Playwright) e committate. Nessun simbolo di Wizards.
 
 ## Decisioni in sospeso
 
