@@ -187,7 +187,8 @@ test('Informazioni: avviso Fan Content Policy esatto; in pagina una sola riga', 
   await setup(page);
   await expect(page.locator('footer p')).toHaveCount(1);
   await expect(page.locator('footer')).toContainText('Fan Content non ufficiale');
-  await page.click('footer a[href="#informazioni"]');
+  await page.locator('footer a[href="#informazioni"]').focus();
+  await page.keyboard.press('Enter');
   await expect(page.locator('#fcp')).toHaveText(FCP);
   await expect(page.locator('#viewAbout')).toContainText('Nessun account, nessun cookie, nessuna analytics');
   await expect(page.locator('#viewAbout')).toContainText('vengono letti solo nel tuo browser');
