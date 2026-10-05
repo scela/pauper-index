@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from celho_pipeline.names import clean, norm, split_faces
+from pauper_index.names import clean, norm, split_faces
 
 VECTORS = json.loads((Path(__file__).parent / "fixtures" / "norm_vectors.json").read_text("utf-8"))
 

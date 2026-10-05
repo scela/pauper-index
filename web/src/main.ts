@@ -18,14 +18,16 @@ import { cancelClose, closeSheet, isOpenFor, openSheet, renderGrid, scheduleClos
 
 const PAGE = 100;
 const NEW_DAYS = 60;
-const STALE_MONTHS_DAYS = 182;
-const STATUS = { owned: 'Posseduta', partial: 'Parziale', missing: 'Mancante' } as const;
+const STALE_DAYS = 182;
+const PERIOD_DESC = ['ultimi 61 giorni', 'ultimo anno', 'ultimi 2 anni', 'dal 2014'];
+const PERIOD_LABELS = [`${WINDOW_LABELS[0]} (61 giorni)`, WINDOW_LABELS[1], WINDOW_LABELS[2], `${WINDOW_LABELS[3]} (dal 2014)`];
 
 interface Saved {
   v: 2;
   groups: Group[];
   roles: Record<string, Role>;
   opts: Opts;
+  showMissing?: boolean;
   savedAt: number;
 }
 
@@ -40,22 +42,22 @@ const S = {
   groups: [] as Group[],
   roles: {} as Record<string, Role>,
   opts: { ...DEFAULT_OPTS } as Opts,
+  showMissing: false,
   savedAt: null as number | null,
-  filter: 'all' as 'all' | 'owned' | 'partial' | 'missing',
   query: '',
   seen: (lsGet('seen') as 'all' | 'recent' | 'old') || 'all',
   sort: (lsGet('sort') as 'share' | 'name' | 'recent' | 'oldest') || 'share',
   results: [] as Result[],
   view: [] as Result[],
   shown: PAGE,
-  order: [] as Result[],
   summaries: [] as SummaryItem[],
   allNames: null as Set<string> | null,
+  replacing: false,
 };
-let animateNext = false;
 let toastTimer: number | undefined;
 let resetTimer: number | undefined;
 let hoverTimer: number | undefined;
+let saveTimer: number | undefined;
 
 /* ---------- utilità ---------- */
 
@@ -68,6 +70,7 @@ function toast(msg: string): void {
 }
 
 const hasColl = () => S.groups.some((g) => S.roles[g.id] === 'coll');
+const plural = (n: number, one: string, many: string) => `${fmtInt(n)} ${n === 1 ? one : many}`;
 
 async function getAllNames(): Promise<Set<string> | null> {
   if (S.allNames) return S.allNames;
@@ -83,12 +86,13 @@ async function getAllNames(): Promise<Set<string> | null> {
 
 /* ---------- persistenza ---------- */
 
-let saveTimer: number | undefined;
 function persist(): void {
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(async () => {
     S.savedAt = Date.now();
-    const ok = await idbSet('state', { v: 2, groups: S.groups, roles: S.roles, opts: S.opts, savedAt: S.savedAt } satisfies Saved);
+    const ok = await idbSet('state', {
+      v: 2, groups: S.groups, roles: S.roles, opts: S.opts, showMissing: S.showMissing, savedAt: S.savedAt,
+    } satisfies Saved);
     $('#memo').textContent = ok ? memoText() : 'Questo browser non permette di salvare la collezione: la prossima volta dovrai ricaricarla.';
   }, 150);
 }
@@ -96,7 +100,7 @@ function persist(): void {
 function memoText(): string {
   if (!S.savedAt) return '';
   const d = new Date(S.savedAt);
-  return `Ultimo aggiornamento: ${d.toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. Per aggiornare un Binder ricarica il suo export: sostituisce quello vecchio.`;
+  return `Salvata su questo dispositivo il ${d.toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.`;
 }
 
 async function restore(): Promise<void> {
@@ -105,10 +109,21 @@ async function restore(): Promise<void> {
   S.groups = saved.groups;
   S.roles = saved.roles || {};
   S.opts = { ...DEFAULT_OPTS, ...(saved.opts || {}) };
+  S.showMissing = !!saved.showMissing;
   S.savedAt = saved.savedAt || null;
 }
 
 /* ---------- importazione ---------- */
+
+function beginImport(): void {
+  // "Sostituisci": il nuovo caricamento prende il posto della collezione precedente
+  if (S.replacing) {
+    S.groups = [];
+    S.roles = {};
+    S.summaries = [];
+    S.replacing = false;
+  }
+}
 
 function addGroups(gs: Group[]): void {
   for (const g of gs) {
@@ -133,8 +148,7 @@ async function summarizeImport(source: string, kind: 'csv' | 'text', groups: Gro
     const all = await getAllNames();
     if (all) s = summarize(S.d, groups, all);
   }
-  S.summaries = [{ source, kind, s }, ...S.summaries.filter((x) => x.source !== source)].slice(0, 4);
-  renderSummaries();
+  S.summaries = [{ source, kind, s }, ...S.summaries.filter((x) => x.source !== source)].slice(0, 6);
 }
 
 function readOne(name: string, text: string): { groups?: Group[]; kind?: 'csv' | 'text'; error?: string } {
@@ -154,28 +168,24 @@ function readOne(name: string, text: string): { groups?: Group[]; kind?: 'csv' |
 
 async function handleFiles(files: File[]): Promise<void> {
   const errs: string[] = [];
-  let added = false;
+  const parsed: { name: string; r: ReturnType<typeof readOne> }[] = [];
   for (const f of files) {
-    let text: string;
     try {
-      text = await f.text();
+      parsed.push({ name: f.name, r: readOne(f.name, await f.text()) });
     } catch {
       errs.push(`${f.name}: impossibile leggere il file.`);
-      continue;
-    }
-    const r = readOne(f.name, text);
-    if (r.error) errs.push(r.error);
-    if (r.groups) {
-      addGroups(r.groups);
-      added = true;
-      await summarizeImport(f.name, r.kind!, r.groups);
     }
   }
+  const ok = parsed.filter((p) => p.r.groups);
+  parsed.forEach((p) => p.r.error && errs.push(p.r.error));
   showErrors(errs);
-  if (added) {
-    animateNext = true;
-    refresh();
+  if (!ok.length) return;
+  beginImport();
+  for (const p of ok) {
+    addGroups(p.r.groups!);
+    await summarizeImport(p.name, p.r.kind!, p.r.groups!);
   }
+  refresh();
 }
 
 async function handleText(): Promise<void> {
@@ -201,39 +211,20 @@ async function handleText(): Promise<void> {
       showErrors(['Il testo incollato non contiene carte. Usa una riga per carta, per esempio "4 Ponder" o "1 Ponder (M12) 73".']);
       return;
     }
+    beginImport();
     groups = [textGroup(rows, 'Testo incollato')];
     kind = 'text';
   }
+  if (kind === 'csv') beginImport();
   showErrors([]);
   addGroups(groups);
   ta.value = '';
   await summarizeImport(groups.length === 1 ? groups[0].name : 'Testo incollato', kind, groups);
-  animateNext = true;
   refresh();
 }
 
 function showErrors(list: string[]): void {
   $('#errors').replaceChildren(...list.map((e) => h('li', null, e)));
-}
-
-function renderSummaries(): void {
-  const root = $('#importSummary');
-  root.replaceChildren(...S.summaries.map(({ source, kind, s }) => {
-    const bits = [`${fmtInt(s.rows)} righe lette`, `${fmtInt(s.inList)} di carte della lista`];
-    if (s.notInList) bits.push(`${fmtInt(s.notInList)} di carte mai giocate in Pauper`);
-    bits.push(`${fmtInt(s.unrecognized.length)} non riconosciute`);
-    const shown = s.unrecognized.slice(0, 60);
-    return h('div', { class: 'item' },
-      h('b', null, source), ': ', bits.join(', ') + '.',
-      kind === 'text' ? h('p', { class: 'note' }, 'Con il testo non ci sono Binder: tutte le carte incollate contano come possedute.') : null,
-      s.approxPrint ? h('p', { class: 'note' }, `${fmtInt(s.approxPrint)} righe senza set e numero: per l'immagine uso la printing di riferimento.`) : null,
-      shown.length
-        ? h('details', null, h('summary', null, 'Righe non riconosciute'),
-          h('ul', null, ...shown.map((r) => h('li', null, `${r.q} ${r.n}${r.s ? ` (${r.s.toUpperCase()})` : ''}`))),
-          s.unrecognized.length > shown.length ? h('p', { class: 'note' }, `e altre ${s.unrecognized.length - shown.length}.`) : null,
-          h('p', { class: 'note' }, 'Controlla che il nome sia in inglese e scritto per intero.'))
-        : null);
-  }));
 }
 
 /* ---------- rendering ---------- */
@@ -247,61 +238,44 @@ function refresh(save = true): void {
 }
 
 function render(): void {
-  renderGroups();
-  renderPresets();
+  renderLoad();
+  renderFilters();
   renderResults();
+  renderExtra();
 }
 
-function renderBanner(): void {
-  const b = $('#banner');
-  const d = S.d;
-  if (!d) return;
-  const m = d.meta;
-  const parts: (Node | string)[] = [
-    h('span', null, 'Dati al ', h('b', null, fmtDate(m.last_tournament))),
-    h('span', null, `${fmtInt(m.tournaments)} tornei · ${fmtInt(m.decks)} mazzi`),
-  ];
+function renderDataline(): void {
+  const m = S.d!.meta;
+  const el = $('#dataline');
+  el.classList.remove('error');
+  el.replaceChildren(`Dati al ${fmtDate(m.last_tournament)} · ${fmtInt(m.tournaments)} tornei · ${fmtInt(m.decks)} mazzi`);
   if (m.source.status === 'ferma') {
-    parts.push(h('span', { class: 'warn' }, `Attenzione: la fonte dei tornei non si aggiorna da ${m.source.days_since_last_tournament} giorni, i dati più recenti potrebbero mancare.`));
+    el.append(h('span', { class: 'warn' }, `La fonte dei tornei non si aggiorna da ${m.source.days_since_last_tournament} giorni: i dati più recenti potrebbero mancare.`));
   }
-  b.classList.remove('error');
-  b.replaceChildren(...parts);
 }
 
-function seg(id: string, val: Role, label: string, role: Role): HTMLLabelElement {
-  return h('label', null, h('input', { type: 'radio', name: `role-${id}`, value: val, dataset: { gid: id }, checked: role === val }),
-    h('span', null, label));
+function collectionCards(): number {
+  return S.groups.filter((g) => S.roles[g.id] === 'coll').reduce((a, g) => a + g.rows.reduce((b, r) => b + r.q, 0), 0);
 }
 
-function renderGroups(): void {
-  const has = S.groups.length > 0;
-  $('#assign').hidden = !has;
-  if (!has) return;
-  $('#groupRows').replaceChildren(...S.groups.map((g) => {
-    const role = S.roles[g.id];
-    const cards = g.rows.reduce((a, r) => a + r.q, 0);
-    const typ = g.kind === 'text' ? 'testo' : g.type || '';
-    return h('tr', null,
-      h('td', { class: 'g-name' }, h('span', { class: 'gname' }, g.name), typ ? h('span', { class: 'gtype' }, typ) : null),
-      h('td', { class: 'g-count count num' }, `${fmtInt(g.rows.length)} voci, ${fmtInt(cards)} carte`),
-      h('td', { class: 'g-role' }, h('div', { class: 'seg', role: 'radiogroup', 'aria-label': `Ruolo di ${g.name}` },
-        seg(g.id, 'coll', 'Le mie carte', role), seg(g.id, 'skip', 'Ignora', role))),
-      h('td', { class: 'g-act' }, h('button', { class: 'btn quiet', type: 'button', dataset: { remove: g.id } }, 'Rimuovi')));
-  }));
-  ($('#optProxy') as HTMLInputElement).checked = S.opts.proxies;
-  $('#optProxyWrap').hidden = !S.groups.some((g) => g.hasProxy && S.roles[g.id] === 'coll');
-  if (!$('#memo').textContent) $('#memo').textContent = memoText();
+function renderLoad(): void {
+  const loaded = S.groups.length > 0;
+  $('#loadArea').hidden = loaded && !S.replacing;
+  $('#cancelReplace').hidden = !(loaded && S.replacing);
+  const line = $('#loaded');
+  line.hidden = !loaded || S.replacing;
+  if (loaded) {
+    line.replaceChildren('Collezione: ', h('b', null, plural(collectionCards(), 'carta', 'carte')), ' · ',
+      h('button', { class: 'linkbtn', type: 'button', id: 'replace' }, 'Sostituisci'));
+  }
 }
 
-function renderPresets(): void {
+function renderFilters(): void {
   const d = S.d!;
   const counts = presetCounts(d, S.opts);
-  const desc = ['ultimi 61 giorni', 'ultimi 12 mesi', 'ultimi 24 mesi', 'dal 2014'];
-  $('#presets').replaceChildren(...WINDOW_LABELS.map((label, i) => h('label', { class: 'preset' },
-    h('input', { type: 'radio', name: 'preset', value: String(i), checked: S.opts.win === i }),
-    h('b', null, label + (i === 1 ? ' (default)' : '')),
-    h('small', { class: 'sub' }, `${desc[i]} · ${fmtInt(d.cards.tot[i][0])} mazzi`),
-    h('span', { class: 'n' }, fmtInt(counts[i])), h('small', null, counts[i] === 1 ? ' carta' : ' carte'))));
+  $('#period').replaceChildren(...PERIOD_LABELS.map((label, i) => h('option', { value: String(i), selected: S.opts.win === i },
+    `${label} · ${fmtInt(counts[i])} carte`)));
+  ($('#period') as HTMLSelectElement).value = String(S.opts.win);
   ($('#optMin') as HTMLInputElement).value = String(S.opts.minDecks);
   ($('#optLegal') as HTMLInputElement).checked = S.opts.legalOnly;
   ($('#optBasics') as HTMLInputElement).checked = S.opts.noBasics;
@@ -311,48 +285,26 @@ function renderPresets(): void {
 
 function renderResults(): void {
   const R = S.results;
-  const tot = R.length;
   const coll = hasColl();
-  const own = R.filter((x) => x.status === 'owned').length;
-  const par = R.filter((x) => x.status === 'partial').length;
-  const mis = tot - own - par;
-
+  const period = PERIOD_DESC[S.opts.win];
+  const owned = R.filter((x) => x.owned > 0).length;
+  const full = R.filter((x) => x.status === 'owned').length;
   let v: string;
-  if (!S.groups.length) v = `La lista contiene ${fmtInt(tot)} carte. Carica la tua collezione per vedere quali possiedi.`;
-  else if (!coll) v = 'Nessun gruppo conta come tue carte: imposta almeno un gruppo su “Le mie carte”.';
-  else if (!tot) v = 'Con queste impostazioni la lista è vuota.';
-  else if (S.opts.qty) v = `Hai tutte le copie per ${fmtInt(own)} carte su ${fmtInt(tot)}${par ? `, e una parte delle copie per altre ${fmtInt(par)}.` : '.'}`;
-  else v = `Possiedi ${fmtInt(own)} delle ${fmtInt(tot)} carte della lista, in qualunque printing.`;
+  let sub: string;
+  if (!S.groups.length) {
+    v = `${plural(R.length, 'carta giocata', 'carte giocate')} in Pauper`;
+    sub = `Periodo: ${period}. Carica la tua collezione per vedere quali possiedi.`;
+  } else if (!coll) {
+    v = 'Nessun gruppo incluso nella collezione';
+    sub = 'Includi almeno un Binder in "Binder inclusi", in fondo alla pagina.';
+  } else {
+    v = `Possiedi ${plural(owned, 'carta giocata', 'carte giocate')} in Pauper`;
+    sub = `Su ${fmtInt(R.length)} nel periodo (${period})`
+      + (S.opts.qty ? `; per ${fmtInt(full)} hai tutte le copie tipiche` : '') + '.';
+  }
   $('#verdict').textContent = v;
-
-  const box = $('#box');
-  box.hidden = $('#boxmeta').hidden = $('#export').hidden = !coll;
-  if (coll) {
-    S.order = [...R.filter((x) => x.status === 'owned'), ...R.filter((x) => x.status === 'partial'), ...R.filter((x) => x.status === 'missing')];
-    box.className = 'box' + (tot > 400 ? ' dense' : '') + (animateNext ? ' animate' : '');
-    box.setAttribute('aria-label', `${own} carte possedute${par ? `, ${par} parziali` : ''}, ${mis} mancanti su ${tot}`);
-    box.replaceChildren(...S.order.map((x, i) => h('span', {
-      class: `tick ${x.status}`, dataset: { i: String(i) },
-      style: animateNext && x.status !== 'missing' ? { '--d': `${Math.round((i / Math.max(tot, 1)) * 600)}ms` } : undefined,
-    })));
-    $('#legend').replaceChildren(
-      h('span', null, h('i', { class: 'owned' }), `Possedute ${fmtInt(own)}`),
-      ...(S.opts.qty ? [h('span', null, h('i', { class: 'partial' }), `Parziali ${fmtInt(par)}`)] : []),
-      h('span', null, h('i'), `Mancanti ${fmtInt(mis)}`));
-  }
-  animateNext = false;
-
-  if (!S.opts.qty && S.filter === 'partial') S.filter = 'all';
-  if (!coll) S.filter = 'all';
-  const tabs: [typeof S.filter, string, number][] = [['all', 'Tutte', tot]];
-  if (coll) {
-    tabs.push(['owned', 'Possedute', own]);
-    if (S.opts.qty) tabs.push(['partial', 'Parziali', par]);
-    tabs.push(['missing', 'Mancanti', mis]);
-  }
-  $('#tabs').replaceChildren(...tabs.map(([val, label, n]) => h('label', null,
-    h('input', { type: 'radio', name: 'tab', value: val, checked: S.filter === val }),
-    h('span', null, `${label} `, h('span', { class: 'num' }, fmtInt(n))))));
+  $('#sub').textContent = sub;
+  $('#thQty').textContent = coll ? (S.opts.qty ? 'Tue / tipiche' : 'Tue') : 'Copie tipiche';
   renderRows();
 }
 
@@ -360,12 +312,13 @@ function filtered(): Result[] {
   const d = S.d!;
   const q = norm(S.query);
   const anchor = d.cards.anchor;
+  const onlyOwned = hasColl() && !S.showMissing;
   let rows = S.results.filter((x) => {
-    if (S.filter !== 'all' && x.status !== S.filter) return false;
+    if (onlyOwned && x.owned === 0) return false;
     const c = d.cards.c[x.idx];
     if (q && !norm(c.n).includes(q)) return false;
     if (S.seen !== 'all') {
-      const old = daysBetween(c.z, anchor) > STALE_MONTHS_DAYS;
+      const old = daysBetween(c.z, anchor) > STALE_DAYS;
       if (S.seen === 'old' ? !old : old) return false;
     }
     return true;
@@ -392,19 +345,13 @@ function isNew(entry: string | undefined): boolean {
 function thumbIds(x: Result): { id: string; owned: boolean }[] {
   const d = S.d!;
   const prints = d.prints.p[x.idx] || [];
+  const ref = prints[d.cards.c[x.idx].r];
   const ids: { id: string; owned: boolean }[] = [];
   for (const p of x.prints) {
     const id = p.row.i || (p.print >= 0 ? prints[p.print][0] : '');
     if (id && !ids.some((t) => t.id === id)) ids.push({ id, owned: true });
   }
-  if (x.prints.length && !ids.length) {
-    const ref = prints[d.cards.c[x.idx].r];
-    if (ref) ids.push({ id: ref[0], owned: true }); // posseduta ma printing non indicata
-  }
-  if (!ids.length) {
-    const ref = prints[d.cards.c[x.idx].r];
-    if (ref) ids.push({ id: ref[0], owned: false });
-  }
+  if (!ids.length && ref) ids.push({ id: ref[0], owned: x.prints.length > 0 });
   return ids;
 }
 
@@ -424,55 +371,107 @@ function renderRows(): void {
   const coll = hasColl();
   S.view = filtered();
   const rows = S.view.slice(0, S.shown);
-  $('#count').textContent = `${fmtInt(S.view.length)} ${S.view.length === 1 ? 'carta' : 'carte'}${S.view.length > rows.length ? `, ne vedi ${fmtInt(rows.length)}` : ''}.`;
   const more = $('#more');
   more.hidden = S.view.length <= rows.length;
-  more.textContent = `Mostra altre ${fmtInt(Math.min(PAGE, S.view.length - rows.length))}`;
+  more.textContent = `Mostra altre ${fmtInt(Math.min(PAGE, S.view.length - rows.length))} (${fmtInt(S.view.length - rows.length)} rimaste)`;
   if (!rows.length) {
-    $('#cardRows').replaceChildren(h('tr', { class: 'nores' }, h('td', { colspan: 7 }, 'Nessuna carta corrisponde.')));
+    $('#cardRows').replaceChildren(h('tr', { class: 'nores' }, h('td', { colspan: 5 },
+      S.query || S.seen !== 'all' ? 'Nessuna carta corrisponde ai filtri.' : coll && !S.showMissing ? 'Nessuna carta posseduta in questo periodo.' : 'Nessuna carta.')));
     return;
   }
   $('#cardRows').replaceChildren(...rows.map((x) => {
     const c = d.cards.c[x.idx];
     const st = c.s[S.opts.win];
     const thumbs = thumbIds(x);
+    const refId = d.prints.p[x.idx]?.[c.r]?.[0];
     const entry = c.e ? d.cards.sets[c.e] : null;
+    const status = coll && x.status !== 'owned'
+      ? h('span', { class: `badge st-${x.status}` }, x.status === 'missing' ? 'mancante' : 'parziale')
+      : null;
+    const own = x.prints.length
+      ? h('span', { class: 'own' }, x.prints.map((p) => `${fmtPrint(p.row)} ×${p.q}`).join(', ')
+        + (x.binders.length ? ` · ${x.binders.map((b) => b[0]).join(', ')}` : ''))
+      : null;
     const btn = h('button', { class: 'cardbtn', type: 'button', dataset: { idx: String(x.idx) }, 'aria-haspopup': 'dialog', 'aria-label': `${c.n}: apri la scheda` },
       h('span', { class: 'thumbs' },
-        ...thumbs.slice(0, 3).map((t) => h('img', { class: 'thumb' + (t.owned ? ' owned' : ''), src: imageUrl(t.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204 })),
+        ...thumbs.slice(0, 3).map((t) => h('img', {
+          class: 'thumb' + (t.owned ? ' owned' : ''), src: imageUrl(t.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204,
+          dataset: refId ? { fallback: imageUrl(refId, 'small') } : undefined,
+        })),
         thumbs.length > 3 ? h('span', { class: 'more-n' }, `+${thumbs.length - 3}`) : null),
-      h('span', null, h('span', { class: 'nm' }, c.n),
+      h('span', { class: 'nmwrap' }, h('span', { class: 'nm' }, c.n), status,
         isNew(c.e) ? h('span', { class: 'badge new' }, 'nuova') : null,
-        c.l === 'b' ? h('span', { class: 'badge banned' }, 'bannata') : null));
-    const prints = x.prints.length ? x.prints.map((p) => `${fmtPrint(p.row)} ×${p.q}`).join(', ') : coll ? 'nessuna' : '';
-    return h('tr', null,
+        c.l === 'b' ? h('span', { class: 'badge banned' }, 'bannata') : null, own));
+    return h('tr', { class: coll ? `r-${x.status}` : '' },
       h('td', { class: 'c-name' }, btn),
-      h('td', { class: 'c-status' }, coll ? h('span', { class: `st st-${x.status}` }, STATUS[x.status]) : h('span', { class: 'muted' }, '—')),
-      h('td', { class: 'c-qty num' }, coll ? (S.opts.qty ? `${x.owned} / ${x.need}` : String(x.owned)) : `tipiche ${x.typical}`),
-      h('td', { class: 'c-pct num' }, fmtPct(x.share), h('div', { class: 'muted' }, st ? fmtInt(S.opts.side ? st[0] : st[1]) : '0')),
+      h('td', { class: 'c-qty num' }, coll ? (S.opts.qty ? `${x.owned} / ${x.need}` : String(x.owned)) : String(x.typical)),
+      h('td', { class: 'c-pct num' }, fmtPct(x.share), h('span', { class: 'muted' }, st ? ` · ${fmtInt(S.opts.side ? st[0] : st[1])}` : '')),
       h('td', { class: 'c-seen' }, fmtDate(c.z)),
-      h('td', { class: 'c-entry' }, entry && c.e ? `${c.e.toUpperCase()} (${entry[1].slice(0, 4)})` : '—'),
-      h('td', { class: 'c-own' }, prints, x.binders.length ? h('div', { class: 'where' }, x.binders.map((b) => b[0]).join(', ')) : null));
+      h('td', { class: 'c-entry' }, entry && c.e ? `${c.e.toUpperCase()} ${entry[1].slice(0, 4)}` : '—'));
   }));
+}
+
+function seg(id: string, val: Role, label: string, role: Role): HTMLLabelElement {
+  return h('label', null, h('input', { type: 'radio', name: `role-${id}`, value: val, dataset: { gid: id }, checked: role === val }),
+    h('span', null, label));
+}
+
+function renderExtra(): void {
+  const loaded = S.groups.length > 0;
+  $('#extraColl').hidden = !loaded;
+  ($('#optMissing') as HTMLInputElement).checked = S.showMissing;
+  if (!loaded) return;
+
+  const inc = S.groups.filter((g) => S.roles[g.id] === 'coll').length;
+  $('#grpSummary').textContent = `Binder inclusi: ${inc} di ${S.groups.length} · modifica`;
+  $('#groupRows').replaceChildren(...S.groups.map((g) => {
+    const role = S.roles[g.id];
+    const cards = g.rows.reduce((a, r) => a + r.q, 0);
+    const typ = g.kind === 'text' ? 'testo' : g.type || '';
+    return h('tr', null,
+      h('td', { class: 'g-name' }, h('span', { class: 'gname' }, g.name), typ ? h('span', { class: 'gtype' }, typ) : null),
+      h('td', { class: 'g-count count num' }, `${fmtInt(g.rows.length)} voci, ${fmtInt(cards)} carte`),
+      h('td', { class: 'g-role' }, h('div', { class: 'seg', role: 'radiogroup', 'aria-label': `Ruolo di ${g.name}` },
+        seg(g.id, 'coll', 'Inclusa', role), seg(g.id, 'skip', 'Esclusa', role))),
+      h('td', { class: 'g-act' }, h('button', { class: 'btn quiet small', type: 'button', dataset: { remove: g.id } }, 'Rimuovi')));
+  }));
+  ($('#optProxy') as HTMLInputElement).checked = S.opts.proxies;
+  $('#optProxyWrap').hidden = !S.groups.some((g) => g.hasProxy && S.roles[g.id] === 'coll');
+  $('#memo').textContent = memoText();
+
+  const unrec = S.summaries.reduce((a, x) => a + x.s.unrecognized.length, 0);
+  const rows = S.summaries.reduce((a, x) => a + x.s.rows, 0);
+  $('#impSummary').textContent = S.summaries.length
+    ? `Importazione: ${plural(rows, 'riga', 'righe')}, ${fmtInt(unrec)} non riconosciute`
+    : 'Importazione';
+  $('#importSummary').replaceChildren(...(S.summaries.length ? S.summaries.map(({ source, kind, s }) => {
+    const bits = [plural(s.rows, 'riga letta', 'righe lette'), `${fmtInt(s.inList)} di carte giocate in Pauper`];
+    if (s.notInList) bits.push(`${fmtInt(s.notInList)} di carte mai giocate`);
+    bits.push(`${fmtInt(s.unrecognized.length)} non riconosciute`);
+    const shown = s.unrecognized.slice(0, 60);
+    return h('div', { class: 'item' },
+      h('b', null, source), ': ', bits.join(', ') + '.',
+      kind === 'text' ? h('p', { class: 'note' }, 'Con il testo non ci sono Binder: tutte le carte incollate contano come possedute.') : null,
+      s.approxPrint ? h('p', { class: 'note' }, `${fmtInt(s.approxPrint)} righe senza set e numero: per l'immagine uso la printing di riferimento.`) : null,
+      shown.length
+        ? h('details', null, h('summary', null, 'Righe non riconosciute'),
+          h('ul', null, ...shown.map((r) => h('li', null, `${r.q} ${r.n}${r.s ? ` (${r.s.toUpperCase()})` : ''}`))),
+          s.unrecognized.length > shown.length ? h('p', { class: 'note' }, `e altre ${s.unrecognized.length - shown.length}.`) : null,
+          h('p', { class: 'note' }, 'Controlla che il nome sia in inglese e scritto per intero.'))
+        : null);
+  }) : [h('p', { class: 'note' }, 'Il riepilogo compare dopo un nuovo caricamento.')]));
 }
 
 async function renderNews(): Promise<void> {
   const root = $('#news');
-  const empty = h('p', { class: 'hint' }, 'Nessuna revisione ancora. Quando esce un nuovo set che porta carte nel Pauper, dopo 60 giorni qui compare il resoconto: carte nuove nella lista, carte uscite, ban e unban.');
+  const empty = h('p', { class: 'note' }, 'Nessuna revisione ancora. Quando esce un set che porta carte nel Pauper, dopo 60 giorni qui compare il resoconto: carte nuove nella lista, carte uscite, ban e unban.');
   try {
     const r = await fetch('data/reviews/index.json');
-    if (!r.ok) {
-      root.replaceChildren(empty);
-      return;
-    }
-    const list = (await r.json()) as { set: string; nome: string; data: string; sommario?: string }[];
-    if (!Array.isArray(list) || !list.length) {
-      root.replaceChildren(empty);
-      return;
-    }
+    const list = r.ok ? ((await r.json()) as { set: string; nome: string; data: string; sommario?: string }[]) : [];
+    if (!Array.isArray(list) || !list.length) return void root.replaceChildren(empty);
     root.replaceChildren(h('ul', { class: 'news' }, ...list.slice(0, 6).map((x) => h('li', null,
       h('b', null, `${x.nome} (${String(x.set).toUpperCase()})`), ` · ${fmtDate(x.data)}`,
-      x.sommario ? h('p', { class: 'hint' }, x.sommario) : null))));
+      x.sommario ? h('p', { class: 'note' }, x.sommario) : null))));
   } catch {
     root.replaceChildren(empty);
   }
@@ -486,24 +485,19 @@ function payload(kind: string): string {
   return textList(d, S.results, kind as 'owned' | 'missing', S.opts.qty);
 }
 
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 const LABEL: Record<string, string> = { owned: 'carte possedute', missing: 'carte mancanti', csv: 'List riallineata' };
 
 async function doCopy(kind: string): Promise<void> {
   const text = payload(kind);
   if (!text.trim()) return toast(`Non ci sono ${LABEL[kind]} da copiare.`);
-  if (await copyText(text)) return toast(`Copiato: ${LABEL[kind]}.`);
-  ($('#copyText') as HTMLTextAreaElement).value = text;
-  $('#copyPanel').hidden = false;
-  ($('#copyText') as HTMLTextAreaElement).select();
+  try {
+    await navigator.clipboard.writeText(text);
+    return toast(`Copiato: ${LABEL[kind]}.`);
+  } catch {
+    ($('#copyText') as HTMLTextAreaElement).value = text;
+    $('#copyPanel').hidden = false;
+    ($('#copyText') as HTMLTextAreaElement).select();
+  }
 }
 
 function doSave(kind: string): void {
@@ -590,23 +584,20 @@ function wire(): void {
       }
     });
   }
-
-  $('#groupRows').addEventListener('change', (e) => {
-    const t = e.target as HTMLInputElement;
-    if (t.name?.startsWith('role-') && t.dataset.gid) {
-      S.roles[t.dataset.gid] = t.value as Role;
-      refresh();
-    }
+  $('#loaded').addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).id !== 'replace') return;
+    S.replacing = true;
+    renderLoad();
+    ($('#files') as HTMLInputElement).focus();
   });
-  $('#groupRows').addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-remove]');
-    if (!b) return;
-    const id = b.dataset.remove!;
-    S.groups = S.groups.filter((g) => g.id !== id);
-    delete S.roles[id];
-    refresh();
+  $('#cancelReplace').addEventListener('click', () => {
+    S.replacing = false;
+    showErrors([]);
+    renderLoad();
   });
 
+  // filtri: ogni modifica aggiorna subito i risultati
+  $('#filters').addEventListener('submit', (e) => e.preventDefault());
   const optBool = (sel: string, key: 'legalOnly' | 'noBasics' | 'side' | 'qty' | 'proxies') =>
     $(sel).addEventListener('change', (e) => {
       S.opts[key] = (e.target as HTMLInputElement).checked;
@@ -617,26 +608,15 @@ function wire(): void {
   optBool('#optSide', 'side');
   optBool('#optQty', 'qty');
   optBool('#optProxy', 'proxies');
-  $('#optMin').addEventListener('change', (e) => {
+  $('#optMin').addEventListener('input', (e) => {
     const v = parseInt((e.target as HTMLInputElement).value, 10);
-    S.opts.minDecks = Number.isFinite(v) && v > 0 ? Math.min(v, 9999) : 1;
+    if (!Number.isFinite(v) || v < 1) return;
+    S.opts.minDecks = Math.min(v, 9999);
     refresh();
   });
-  $('#presets').addEventListener('change', (e) => {
-    const t = e.target as HTMLInputElement;
-    if (t.name === 'preset') {
-      S.opts.win = Number(t.value);
-      refresh();
-    }
-  });
-
-  $('#tabs').addEventListener('change', (e) => {
-    const t = e.target as HTMLInputElement;
-    if (t.name === 'tab') {
-      S.filter = t.value as typeof S.filter;
-      S.shown = PAGE;
-      renderRows();
-    }
+  $('#period').addEventListener('change', (e) => {
+    S.opts.win = Number((e.target as HTMLSelectElement).value);
+    refresh();
   });
   $('#search').addEventListener('input', (e) => {
     S.query = (e.target as HTMLInputElement).value;
@@ -663,6 +643,28 @@ function wire(): void {
     S.shown += PAGE;
     renderRows();
   });
+  $('#optMissing').addEventListener('change', (e) => {
+    S.showMissing = (e.target as HTMLInputElement).checked;
+    S.shown = PAGE;
+    renderRows();
+    persist();
+  });
+
+  $('#groupRows').addEventListener('change', (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.name?.startsWith('role-') && t.dataset.gid) {
+      S.roles[t.dataset.gid] = t.value as Role;
+      refresh();
+    }
+  });
+  $('#groupRows').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-remove]');
+    if (!b) return;
+    const id = b.dataset.remove!;
+    S.groups = S.groups.filter((g) => g.id !== id);
+    delete S.roles[id];
+    refresh();
+  });
 
   document.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
@@ -674,19 +676,6 @@ function wire(): void {
   $('#copyClose').addEventListener('click', () => {
     $('#copyPanel').hidden = true;
   });
-
-  // barra delle carte (dal prototipo)
-  const showCap = (e: Event) => {
-    const t = (e.target as HTMLElement).closest<HTMLElement>('.tick');
-    if (!t) return;
-    const x = S.order[Number(t.dataset.i)];
-    if (!x) return;
-    const name = S.d!.cards.c[x.idx].n;
-    const s = x.status === 'owned' ? 'posseduta' : x.status === 'partial' ? `${x.owned} copie su ${x.need}` : 'mancante';
-    $('#caption').textContent = `${name}: ${s}`;
-  };
-  $('#box').addEventListener('pointerover', showCap);
-  $('#box').addEventListener('click', showCap);
 
   // scheda: passaggio del cursore, focus da tastiera, tocco
   const rows = $('#cardRows');
@@ -727,7 +716,7 @@ function wire(): void {
     if (!sheet.hidden && !sheet.contains(t) && !t.closest('.cardbtn') && !t.closest('dialog')) closeSheet();
   });
 
-  // cancella i miei dati (conferma in due tempi, come "Svuota tutto" del prototipo)
+  // cancella i miei dati (conferma in due tempi)
   $('#clearData').addEventListener('click', async (e) => {
     const b = e.currentTarget as HTMLButtonElement;
     if (!b.classList.contains('warn')) {
@@ -745,16 +734,8 @@ function wire(): void {
     b.textContent = 'Cancella i miei dati';
     window.clearTimeout(saveTimer);
     await clearAll();
-    S.groups = [];
-    S.roles = {};
-    S.opts = { ...DEFAULT_OPTS };
-    S.savedAt = null;
-    S.summaries = [];
-    S.filter = 'all';
-    S.query = '';
+    Object.assign(S, { groups: [], roles: {}, opts: { ...DEFAULT_OPTS }, showMissing: false, savedAt: null, summaries: [], query: '', replacing: false });
     ($('#search') as HTMLInputElement).value = '';
-    $('#memo').textContent = '';
-    renderSummaries();
     showErrors([]);
     applyTheme(null);
     refresh(false);
@@ -770,6 +751,15 @@ function wire(): void {
     applyTheme(next);
   });
   window.addEventListener('hashchange', route);
+
+  // immagine non disponibile (per esempio uno Scryfall ID sconosciuto): ripiego sulla printing di riferimento
+  document.addEventListener('error', (e) => {
+    const img = e.target;
+    if (img instanceof HTMLImageElement && img.dataset.fallback && img.src !== img.dataset.fallback) {
+      img.src = img.dataset.fallback;
+      delete img.dataset.fallback;
+    }
+  }, true);
 }
 
 /* ---------- avvio ---------- */
@@ -781,14 +771,13 @@ async function main(): Promise<void> {
   try {
     S.d = await loadData();
   } catch {
-    const b = $('#banner');
-    b.classList.add('error');
-    b.textContent = 'Non riesco a caricare la lista delle carte. Ricarica la pagina tra qualche minuto.';
+    const el = $('#dataline');
+    el.classList.add('error');
+    el.textContent = 'Non riesco a caricare la lista delle carte. Ricarica la pagina tra qualche minuto.';
     return;
   }
-  renderBanner();
+  renderDataline();
   await restore();
-  if (S.groups.length) animateNext = true;
   refresh(false);
   if (location.hash === '#informazioni') renderAbout($('#viewAbout'), S.d);
   void renderNews();

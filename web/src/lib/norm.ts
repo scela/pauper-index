@@ -1,4 +1,4 @@
-// Porting di pipeline/src/celho_pipeline/names.py: norm() deve dare lo stesso risultato.
+// Porting di pipeline/src/pauper_index/names.py: norm() deve dare lo stesso risultato.
 // Vettori condivisi: pipeline/tests/fixtures/norm_vectors.json.
 
 const LIGATURES: Record<string, string> = { 'æ': 'ae', 'Æ': 'Ae', 'œ': 'oe', 'Œ': 'Oe' };

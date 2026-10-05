@@ -3,9 +3,9 @@ requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "celho-pipeline"
+name = "pauper-index-pipeline"
 version = "0.1.0"
-description = "Pipeline dati di Ce l'ho? Pauper: carte giocate in Pauper, statistiche e legalità"
+description = "Pipeline dati di Pauper Index: carte giocate in Pauper, statistiche e legalità"
 requires-python = ">=3.14,<3.15"
 dependencies = ["requests>=2.32,<3"]
 

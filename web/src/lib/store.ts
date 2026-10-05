@@ -2,9 +2,9 @@
 // localStorage solo per piccole preferenze. Tutto con chiavi proprie: su GitHub Pages l'origine
 // è condivisa con gli altri siti dello stesso utente, quindi niente localStorage.clear().
 
-const DB = 'celho';
+const DB = 'pauper-index';
 const STORE = 'kv';
-export const LS_PREFIX = 'celho:';
+export const LS_PREFIX = 'pauper-index:';
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {

@@ -5,7 +5,7 @@ import type { Data } from '../lib/data';
 import { h } from '../lib/dom';
 import { fmtDate, fmtInt } from '../lib/format';
 
-export const SITE_TITLE = "Ce l'ho? Pauper";
+export const SITE_TITLE = 'Pauper Index';
 // Testo esatto richiesto da company.wizards.com/en/legal/fancontentpolicy (verificato il 2026-10-05).
 export const FCP_NOTICE = `${SITE_TITLE} is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.`;
 
@@ -18,6 +18,15 @@ export function renderAbout(root: HTMLElement, d: Data | null): void {
   root.replaceChildren(h('article', { class: 'about' },
     h('h2', null, 'Informazioni'),
     h('p', null, `${SITE_TITLE} confronta la tua collezione con le carte giocate in Pauper negli ultimi anni e ti dice quali possiedi, in qualunque printing. È un progetto personale, gratuito e senza alcun guadagno.`),
+
+    h('section', null,
+      h('h3', null, 'Come funziona'),
+      h('ul', null,
+        h('li', null, 'Carica l\'export CSV di ManaBox (singoli Binder o l\'intera collezione) oppure incolla una lista di testo nel formato "4 Nome carta" o "1 Nome (SET) 123". I file e il testo vengono letti solo nel tuo browser.'),
+        h('li', null, 'Contano come tue le carte dei Binder; List e mazzi sono esclusi di default. Puoi cambiarlo in fondo alla pagina, in "Binder inclusi". Con il testo incollato non ci sono Binder: tutte le carte contano come possedute.'),
+        h('li', null, 'Una carta è riconosciuta in qualunque printing, lingua o finitura: conta la carta, non la stampa.'),
+        h('li', null, '"Conta le copie": la lista non ha quantità, quindi il confronto è con le copie tipiche, cioè la mediana delle copie nei mazzi che giocano la carta nel periodo scelto.'),
+        h('li', null, '"Conta anche il side": include le carte giocate solo in sideboard. "Min. mazzi": quanti mazzi servono perché una carta entri nella lista.'))),
 
     h('section', null,
       h('h3', null, 'Avviso'),

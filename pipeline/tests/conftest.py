@@ -4,7 +4,7 @@ import uuid
 
 import pytest
 
-from celho_pipeline.carddb import CardDB
+from pauper_index.carddb import CardDB
 
 
 def oid(name: str) -> str:

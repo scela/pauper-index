@@ -36,10 +36,10 @@ const CSP = [
   "form-action 'none'",
 ].join('; ');
 
-function celhoData(): Plugin {
+function pauperIndexData(): Plugin {
   let isBuild = false;
   return {
-    name: 'celho-data',
+    name: 'pauper-index-data',
     configResolved(c) {
       isBuild = c.command === 'build';
     },
@@ -75,7 +75,7 @@ function celhoData(): Plugin {
 
 export default defineConfig({
   base: './',
-  plugins: [celhoData()],
+  plugins: [pauperIndexData()],
   build: { target: 'es2022', sourcemap: false },
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },

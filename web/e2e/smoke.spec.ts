@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const FIX = resolve(dirname(fileURLToPath(import.meta.url)), '../tests/fixtures');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN8+P9/PQAJpAPq4u1pTwAAAABJRU5ErkJggg==', 'base64');
-const FCP = "Ce l'ho? Pauper is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.";
+const FCP = 'Pauper Index is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.';
 
 async function setup(page: Page): Promise<string[]> {
   const problems: string[] = [];
@@ -16,55 +16,91 @@ async function setup(page: Page): Promise<string[]> {
   // niente richieste vere al CDN di Scryfall durante i test
   await page.route('https://cards.scryfall.io/**', (r) => r.fulfill({ contentType: 'image/png', body: PNG }));
   await page.goto('./');
-  await expect(page.locator('#banner')).toContainText('Dati al');
+  await expect(page.locator('#dataline')).toContainText('Dati al');
   return problems;
 }
 
 async function uploadCollection(page: Page): Promise<void> {
   await page.setInputFiles('#files', resolve(FIX, 'collezione-sintetica.csv'));
-  await expect(page.locator('#importSummary')).toContainText('collezione-sintetica.csv');
+  await expect(page.locator('#loaded')).toContainText('Collezione:');
 }
 
-test('carica dati, preset e lista integrata senza errori, con CSP', async ({ page }) => {
+const rowsText = (page: Page) => page.locator('#cardRows tr').allInnerTexts();
+
+test('prima del caricamento: area di caricamento, filtri e lista integrata, con CSP', async ({ page }) => {
   const problems = await setup(page);
   await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveCount(1);
-  await expect(page.locator('#presets .preset')).toHaveCount(4);
-  await expect(page.locator('#presets input:checked')).toHaveValue('1');
-  await expect(page.locator('#verdict')).toContainText('La lista contiene');
+  await expect(page.locator('h1')).toHaveText('Pauper Index');
+  await expect(page).toHaveTitle('Pauper Index');
+  await expect(page.locator('#loadArea')).toBeVisible();
+  await expect(page.locator('#loaded')).toBeHidden();
+  await expect(page.locator('#period option')).toHaveCount(4);
+  await expect(page.locator('#period')).toHaveValue('1');
+  await expect(page.locator('#verdict')).toContainText('carte giocate in Pauper');
   await expect(page.locator('#cardRows tr')).toHaveCount(100);
-  await expect(page.locator('#more')).toBeVisible();
+  await expect(page.locator('#extraColl')).toBeHidden();
+  await expect(page.locator('.box, .tick, #assign')).toHaveCount(0); // heatmap e "Cosa conta" rimosse
+  await expect(page.locator('#viewMain')).not.toContainText('vengono letti solo in questo browser');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   expect(problems).toEqual([]);
 });
 
-test('export CSV ManaBox: ruoli, stato, proxy, riepilogo ed export', async ({ page, context }) => {
+test('i filtri aggiornano subito i risultati', async ({ page }) => {
+  await setup(page);
+  await page.selectOption('#period', '0');
+  await expect(page.locator('#sub')).toContainText('ultimi 61 giorni');
+  const before = await page.locator('#verdict').innerText();
+  await page.fill('#optMin', '500');
+  await expect(page.locator('#verdict')).not.toHaveText(before);
+  await page.fill('#search', 'zzzz-nessuna');
+  await expect(page.locator('#cardRows')).toContainText('Nessuna carta corrisponde');
+});
+
+test('CSV ManaBox: riga compatta, solo possedute, mancanti, Binder inclusi, export', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const problems = await setup(page);
   await uploadCollection(page);
-  const groups = page.locator('#groupRows tr');
-  await expect(groups).toHaveCount(4);
-  await expect(page.locator('#groupRows input[value="skip"]:checked')).toHaveCount(2); // deck e list esclusi
-  await expect(page.locator('#importSummary')).toContainText('mai giocate in Pauper'); // Black Lotus
+  await expect(page.locator('#loadArea')).toBeHidden();
+  await expect(page.locator('#loaded')).toContainText('Sostituisci');
   await expect(page.locator('#verdict')).toContainText('Possiedi');
+  await expect(page.locator('#verdict')).toContainText('carte giocate in Pauper');
 
+  // di default solo le possedute, ordinate dalle più giocate
+  const rows = await rowsText(page);
+  expect(rows.length).toBeGreaterThan(0);
+  expect(rows.join('\n')).not.toMatch(/mancante/i);
+  expect(rows.join('\n')).not.toContain('Kor Skyfisher'); // nel mazzo: escluso
   await page.fill('#search', 'brainstorm');
-  const row = page.locator('#cardRows tr').first();
-  await expect(row).toContainText('Posseduta');
-  await expect(row.locator('.c-qty')).toHaveText('5');
-  await expect(row.locator('img.thumb.owned')).toHaveCount(2);
+  await expect(page.locator('#cardRows tr').first().locator('.c-qty')).toHaveText('5');
+  await expect(page.locator('#cardRows tr').first().locator('img.thumb.owned')).toHaveCount(2);
+  await page.fill('#search', '');
 
+  // gruppi inclusi, in fondo
+  await expect(page.locator('#grpSummary')).toHaveText('Binder inclusi: 2 di 4 · modifica');
+  await page.locator('#grpSummary').click();
+  await expect(page.locator('#groupRows input[value="skip"]:checked')).toHaveCount(2);
+  await expect(page.locator('#optProxyWrap')).toBeVisible();
   await page.fill('#search', 'tolarian terror');
-  await expect(page.locator('#cardRows tr').first()).toContainText('Mancante'); // proxy non conta
+  await expect(page.locator('#cardRows')).toContainText('Nessuna carta');
   await page.locator('#optProxyWrap').click();
-  await expect(page.locator('#cardRows tr').first()).toContainText('Posseduta');
+  await expect(page.locator('#cardRows tr').first()).toContainText('Tolarian Terror');
 
+  // mostra anche le mancanti
   await page.fill('#search', 'kor skyfisher');
-  await expect(page.locator('#cardRows tr').first()).toContainText('Mancante'); // il mazzo è "Ignora"
+  await expect(page.locator('#cardRows')).toContainText('Nessuna carta');
+  await page.locator('label:has(#optMissing)').click();
+  await expect(page.locator('#cardRows tr').first()).toContainText('mancante');
 
+  // riepilogo dell'importazione
+  await expect(page.locator('#impSummary')).toContainText('righe');
+  await page.locator('#impSummary').click();
+  await expect(page.locator('#importSummary')).toContainText('mai giocate');
+
+  // export
+  await page.locator('#expDetails summary').click();
   await page.click('[data-copy="owned"]');
   const clip = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clip).toMatch(/^1 /m);
   expect(clip).toContain('1 Brainstorm');
   const dl = page.waitForEvent('download');
   await page.click('[data-save="csv"]');
@@ -76,6 +112,25 @@ test('export CSV ManaBox: ruoli, stato, proxy, riepilogo ed export', async ({ pa
   expect(problems).toEqual([]);
 });
 
+test('Sostituisci: il nuovo caricamento prende il posto della collezione', async ({ page }) => {
+  await setup(page);
+  await uploadCollection(page);
+  await page.click('#replace');
+  await expect(page.locator('#loadArea')).toBeVisible();
+  await page.fill('#pasteText', readFileSync(resolve(FIX, 'testo-sintetico.txt'), 'utf-8'));
+  await page.click('#pasteAdd');
+  await expect(page.locator('#loadArea')).toBeHidden();
+  await expect(page.locator('#grpSummary')).toHaveText('Binder inclusi: 1 di 1 · modifica');
+  await page.locator('#impSummary').click();
+  const sum = page.locator('#importSummary');
+  await expect(sum).toContainText('Con il testo non ci sono Binder');
+  await expect(sum).toContainText('1 non riconosciute');
+  await sum.locator('summary').click();
+  await expect(sum).toContainText('Carta Che Non Esiste');
+  await page.fill('#search', 'fire // ice');
+  await expect(page.locator('#cardRows tr').first()).toContainText('MH2 #290 foil');
+});
+
 test('scheda con ventaglio: tastiera, carta attiva visibile, Esc', async ({ page }) => {
   await setup(page);
   await uploadCollection(page);
@@ -85,12 +140,10 @@ test('scheda con ventaglio: tastiera, carta attiva visibile, Esc', async ({ page
   await page.keyboard.press('Enter');
   const sheet = page.locator('#sheet');
   await expect(sheet).toBeVisible();
-  const items = sheet.locator('.fan-item');
-  expect(await items.count()).toBeLessThanOrEqual(7);
+  expect(await sheet.locator('.fan-item').count()).toBeLessThanOrEqual(7);
   await expect(sheet.locator('.fan-item.owned').first()).toBeVisible();
-  await expect(sheet.locator('.tag')).toBeVisible(); // "Tua"
+  await expect(sheet.locator('.tag')).toBeVisible();
   await expect(sheet).toContainText('Ultima su');
-  // la carta attiva è interamente visibile
   const img = sheet.locator('.active-card img');
   await img.scrollIntoViewIfNeeded();
   const box = await img.boundingBox();
@@ -107,31 +160,13 @@ test('scheda con ventaglio: tastiera, carta attiva visibile, Esc', async ({ page
   await expect(sheet).toBeHidden();
 });
 
-test('testo incollato: riepilogo, non riconosciute, nessun Binder', async ({ page }) => {
-  await setup(page);
-  await page.fill('#pasteText', readFileSync(resolve(FIX, 'testo-sintetico.txt'), 'utf-8'));
-  await page.click('#pasteAdd');
-  const sum = page.locator('#importSummary');
-  await expect(sum).toContainText('Con il testo non ci sono Binder');
-  await expect(sum).toContainText('1 non riconosciute');
-  await expect(sum).toContainText('mai giocate in Pauper');
-  await sum.locator('summary').click();
-  await expect(sum).toContainText('Carta Che Non Esiste');
-  await expect(page.locator('#groupRows tr')).toHaveCount(1);
-  await page.fill('#search', 'fire // ice');
-  const row = page.locator('#cardRows tr').first();
-  await expect(row).toContainText('Posseduta');
-  await expect(row).toContainText('MH2 #290 foil');
-  // CSV incollato come testo: riconosciuto come file
-  await page.fill('#pasteText', 'Name,Quantity,Binder Name\nGush,1,Incollato\n');
-  await page.click('#pasteAdd');
-  await expect(page.locator('#groupRows')).toContainText('Incollato');
-});
-
 test('CSV malevolo: nessuno script eseguito, testo mostrato alla lettera', async ({ page }) => {
   await setup(page);
   await page.setInputFiles('#files', resolve(FIX, 'malevolo.csv'));
+  await expect(page.locator('#loaded')).toContainText('Collezione:');
+  await page.locator('#grpSummary').click();
   await expect(page.locator('#groupRows')).toContainText('<script>window.__xss=1</script>');
+  await page.locator('#impSummary').click();
   await page.locator('#importSummary summary').click();
   await expect(page.locator('#importSummary')).toContainText('<img src=x onerror="window.__xss=1">');
   await page.mouse.move(10, 10);
@@ -139,13 +174,15 @@ test('CSV malevolo: nessuno script eseguito, testo mostrato alla lettera', async
   expect(await page.locator('#groupRows img, #groupRows script, #importSummary img').count()).toBe(0);
 });
 
-test('Informazioni: avviso Fan Content Policy esatto e privacy', async ({ page }) => {
+test('Informazioni: avviso Fan Content Policy esatto; in pagina una sola riga', async ({ page }) => {
   await setup(page);
-  await page.click('#navAbout');
+  await expect(page.locator('footer p')).toHaveCount(1);
+  await expect(page.locator('footer')).toContainText('Fan Content non ufficiale');
+  await page.click('footer a[href="#informazioni"]');
   await expect(page.locator('#fcp')).toHaveText(FCP);
   await expect(page.locator('#viewAbout')).toContainText('Nessun account, nessun cookie, nessuna analytics');
+  await expect(page.locator('#viewAbout')).toContainText('vengono letti solo nel tuo browser');
   await expect(page.locator('#viewAbout')).toContainText('primi 32 mazzi');
-  await expect(page.locator('footer')).toContainText(FCP);
   await page.click('#viewAbout a[href="#"]');
   await expect(page.locator('#viewMain')).toBeVisible();
 });
@@ -155,13 +192,13 @@ test('persistenza e "Cancella i miei dati"', async ({ page }) => {
   await uploadCollection(page);
   await page.waitForTimeout(400); // salvataggio differito
   await page.reload();
-  await expect(page.locator('#groupRows tr')).toHaveCount(4);
+  await expect(page.locator('#loaded')).toContainText('Collezione:');
   await page.click('#clearData');
   await page.click('#clearData');
-  await expect(page.locator('#assign')).toBeHidden();
+  await expect(page.locator('#loadArea')).toBeVisible();
   await page.reload();
-  await expect(page.locator('#banner')).toContainText('Dati al');
-  await expect(page.locator('#assign')).toBeHidden();
-  const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('celho:')));
+  await expect(page.locator('#dataline')).toContainText('Dati al');
+  await expect(page.locator('#loaded')).toBeHidden();
+  const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('pauper-index:')));
   expect(keys).toEqual([]);
 });

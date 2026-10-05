@@ -1,4 +1,4 @@
-"""python -m celho_pipeline <comando>
+"""python -m pauper_index <comando>
 
   build      aggiorna fonte e bulk, ricalcola tutto e scrive data/
   sets       set d'ingresso: validazione della regola ed elenco dei set rilevanti (ultimi 2 anni)
@@ -176,7 +176,7 @@ def cmd_baseline(args) -> None:
 
 
 def main(argv=None) -> None:
-    ap = argparse.ArgumentParser(prog="celho_pipeline", description=__doc__,
+    ap = argparse.ArgumentParser(prog="pauper_index", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["build", "sets", "baseline"])
     ap.add_argument("--offline", action="store_true")

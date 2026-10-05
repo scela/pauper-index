@@ -138,6 +138,7 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
   const renderActive = () => {
     if (!active) return;
     img.src = imageUrl(active.id, 'normal', face);
+    if (ref) img.dataset.fallback = imageUrl(ref[0], 'normal');
     img.alt = `${c.n}, ${active.setName}${face === 'back' ? ' (retro)' : ''}`;
     cardBox.classList.toggle('owned', active.owned);
     tag.hidden = !active.owned;
@@ -165,7 +166,7 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
       class: 'fan-item' + (it.owned ? ' owned' : ''), type: 'button', dataset: { id: it.id },
       style: { '--r': `${off * 3}deg`, '--y': `${Math.abs(off) * 4}px` },
       'aria-label': `${it.setName}${it.owned ? ', posseduta' : ''}`,
-    }, h('img', { src: imageUrl(it.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204 }));
+    }, h('img', { src: imageUrl(it.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204, dataset: ref ? { fallback: imageUrl(ref[0], 'small') } : undefined }));
     const select = () => {
       active = it;
       face = 'front';

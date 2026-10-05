@@ -1,7 +1,7 @@
 import datetime as dt
 
-from celho_pipeline.carddb import CardDB
-from celho_pipeline.sets import entry_map, group_of, relevant_sets, validate
+from pauper_index.carddb import CardDB
+from pauper_index.sets import entry_map, group_of, relevant_sets, validate
 
 from .conftest import card, oid, printing
 

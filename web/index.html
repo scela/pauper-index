@@ -8,11 +8,11 @@
 <meta name="theme-color" content="#EDF0F3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1B2028" media="(prefers-color-scheme: dark)">
 <meta name="description" content="Quali carte giocate in Pauper possiedi, in qualunque printing? Confronta la tua collezione ManaBox con la lista aggiornata ogni settimana.">
-<title>Ce l'ho? Pauper</title>
+<title>Pauper Index</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="apple-mobile-web-app-title" content="Ce l'ho?">
+<meta name="apple-mobile-web-app-title" content="Pauper Index">
 <script type="module" src="/src/main.ts"></script>
 </head>
 <body>
@@ -20,125 +20,128 @@
 <div class="wrap">
 
   <header class="top">
-    <div>
-      <h1><a href="#" class="home">Ce l'ho? <span>Pauper</span></a></h1>
-      <p class="lede">Di tutte le carte giocate in Pauper, quali possiedi in qualunque printing? La lista è integrata e si aggiorna da sola: tu carichi solo la tua collezione.</p>
-    </div>
+    <h1><a href="#" class="home">Pauper Index</a></h1>
     <nav class="nav" aria-label="Navigazione">
       <a href="#informazioni" id="navAbout">Informazioni</a>
-      <button class="btn quiet" id="theme" type="button" aria-label="Cambia tema">Tema</button>
+      <button class="btn quiet small" id="theme" type="button">Tema</button>
     </nav>
   </header>
-
-  <div class="banner" id="banner" role="status" aria-live="polite">Caricamento dei dati…</div>
+  <p class="dataline" id="dataline" role="status" aria-live="polite">Caricamento dei dati…</p>
 
   <main id="contenuto">
   <div id="viewMain">
-    <section aria-labelledby="h-load">
-      <h2 id="h-load">La tua collezione</h2>
-      <p class="hint">Carica l'export CSV di ManaBox (singoli Binder o l'intera collezione) oppure incolla una lista di carte in testo.</p>
+
+    <section class="loadsec" id="loadArea" aria-label="Carica la collezione">
       <div class="load">
         <label class="drop" id="drop">
           <input type="file" id="files" multiple accept=".csv,.txt,text/csv,text/plain">
-          <strong>Trascina qui i file CSV o tocca per sceglierli</strong>
-          <span>Export di ManaBox in formato CSV. Anche più file insieme.</span>
+          <strong>Carica l'export CSV di ManaBox</strong>
+          <span>Trascina qui i file o tocca per sceglierli</span>
         </label>
         <div class="paste">
-          <label for="pasteText">Oppure incolla la collezione in testo</label>
-          <textarea id="pasteText" rows="5" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="4 Ponder&#10;1 Lightning Bolt (M10) 146&#10;2 Counterspell *F*"></textarea>
+          <label for="pasteText">Incolla la lista in testo</label>
+          <textarea id="pasteText" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="4 Ponder&#10;1 Lightning Bolt (M10) 146"></textarea>
           <div class="row">
-            <button class="btn" id="pasteClip" type="button" hidden>Incolla dagli appunti</button>
-            <button class="btn primary" id="pasteAdd" type="button">Aggiungi</button>
+            <button class="btn quiet small" id="cancelReplace" type="button" hidden>Annulla</button>
+            <button class="btn small" id="pasteClip" type="button" hidden>Incolla dagli appunti</button>
+            <button class="btn primary small" id="pasteAdd" type="button">Carica</button>
           </div>
         </div>
       </div>
       <ul class="errors" id="errors" aria-live="polite"></ul>
-      <div class="summary" id="importSummary" aria-live="polite"></div>
-      <p class="privacy">I file e il testo vengono letti solo in questo browser e non vengono inviati da nessuna parte. L'ultimo caricamento resta salvato su questo dispositivo.</p>
     </section>
 
-    <section aria-labelledby="h-assign" id="assign" hidden>
-      <h2 id="h-assign">Cosa conta</h2>
-      <p class="hint">Scegli quali gruppi contengono carte che possiedi davvero. Le List e i mazzi sono esclusi di default.</p>
-      <div class="tablewrap">
-        <table class="groups">
-          <thead><tr><th scope="col">Gruppo</th><th scope="col">Contenuto</th><th scope="col">Ruolo</th><th scope="col"><span class="sr">Azioni</span></th></tr></thead>
-          <tbody id="groupRows"></tbody>
-        </table>
-      </div>
-      <div class="opts">
-        <label class="opt" id="optProxyWrap" hidden><input type="checkbox" id="optProxy"><span><b>Conta i proxy</b><small>Le carte segnate come proxy nei tuoi Binder valgono come possedute.</small></span></label>
-      </div>
-      <p class="memo" id="memo"></p>
-      <button class="btn quiet" id="clearData" type="button">Cancella i miei dati</button>
-    </section>
+    <p class="loaded" id="loaded" hidden></p>
 
-    <section aria-labelledby="h-def">
-      <h2 id="h-def">Quali carte contano come giocate</h2>
-      <div class="presets" id="presets" role="radiogroup" aria-labelledby="h-def"></div>
-      <div class="opts">
-        <label class="opt num-opt"><span><b>Minimo mazzi</b><small>Una carta entra nella lista se compare in almeno questi mazzi.</small></span><input type="number" id="optMin" min="1" max="999" value="1" inputmode="numeric"></label>
-        <label class="opt"><input type="checkbox" id="optLegal" checked><span><b>Solo legali</b><small>Nasconde le carte bannate oggi.</small></span></label>
-        <label class="opt"><input type="checkbox" id="optBasics" checked><span><b>Escludi le terre base</b><small>Plains, Island, Swamp, Mountain, Forest, Wastes e le versioni Snow.</small></span></label>
-        <label class="opt"><input type="checkbox" id="optSide" checked><span><b>Conta anche il side</b><small>Includi le carte giocate solo in sideboard.</small></span></label>
-        <label class="opt"><input type="checkbox" id="optQty"><span><b>Conta le copie</b><small>La lista non ha quantità: ti confronto con le copie tipiche, cioè la mediana delle copie nei mazzi che giocano la carta.</small></span></label>
+    <form class="filters" id="filters" role="search" aria-label="Filtri">
+      <label class="f-field">Periodo
+        <select id="period"></select>
+      </label>
+      <label class="f-field">Min. mazzi
+        <input type="number" id="optMin" min="1" max="9999" value="1" inputmode="numeric">
+      </label>
+      <div class="chips">
+      <label class="chk"><input type="checkbox" id="optLegal" checked> Solo legali</label>
+      <label class="chk"><input type="checkbox" id="optSide" checked> Conta anche il side</label>
+      <label class="chk" title="La lista non ha quantità: il confronto è con le copie tipiche, cioè la mediana delle copie nei mazzi che giocano la carta."><input type="checkbox" id="optQty"> Conta le copie</label>
+      <label class="chk"><input type="checkbox" id="optBasics" checked> Escludi terre base</label>
       </div>
-    </section>
+      <input type="search" class="search" id="search" placeholder="Cerca una carta" aria-label="Cerca una carta">
+    </form>
 
-    <section id="results" aria-labelledby="verdict">
-      <p class="verdict" id="verdict"></p>
-      <div class="box" id="box" role="img" hidden></div>
-      <div class="boxmeta" id="boxmeta" hidden>
-        <div class="legend" id="legend"></div>
-        <div class="caption" id="caption" aria-live="polite">Passa sopra un segmento o toccalo per vedere la carta.</div>
-      </div>
-
-      <div class="export" id="export" hidden>
-        <span class="lbl">Copia</span>
-        <div class="btns">
-          <button class="btn" type="button" data-copy="owned">Possedute</button>
-          <button class="btn" type="button" data-copy="missing">Mancanti</button>
-          <button class="btn" type="button" data-copy="csv">List riallineata (CSV)</button>
+    <section class="results" id="results" aria-labelledby="verdict">
+      <div class="res-head">
+        <div>
+          <h2 class="verdict" id="verdict"></h2>
+          <p class="sub" id="sub"></p>
         </div>
-        <span class="lbl">Scarica</span>
-        <div class="btns">
-          <button class="btn" type="button" data-save="owned">Possedute .txt</button>
-          <button class="btn" type="button" data-save="missing">Mancanti .txt</button>
-          <button class="btn primary" type="button" data-save="csv">List riallineata .csv</button>
-        </div>
-        <p class="note">Le liste di testo usano il formato "1 Nome carta", importabile in ManaBox e in Cardmarket. La List riallineata usa, per ogni carta che possiedi, una printing presente nei tuoi Binder e, per le mancanti, la printing di riferimento: importala in ManaBox come nuova List e il filtro "In Collection" la riconoscerà.</p>
-      </div>
-
-      <div class="toolbar">
-        <div class="seg" role="radiogroup" aria-label="Mostra" id="tabs"></div>
-        <div class="filters">
-          <input type="search" class="search" id="search" placeholder="Cerca una carta" aria-label="Cerca una carta">
-          <select id="seenFilter" aria-label="Ultima apparizione">
-            <option value="all">Tutte le date</option>
-            <option value="recent">Viste negli ultimi 6 mesi</option>
-            <option value="old">Non viste da oltre 6 mesi</option>
-          </select>
+        <div class="res-tools">
           <select id="sort" aria-label="Ordina">
             <option value="share">Più giocate</option>
             <option value="name">Nome (A–Z)</option>
             <option value="recent">Viste di recente</option>
             <option value="oldest">Non viste da più tempo</option>
           </select>
+          <select id="seenFilter" aria-label="Ultima apparizione">
+            <option value="all">Qualsiasi data</option>
+            <option value="recent">Viste negli ultimi 6 mesi</option>
+            <option value="old">Non viste da oltre 6 mesi</option>
+          </select>
         </div>
       </div>
-      <p class="count" id="count" aria-live="polite"></p>
       <div class="tablewrap">
         <table class="cards">
-          <thead><tr><th scope="col">Carta</th><th scope="col">Stato</th><th scope="col" class="c-qty">Copie</th><th scope="col" class="c-pct">Mazzi</th><th scope="col">Ultima apparizione</th><th scope="col">Ingresso</th><th scope="col">Le tue printing</th></tr></thead>
+          <thead><tr><th scope="col">Carta</th><th scope="col" class="c-qty" id="thQty">Copie</th><th scope="col" class="c-pct">Mazzi</th><th scope="col">Ultima apparizione</th><th scope="col">Ingresso</th></tr></thead>
           <tbody id="cardRows"></tbody>
         </table>
       </div>
       <button class="btn more" id="more" type="button" hidden>Mostra altre</button>
     </section>
 
-    <section aria-labelledby="h-news">
-      <h2 id="h-news">Novità</h2>
-      <div id="news"><p class="hint">Caricamento…</p></div>
+    <section class="extra" id="extra" aria-label="Altre opzioni">
+      <div class="extra-row" id="extraColl" hidden>
+        <label class="chk"><input type="checkbox" id="optMissing"> Mostra anche le mancanti</label>
+        <details class="mini" id="expDetails">
+          <summary>Esporta e copia</summary>
+          <div class="export">
+            <span class="lbl">Copia</span>
+            <div class="btns">
+              <button class="btn small" type="button" data-copy="owned">Possedute</button>
+              <button class="btn small" type="button" data-copy="missing">Mancanti</button>
+              <button class="btn small" type="button" data-copy="csv">List riallineata (CSV)</button>
+            </div>
+            <span class="lbl">Scarica</span>
+            <div class="btns">
+              <button class="btn small" type="button" data-save="owned">Possedute .txt</button>
+              <button class="btn small" type="button" data-save="missing">Mancanti .txt</button>
+              <button class="btn small" type="button" data-save="csv">List riallineata .csv</button>
+            </div>
+            <p class="note">Liste di testo nel formato "1 Nome carta" (ManaBox, Cardmarket). La List riallineata usa una printing che possiedi o, per le mancanti, quella di riferimento: importala in ManaBox come nuova List e il filtro "In Collection" la riconoscerà.</p>
+          </div>
+        </details>
+        <details class="mini" id="impDetails">
+          <summary id="impSummary">Importazione</summary>
+          <div class="summary" id="importSummary"></div>
+        </details>
+        <details class="mini" id="grpDetails">
+          <summary id="grpSummary">Binder inclusi</summary>
+          <div class="tablewrap">
+            <table class="groups">
+              <thead><tr><th scope="col">Gruppo</th><th scope="col">Contenuto</th><th scope="col">Ruolo</th><th scope="col"><span class="sr">Azioni</span></th></tr></thead>
+              <tbody id="groupRows"></tbody>
+            </table>
+          </div>
+          <label class="chk" id="optProxyWrap" hidden><input type="checkbox" id="optProxy"> Conta i proxy come posseduti</label>
+          <p class="memo" id="memo"></p>
+        </details>
+      </div>
+      <div class="extra-row">
+        <details class="mini" id="newsDetails">
+          <summary>Novità</summary>
+          <div id="news"><p class="note">Caricamento…</p></div>
+        </details>
+        <button class="btn quiet small" id="clearData" type="button">Cancella i miei dati</button>
+      </div>
     </section>
   </div>
 
@@ -146,8 +149,7 @@
   </main>
 
   <footer class="foot">
-    <p>Ce l'ho? Pauper is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
-    <p>Dati e immagini delle carte da Scryfall. Non affiliato a Wizards of the Coast, ManaBox o Scryfall. <a href="#informazioni">Informazioni, crediti e privacy</a>.</p>
+    <p>Pauper Index è Fan Content non ufficiale consentito dalla Fan Content Policy, non approvato da Wizards. <a href="#informazioni">Informazioni, crediti e privacy</a></p>
   </footer>
 </div>
 

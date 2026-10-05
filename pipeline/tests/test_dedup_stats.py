@@ -6,8 +6,8 @@ from array import array
 
 import pytest
 
-from celho_pipeline.dedup import dedupe
-from celho_pipeline.source import (
+from pauper_index.dedup import dedupe
+from pauper_index.source import (
     Deck,
     NameTable,
     Tournament,
@@ -16,7 +16,7 @@ from celho_pipeline.source import (
     normalize_result,
     parse_day,
 )
-from celho_pipeline.stats import compute, median_high
+from pauper_index.stats import compute, median_high
 
 D0 = dt.date(2026, 9, 1).toordinal()
 NAMES = ["Brainstorm", "Gush", "Island", "Fire // Ice", "Unknown Card"]
@@ -191,7 +191,7 @@ def test_parse_day_formats(s):
     ("pauper-unlimited-power-2026.json", False),
 ])
 def test_excluded_filename_whole_word(fn, excluded):
-    from celho_pipeline.source import EXCLUDED_NAME
+    from pauper_index.source import EXCLUDED_NAME
     assert bool(EXCLUDED_NAME.search(fn)) is excluded
 
 

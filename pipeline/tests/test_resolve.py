@@ -1,7 +1,7 @@
 import pytest
 
-from celho_pipeline.names import norm
-from celho_pipeline.resolve import OnlineLog, Resolver
+from pauper_index.names import norm
+from pauper_index.resolve import OnlineLog, Resolver
 
 from .conftest import oid
 

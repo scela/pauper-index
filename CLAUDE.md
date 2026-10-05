@@ -1,4 +1,4 @@
-# CLAUDE.md — "Ce l'ho? Pauper"
+# CLAUDE.md — Pauper Index
 
 ## Scopo
 
@@ -7,6 +7,13 @@ Web app statica: tra le carte giocate in Pauper, quali possiedo (in qualsiasi pr
 - **Frontend** statico (Vite + TS): legge nel browser l'export CSV di ManaBox e lo confronta con la lista.
 
 La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni prese e gli scostamenti dalla spec: **tienilo aggiornato**.
+
+**Nome**: il sito si chiama **Pauper Index** (la spec usava il nome provvisorio "Ce l'ho? Pauper"). Il repository GitHub si chiamerà `pauper-index`. Gli identificatori seguono il nome:
+- pacchetto Python `pauper_index` (`python -m pauper_index …`);
+- pacchetto npm `pauper-index-web`;
+- database IndexedDB `pauper-index` e chiavi localStorage `pauper-index:`;
+- User-Agent `PauperIndex/0.1`;
+- variabili d'ambiente `PAUPER_INDEX_*`.
 
 ## Stato
 
@@ -23,7 +30,7 @@ docs/SPEC.md            specifica
 reference/              prototipo (ce-lho.html) e script (pauper_sync.py) da portare
 reference/private/      export ManaBox personali: IGNORATA da git, non copiarne mai il contenuto
 baseline/               pauper-2026-09-14.csv: List ManaBox della ricerca precedente (carte giocate negli ultimi 12 mesi)
-pipeline/               pacchetto Python celho_pipeline (Fase 1)
+pipeline/               pacchetto Python pauper_index (Fase 1)
 data/                   output committati, letti dal frontend; data/manual/ contiene i file curati a mano
 web/                    frontend (Fase 2)
 .cache/                 IGNORATA: clone della fonte, bulk Scryfall, cache HTTP
@@ -174,9 +181,9 @@ Le carte dei 12 mesi (3.084) non cambiano.
 ## Pipeline: comandi
 
 ```powershell
-.\.venv\Scripts\python -m celho_pipeline build      # aggiorna fonte e bulk, ricalcola, scrive data/
-.\.venv\Scripts\python -m celho_pipeline sets       # data/reviews/set-ingresso.md
-.\.venv\Scripts\python -m celho_pipeline baseline   # data/reviews/baseline-2026-09-14.md
+.\.venv\Scripts\python -m pauper_index build      # aggiorna fonte e bulk, ricalcola, scrive data/
+.\.venv\Scripts\python -m pauper_index sets       # data/reviews/set-ingresso.md
+.\.venv\Scripts\python -m pauper_index baseline   # data/reviews/baseline-2026-09-14.md
 #   --offline: niente rete (usa cache e fuzzy_matches.csv); --no-fetch: non aggiorna la fonte
 .\.venv\Scripts\python -m pytest pipeline; .\.venv\Scripts\ruff check pipeline
 ```
@@ -312,6 +319,24 @@ Idee da valutare dopo la prima versione: `docs/IDEE.md`.
 
 ## Frontend (Fase 2)
 
+**Layout** (rivisto su richiesta dopo la Fase 2: una sola funzione principale):
+1. **In alto**: titolo, riga dei dati ("Dati al …", con l'avviso se la fonte è ferma) e area di caricamento (file CSV o testo incollato). Dopo il caricamento l'area diventa la riga "Collezione: N carte · Sostituisci". "Sostituisci" riapre l'area, e il caricamento successivo **rimpiazza** la collezione.
+2. **Filtri** su una o due righe: periodo (menu con il numero di carte per periodo), minimo mazzi, solo legali, conta anche il side, conta le copie, escludi terre base, ricerca. Ogni modifica aggiorna subito i risultati. Su mobile le opzioni stanno su una riga scorrevole.
+3. **Risultati**:
+   - intestazione "Possiedi N carte giocate in Pauper";
+   - di default **solo le carte possedute** (anche parziali), dalle più giocate;
+   - prima del caricamento: tutte le carte del periodo;
+   - colonne: carta (con le tue printing e i Binder sotto il nome), copie, mazzi, ultima apparizione, ingresso;
+   - ordinamento e filtro delle date a destra dell'intestazione.
+4. **In fondo, raccolto**: "Mostra anche le mancanti", "Esporta e copia", "Importazione: N righe, M non riconosciute" (con le righe espandibili), "Binder inclusi: X di Y · modifica" (ruoli Inclusa/Esclusa, proxy), "Novità", "Cancella i miei dati". Tutte le sezioni usano `<details>`.
+5. **Piè di pagina**: una riga breve sulla Fan Content Policy con il link a Informazioni. Il testo **esatto** dell'avviso sta per esteso solo nella pagina Informazioni, che contiene anche "Come funziona" e la privacy (spostate dalla pagina principale).
+
+Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede, gli avvisi ridondanti.
+
+**Immagini**: se una miniatura non si carica (per esempio uno Scryfall ID sconosciuto), si usa la printing di riferimento (`data-fallback`).
+
+**Screenshot di controllo**: `npm run screenshots` (con `npm run preview` attivo) salva in `.cache/screenshots/` le viste prima e dopo il caricamento, desktop e mobile. Di default usa la collezione sintetica; con `-- percorso.csv` usa un altro file.
+
 **Struttura di `web/`** (Vite + TypeScript, nessun framework):
 - `src/lib/`: logica pura e testata:
   - `norm` (porting esatto di `names.norm`);
@@ -330,7 +355,7 @@ Idee da valutare dopo la prima versione: `docs/IDEE.md`.
 **Decisioni**:
 - **Font di sistema** al posto di Geist: nessuna richiesta esterna e nessun file di font da servire.
 - **CSP**: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://cards.scryfall.io data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'`. `<meta name="referrer" content="no-referrer">`, così le richieste di immagini a Scryfall non rivelano la pagina.
-- **Ruoli dei gruppi**: solo "Le mie carte" o "Ignora". Binder di tipo `deck` o `list` sono su "Ignora" di default; il testo incollato è un gruppo "Testo incollato" che conta come posseduto.
+- **Ruoli dei gruppi**: solo "Inclusa" o "Esclusa" (in "Binder inclusi"). Binder di tipo `deck` o `list` sono esclusi di default; il testo incollato è un gruppo "Testo incollato" che conta come posseduto.
 - **Abbinamento di una riga**:
   1. Scryfall ID (`printings.json`);
   2. set + numero;
@@ -340,7 +365,7 @@ Idee da valutare dopo la prima versione: `docs/IDEE.md`.
 - **Riepilogo dell'importazione**: righe lette, carte della lista, carte mai giocate in Pauper (Scryfall ID o nome in `allnames.json`), righe non riconosciute (elencate), righe senza set e numero (immagine di riferimento, segnalata anche nella scheda).
 - **"Conta le copie"**: confronto con la mediana delle copie (main+side, oppure solo main se "Conta anche il side" è spento) nella finestra scelta.
 - **Ventaglio**: un artwork per `illustration_id`, preferendo la printing posseduta, poi la più recente in inglese. Al massimo 7, più "Mostra tutte" che apre una griglia in un `<dialog>`. Le carte sono **distanziate e ruotate di pochi gradi, senza sovrapporsi**, per non coprire artista e copyright (regole di Scryfall). La carta attiva è mostrata intera e più grande.
-- **Persistenza**: IndexedDB (database `celho`) per la collezione; localStorage solo per tema, ordinamento e filtro, con prefisso `celho:`. "Cancella i miei dati" elimina il database e **solo** le chiavi `celho:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
+- **Persistenza**: IndexedDB (database `pauper-index`) per la collezione; localStorage solo per tema, ordinamento e filtro, con prefisso `pauper-index:`. "Cancella i miei dati" elimina il database e **solo** le chiavi `pauper-index:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
 - **Tabella**: pagine da 100 righe ("Mostra altre"). Ordinamento per percentuale di mazzi, nome, ultima apparizione (recente o meno recente). Filtro "viste negli ultimi 6 mesi / non viste da oltre 6 mesi", rispetto alla data dei dati.
 - **Link "Segnala un errore"**: usa `VITE_REPO_URL` al momento della build (da impostare nella Fase 3); senza, mostra un testo generico.
 - **Icone**: `public/icon.svg` più PNG generate con `npm run icons` (Chromium di Playwright) e committate. Nessun simbolo di Wizards.
