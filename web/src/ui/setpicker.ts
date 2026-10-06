@@ -117,7 +117,9 @@ export function initSetPicker(ctx: SetPickerCtx): { refresh(): void } {
     const sel = ctx.selected();
     input.value = sel ? label(sel) : '';
   }, 150));
-  document.addEventListener('pointerdown', (ev) => {
+  // le opzioni sotto il campo si richiudono a clic concluso: su pointerdown il layout si spostava sotto il
+  // cursore e il clic finiva su un altro elemento (per esempio una casella più in basso)
+  document.addEventListener('click', (ev) => {
     if (!wrap.contains(ev.target as Node) && !ctx.selected()) wrap.classList.remove('open');
   });
 

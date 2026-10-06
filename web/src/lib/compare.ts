@@ -94,8 +94,12 @@ export function listIndexes(d: Data, o: Opts): number[] {
   return out;
 }
 
-export function presetCounts(d: Data, o: Opts): number[] {
-  return d.cards.w.map((_, win) => listIndexes(d, { ...o, win }).length);
+/** Carte della lista per ogni periodo; `keep` restringe il conteggio (per esempio alle carte di un'espansione). */
+export function presetCounts(d: Data, o: Opts, keep?: (idx: number) => boolean): number[] {
+  return d.cards.w.map((_, win) => {
+    const ids = listIndexes(d, { ...o, win });
+    return keep ? ids.filter(keep).length : ids.length;
+  });
 }
 
 /** Copie tipiche: mediana delle copie tra i mazzi che la giocano (main+side o solo main). */

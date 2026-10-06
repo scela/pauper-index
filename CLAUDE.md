@@ -30,9 +30,10 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] Funzione 3: filtro per espansione (vedi "Filtro per espansione")
   - [x] "Carica altri" (10 carte alla volta) e "Rispolvera una carta" (vedi le sezioni omonime), prima della funzione 4
   - [x] 2026-10-07: simboli delle espansioni (vedi "Simboli delle espansioni"), stampa del set nella vista per espansione e "Rispolvera" spostata nella pagina "Carta dimenticata"
+  - [x] 2026-10-07: riepiloghi coerenti con l'elenco (vedi "Riepiloghi ed elenco") e pulsante "Rispolvera una carta" in rilievo, con le ragnatele
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo simboli, vista per espansione e "Carta dimenticata", 2026-10-07): 96 pytest, 54 Vitest, 82 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo riepiloghi coerenti e nuovo pulsante, 2026-10-07): 96 pytest, 58 Vitest, 86 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -90,7 +91,7 @@ web/                    frontend (Vite + TypeScript)
 
 **File principali**:
 - Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `seticons.py` (simboli delle espansioni), `review.py` (revisioni, snapshot, allarme), `scryfall.py` (client con limiti di frequenza), `config.py`.
-- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata"), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
+- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `view` (filtri dell'elenco e nota del riepilogo), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata"), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
 - Test: `pipeline/tests/`, `web/tests/` (Vitest), `web/e2e/smoke.spec.ts` (Playwright).
 - Automazione: `.github/workflows/aggiorna.yml`.
 - Documentazione: questo file, `README.md` (avvio manuale, file manuali, comandi locali), `docs/IDEE.md`.
@@ -122,6 +123,7 @@ npx playwright install chromium; npm run e2e   # Playwright sulla build: desktop
 npm run screenshots                  # con preview attivo: schermate in .cache/screenshots/
 npm run dust-frames                  # con preview attivo: fotogrammi dell'animazione "Rispolvera" in .cache/screenshots/
 node scripts/feature-shots.mjs <etichetta>   # con preview attivo: espansioni e "Carta dimenticata", desktop/mobile/scuro
+node scripts/dust-button-shots.mjs <etichetta>   # con preview attivo: pulsante "Rispolvera", desktop/mobile, chiaro/scuro
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
 # Stato della CI
@@ -516,15 +518,34 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 
 - **Pagina a sé** (`#viewDust`, hash `#carta-dimenticata`), raggiungibile dalla testata con la voce "Carta dimenticata" / "Forgotten card" (`#navDust`, prima di Informazioni; `aria-current="page"` sulla voce attiva). Non è più nella zona del controllo rapido. Contiene:
   - il titolo e la frase "Riscopri una carta che si giocava in Pauper ma che non compare in nessun mazzo da oltre un anno" (`dust.lead`);
-  - il pulsante grande "Rispolvera una carta" / "Dust off a card" (`#dustBtn`, icona del piumino), che dopo la prima pesca diventa "Rispolverane un'altra"; sotto, solo con la collezione, l'interruttore "Pesca tra tutte le carte" (`#dustAll`);
+  - il pulsante grande "Rispolvera una carta" / "Dust off a card" (`#dustBtn`), che dopo la prima pesca diventa "Rispolverane un'altra"; sotto, solo con la collezione, l'interruttore "Pesca tra tutte le carte" (`#dustAll`);
   - la **scena** (`#dustResult .dust-scene`), con la carta al centro e i dettagli accanto (sotto su mobile).
-- Prima della pesca la scena mostra una **cornice vuota** (`.dust-empty`, nessuna immagine né retro di carta) con polvere e ragnatele ferme (`dustCover(true)`, classe `still`, visibile anche con `prefers-reduced-motion`).
+- **Pulsante** (rifatto il 2026-10-07, perché la scritta non sembrava da premere):
+  - pieno di colore (sfumatura dell'accento), in rilievo (bordo inferiore `--btn-ledge` che si abbassa alla pressione), alto 68 px (72 px e largo quanto lo schermo su mobile), testo 1,25 rem;
+  - icona originale di un piumino (manico, ghiera, tre piume), che oscilla al passaggio del mouse;
+  - tre **ragnatele originali** agli angoli (`buttonWeb` in `ui/dust.ts`, SVG generato a caso, fili `--btn-web`: bianchi in tema chiaro, scuri in tema scuro). Al passaggio del mouse oscillano; alla pressione vengono spazzate via (classe `sweep`, 320 ms) **prima** che parta la pesca e l'animazione della carta, e si riformano dopo (classe `regrow`);
+  - focus da tastiera: contorno di 3 px nel colore del testo, staccato di 5 px. Contrasto del testo: 6,4:1 in chiaro, 7,8:1 in scuro;
+  - con `prefers-reduced-motion` niente movimento: le ragnatele restano ferme e la pesca parte subito.
+- Prima della pesca la scena mostra una **cornice vuota** (`button.dust-empty`, nessuna immagine né retro di carta) con polvere e ragnatele ferme (`dustCover(true)`, classe `still`, visibile anche con `prefers-reduced-motion`) e la scritta "Tocca per rispolverare": anche la cornice si tocca per pescare.
 - Logica in `lib/dust.ts` (testata), interfaccia e animazione in `ui/dust.ts`.
 - **Carte ammesse** (`dustPool`): legali oggi, non terre base, almeno `DUST_MIN_DECKS = 20` mazzi (main+side) nello storico, nessuna apparizione negli ultimi `DUST_QUIET_DAYS = 365` giorni contati dalla data dei dati. Al 2026-10-06: **203 carte**.
 - **Pesca**: con la collezione tra le carte possedute (interruttore "Pesca tra tutte le carte"); senza collezione tra tutte. Nessuna ripetizione nella sessione (oracle_id in sessionStorage `pauper-index:dusted`, cancellato anche da "Cancella i miei dati"); quando sono finite si ricomincia, con un avviso. Se nessuna carta posseduta è dimenticata, la scena lo dice (prima, al primo clic non compariva nulla: corretto).
 - **Dettagli**: immagine (la printing posseduta, altrimenti quella di riferimento; un clic apre gli artwork), mazzi nello storico tra prima e ultima apparizione, **anno di massima diffusione** in percentuale dei mazzi di quell'anno (`y` / `yt`), ultima apparizione più recente tra MTGO e cartaceo con il link al torneo, possesso. Tolti i pulsanti "Chiudi" e "Rispolverane un'altra" dentro il risultato, perché c'è il pulsante grande.
 - **Animazione** (circa 1,5 s, invariata): copertura `.dust-cover` con velo di polvere (rumore SVG), granelli, fiocchi e tre ragnatele generate a caso, spazzati via con una maschera diagonale. Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall); a fine animazione la copertura viene rimossa. Parte quando l'immagine è caricata. Con `prefers-reduced-motion` nessuna copertura sulla carta. CSP invariata: i valori casuali passano da `style.setProperty`.
 - Fotogrammi di controllo: `npm run dust-frames` (desktop e mobile, 5 istanti più la fine, dalla pagina `#carta-dimenticata`).
+
+## Riepiloghi ed elenco (2026-10-07)
+
+- **Regola**: ogni riepilogo conta esattamente l'insieme che l'elenco può mostrare; se i filtri dell'elenco ne mostrano un altro, lo si dice.
+- **Difetto corretto**: con Edge of Eternities, periodo "Storico" e "Non viste da oltre 6 mesi" il titolo diceva 69 carte e l'elenco ne mostrava 13. Il titolo conta `S.results` (periodo, minimo mazzi, solo legali, side, gruppo di set con i set nascosti se attivati), mentre l'elenco applicava dopo altri filtri che il titolo ignorava: ricerca, "Ultima apparizione" (ricordata nel browser tra una visita e l'altra) e "Solo quelle che possiedi". Gruppo di set e set nascosti erano già contati allo stesso modo in titolo ed elenco.
+- **Ora** (`lib/view.ts`): `restrictToSet` e `visible` sono la sola catena di filtri, usata dall'elenco; `shownNote(titolo, elenco)` confronta i due insiemi. Se sono diversi, sotto il titolo compare `#filterNote`: "13 mostrate con i filtri attivi: non viste da oltre 6 mesi" (motivi: ricerca, ultima apparizione, solo quelle che possiedi, comprese le mancanti), con "Togli questi filtri", che azzera ricerca, ultima apparizione e "Solo quelle che possiedi".
+- Insieme del titolo: nella vista collezione le carte possedute ("Possiedi N"); altrimenti tutta la lista ("N carte giocate", "In questo set: N"). Con "Mostra anche le mancanti" l'elenco contiene anche le mancanti, e la nota lo dice.
+- **Menu Periodo**: con un'espansione scelta i conteggi ("Storico · 69 carte") sono quelli dell'espansione (`presetCounts` con `keep`); prima erano quelli di tutte le carte.
+- Controllati gli altri riepiloghi:
+  - "ne possiedi M (K in questa espansione)" conta sulla stessa lista;
+  - in "Carta dimenticata" il numero di "nessuna delle tue carte… ({n} in tutto)" è l'insieme da cui si pesca;
+  - gli export lavorano sulla lista completa (decisione già presa), non sull'elenco filtrato.
+- **Difetto trovato con il test**: dopo aver usato il campo "Espansione", il primo `pointerdown` fuori dal campo richiudeva le opzioni sotto il campo e spostava il layout sotto il cursore, quindi il clic finiva su un altro elemento (per esempio la casella "Mostra anche le mancanti" non si spuntava). Ora la chiusura avviene su `click`.
 
 ## Pagina Informazioni (riscritta il 2026-10-06)
 

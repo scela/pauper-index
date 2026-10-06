@@ -10,13 +10,13 @@ import { imageUrl, loadData, type Data } from './lib/data';
 import { $, h } from './lib/dom';
 import { realignedCSV, textList } from './lib/exports';
 import { daysBetween, fmtDate, fmtInt, fmtPct, fmtPrint } from './lib/format';
-import { norm } from './lib/norm';
 import { clearAll, idbGet, idbSet, lsGet, lsSet } from './lib/store';
 import { parseTextList } from './lib/text';
 import type { Group, Role, Row } from './lib/types';
 import { collectionIndex, type CollectionIndex, type Owned } from './lib/quick';
 import { buildGroups, displayPrint, iconOf, memberCodes, printsInSets, rarityHere, type SetGroup, type SetRow } from './lib/sets';
 import { setIcon } from './ui/seticon';
+import { restrictToSet, shownNote, visible, type Seen } from './lib/view';
 import { renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
 import { initDust } from './ui/dust';
@@ -26,7 +26,6 @@ import { cancelClose, closeSheet, isHoverBlocked, isOpenFor, openSheet, recently
 // Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa.
 const PAGE = 10;
 const NEW_DAYS = 60;
-const STALE_DAYS = 182;
 const STALE_SOURCE_DAYS = 21;
 const PASTED = '__pasted__'; // sorgente dei gruppi incollati: il nome si traduce quando viene mostrato
 const periodLabel = (i: number) => t(`period.${i}` as Key);
@@ -55,7 +54,7 @@ const S = {
   showMissing: false,
   savedAt: null as number | null,
   query: '',
-  seen: (lsGet('seen') as 'all' | 'recent' | 'old') || 'all',
+  seen: (lsGet('seen') as Seen) || 'all',
   sort: (lsGet('sort') as 'share' | 'name' | 'recent' | 'oldest') || 'share',
   results: [] as Result[],
   view: [] as Result[],
@@ -301,10 +300,7 @@ const selectedGroup = (): SetGroup | null => (S.setFilter && S.setGroups?.get(S.
 function applySetFilter(): void {
   const g = selectedGroup();
   S.setCodes = g ? memberCodes(g, S.setHidden) : null;
-  if (S.setCodes) {
-    const codes = S.setCodes;
-    S.results = S.results.filter((x) => printsInSets(S.d!, x.idx, codes).length > 0);
-  }
+  S.results = restrictToSet(S.d!, S.results, S.setCodes);
 }
 
 function selectSet(code: string | null): void {
@@ -344,7 +340,9 @@ function renderLoad(): void {
 
 function renderFilters(): void {
   const d = S.d!;
-  const counts = presetCounts(d, S.opts);
+  // con un'espansione scelta i conteggi del periodo sono quelli dell'espansione, come il riepilogo
+  const codes = S.setCodes;
+  const counts = presetCounts(d, S.opts, codes ? (idx) => printsInSets(d, idx, codes).length > 0 : undefined);
   $('#period').replaceChildren(...counts.map((n, i) => h('option', { value: String(i), selected: S.opts.win === i },
     t('period.option', { label: periodLabel(i), n: fmtInt(n) }))));
   ($('#period') as HTMLSelectElement).value = String(S.opts.win);
@@ -360,7 +358,10 @@ function renderResults(): void {
   const R = S.results;
   const coll = hasColl();
   const period = periodDesc(S.opts.win);
-  const owned = R.filter((x) => x.owned > 0).length;
+  const ownedList = R.filter((x) => x.owned > 0);
+  const owned = ownedList.length;
+  // insieme contato nel titolo: le carte possedute nella vista collezione, altrimenti tutta la lista
+  let headline: Result[] = R;
   let v: string;
   let sub: string;
   const g = selectedGroup();
@@ -375,6 +376,7 @@ function renderResults(): void {
     v = t('res.noGroups');
     sub = t('res.noGroupsSub');
   } else {
+    headline = ownedList;
     v = t('res.owned', { n: owned });
     sub = t('res.ownedSub', { total: fmtInt(R.length), period });
   }
@@ -382,24 +384,17 @@ function renderResults(): void {
   $('#sub').textContent = sub;
   $('#thQty').textContent = coll ? t('th.qtyYours') : t('th.qtyTypical');
   renderRows();
+  renderNote(headline);
+}
+
+/** Filtri dell'elenco: senza espansione di default solo le possedute; con un'espansione tutte, a richiesta solo le possedute. */
+function listFilters() {
+  return { query: S.query, seen: S.seen, onlyOwned: hasColl() && (S.setCodes ? S.setOwned : !S.showMissing) };
 }
 
 function filtered(): Result[] {
   const d = S.d!;
-  const q = norm(S.query);
-  const anchor = d.cards.anchor;
-  // senza espansione: di default solo le possedute; con un'espansione: tutte (esplorazione), a richiesta solo le possedute
-  const onlyOwned = hasColl() && (S.setCodes ? S.setOwned : !S.showMissing);
-  let rows = S.results.filter((x) => {
-    if (onlyOwned && x.owned === 0) return false;
-    const c = d.cards.c[x.idx];
-    if (q && !norm(c.n).includes(q)) return false;
-    if (S.seen !== 'all') {
-      const old = daysBetween(c.z, anchor) > STALE_DAYS;
-      if (S.seen === 'old' ? !old : old) return false;
-    }
-    return true;
-  });
+  let rows = visible(d, S.results, listFilters());
   const name = (x: Result) => d.cards.c[x.idx].n;
   const cmpName = (a: Result, b: Result) => name(a).localeCompare(name(b), 'en', { sensitivity: 'base' });
   if (S.sort === 'share') rows = rows.sort((a, b) => b.share - a.share || cmpName(a, b));
@@ -409,6 +404,29 @@ function filtered(): Result[] {
     rows = rows.sort((a, b) => (S.sort === 'recent' ? z(b).localeCompare(z(a)) : z(a).localeCompare(z(b))) || cmpName(a, b));
   }
   return rows;
+}
+
+/** Perché l'elenco non mostra esattamente le carte contate nel riepilogo. */
+function noteReasons(): string[] {
+  const why: string[] = [];
+  const f = listFilters();
+  if (S.query.trim()) why.push(t('why.search', { q: S.query.trim() }));
+  if (S.seen !== 'all') why.push(t(S.seen === 'old' ? 'why.old' : 'why.recent'));
+  if (S.setCodes && f.onlyOwned) why.push(t('why.onlyOwned'));
+  if (!S.setCodes && hasColl() && S.showMissing) why.push(t('why.missing'));
+  return why;
+}
+
+/** Nota sotto il riepilogo, quando l'elenco non mostra esattamente le carte contate nel titolo. */
+function renderNote(headline: Result[]): void {
+  const n = shownNote(headline, S.view);
+  const el = $('#filterNote');
+  el.hidden = n === null;
+  if (n === null) return el.replaceChildren();
+  const why = noteReasons();
+  const clearable = !!S.query.trim() || S.seen !== 'all' || (!!S.setCodes && S.setOwned);
+  el.replaceChildren(t('res.filtered', { n: fmtInt(n), why: why.join(', ') }),
+    clearable ? ' · ' : '', clearable ? h('button', { class: 'linkbtn', type: 'button', id: 'clearListFilters' }, t('res.clearFilters')) : '');
 }
 
 function isNew(entry: string | undefined): boolean {
@@ -806,7 +824,7 @@ function wire(): void {
   $('#search').addEventListener('input', (e) => {
     S.query = (e.target as HTMLInputElement).value;
     S.shown = PAGE;
-    renderRows();
+    renderResults();
   });
   const seenSel = $('#seenFilter') as HTMLSelectElement;
   seenSel.value = S.seen;
@@ -814,7 +832,7 @@ function wire(): void {
     S.seen = seenSel.value as typeof S.seen;
     lsSet('seen', S.seen);
     S.shown = PAGE;
-    renderRows();
+    renderResults();
   });
   const sortSel = $('#sort') as HTMLSelectElement;
   sortSel.value = S.sort;
@@ -823,6 +841,18 @@ function wire(): void {
     lsSet('sort', S.sort);
     S.shown = PAGE;
     renderRows();
+  });
+  $('#filterNote').addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).id !== 'clearListFilters') return;
+    S.query = '';
+    S.seen = 'all';
+    S.setOwned = false;
+    lsSet('seen', 'all');
+    ($('#search') as HTMLInputElement).value = '';
+    seenSel.value = 'all';
+    ($('#setOwned') as HTMLInputElement).checked = false;
+    S.shown = PAGE;
+    renderResults();
   });
   $('#more').addEventListener('click', () => {
     const first = S.shown;
@@ -848,7 +878,7 @@ function wire(): void {
   $('#optMissing').addEventListener('change', (e) => {
     S.showMissing = (e.target as HTMLInputElement).checked;
     S.shown = PAGE;
-    renderRows();
+    renderResults();
     persist();
   });
 

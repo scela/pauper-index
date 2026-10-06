@@ -19,6 +19,8 @@ export interface DustCtx {
 }
 
 const SWEEP_MS = 1700; // durata massima dell'animazione (CSS) più un margine
+const BTN_SWEEP_MS = 320; // le ragnatele del pulsante vengono spazzate via prima che compaia la carta
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
  * Pagina "Carta dimenticata": pulsante grande e una scena al centro. Prima della pesca la scena mostra una cornice
@@ -63,9 +65,30 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
     render(true);
   };
 
-  /** Cornice vuota con la copertura ferma (niente immagine: nessuna carta, nessun retro). */
-  const waiting = () => h('div', { class: 'dust-stage dust-empty', role: 'img', 'aria-label': t('dust.waiting') },
-    dustCover(true));
+  /** Cornice vuota con la copertura ferma (niente immagine: nessuna carta, nessun retro); toccarla pesca una carta. */
+  const waiting = () => h('button', { class: 'dust-stage dust-empty', type: 'button', 'aria-label': t('dust.tapFrame'), onclick: press },
+    dustCover(true), h('span', { class: 'dust-tap', 'aria-hidden': 'true' }, t('dust.tap')));
+
+  // pressione: prima le ragnatele del pulsante vengono spazzate via, poi la carta compare sotto la polvere
+  let busy = false;
+  let regrowTimer: number | undefined;
+  const press = () => {
+    if (busy) return;
+    if (reducedMotion()) return draw();
+    busy = true;
+    window.clearTimeout(regrowTimer);
+    btn.classList.remove('regrow');
+    btn.classList.add('sweep');
+    window.setTimeout(() => {
+      busy = false;
+      draw();
+      // le ragnatele si riformano dopo la spazzata della carta
+      regrowTimer = window.setTimeout(() => {
+        btn.classList.remove('sweep');
+        btn.classList.add('regrow');
+      }, SWEEP_MS);
+    }, BTN_SWEEP_MS);
+  };
 
   const render = (animate = false) => {
     const d = ctx.data();
@@ -127,11 +150,12 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
       stage, h('div', { class: 'qinfo dust-info' }, ...info)));
     if (animate) {
       root.scrollIntoView({ block: 'nearest' });
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) sweep(stage, img);
+      if (!reducedMotion()) sweep(stage, img);
     }
   };
 
-  btn.addEventListener('click', draw);
+  btn.prepend(buttonWeb('tl'), buttonWeb('tr'), buttonWeb('br'));
+  btn.addEventListener('click', press);
   allBox.addEventListener('change', () => {
     fromAll = allBox.checked;
     if (drawn) draw();
@@ -140,6 +164,38 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
 }
 
 /* ---------- animazione ---------- */
+
+/**
+ * Piccola ragnatela per un angolo del pulsante (disegnata per l'angolo in alto a sinistra; le altre sono
+ * specchiate via CSS): fili radiali dall'angolo, giri che cedono verso il centro, un filo penzolante.
+ */
+function buttonWeb(corner: 'tl' | 'tr' | 'br'): HTMLElement {
+  const n = 5;
+  const angles = Array.from({ length: n }, (_, k) => ((k + rand(-0.15, 0.15)) * (90 / (n - 1))) * (Math.PI / 180));
+  const lens = angles.map((_, k) => (k === 0 || k === n - 1 ? 40 : rand(28, 38)));
+  const at = (k: number, r: number): [number, number] => [1 + r * Math.cos(angles[k]), 1 + r * Math.sin(angles[k])];
+  let radial = '';
+  angles.forEach((_, k) => {
+    const [x, y] = at(k, lens[k]);
+    radial += `M1 1L${f1(x)} ${f1(y)}`;
+  });
+  let rings = '';
+  for (const r of [7, 13, 19.5, 26]) {
+    for (let k = 0; k < n - 1; k++) {
+      if (r > lens[k] * 0.95 || r > lens[k + 1] * 0.95) continue;
+      const [x1, y1] = at(k, r * rand(0.95, 1.05));
+      const [x2, y2] = at(k + 1, r * rand(0.95, 1.05));
+      const mid = (angles[k] + angles[k + 1]) / 2;
+      const sag = r * rand(0.8, 0.88);
+      rings += `M${f1(x1)} ${f1(y1)}Q${f1(1 + sag * Math.cos(mid))} ${f1(1 + sag * Math.sin(mid))} ${f1(x2)} ${f1(y2)}`;
+    }
+  }
+  const [dx, dy] = at(2, 17);
+  const dangle = `M${f1(dx)} ${f1(dy)}c1 3 -1 6 .5 9`;
+  return h('span', { class: `bweb bweb-${corner}`, 'aria-hidden': 'true' },
+    svg('svg', { viewBox: '0 0 40 40', focusable: 'false' },
+      svg('path', { d: radial + rings + dangle, class: 'bweb-line' })));
+}
 
 /** Copertura di polvere e ragnatele sopra la carta; parte quando l'immagine è pronta e poi si rimuove. */
 function sweep(stage: HTMLElement, img: HTMLImageElement): void {

@@ -510,6 +510,71 @@ test('espansione: set nascosti attivabili; con la collezione "ne possiedi" e "so
   await expect(page.locator('#sheet .tag')).toBeHidden();
 });
 
+/** Numero nel titolo, totale dell'elenco ("Mostrate n di totale") e numero nella nota dei filtri (se c'è). */
+async function counts(page: Page): Promise<{ head: number; list: number; note: number | null }> {
+  const num = (s: string, i = 0) => Number((s.replace(/[.,](?=\d{3})/g, '').match(/\d+/g) || [])[i]);
+  const head = num(await page.locator('#verdict').innerText());
+  const shown = page.locator('#shownCount');
+  const list = (await shown.isVisible()) ? num(await shown.innerText(), 1) : 0;
+  const note = page.locator('#filterNote');
+  return { head, list, note: (await note.isVisible()) ? num(await note.innerText()) : null };
+}
+
+test('riepilogo ed elenco: stesso insieme, e i filtri che nascondono carte sono dichiarati', async ({ page }) => {
+  await setup(page);
+  // il caso segnalato: Edge of Eternities, storico, "non viste da oltre 6 mesi" (ricordato nel browser)
+  await pickSet(page, 'edge of eternities', 'Edge of Eternities');
+  await page.selectOption('#period', '3');
+  let c = await counts(page);
+  expect(c.note).toBeNull();
+  expect(c.list).toBe(c.head);
+  // il menu Periodo conta le carte dell'espansione, come il riepilogo
+  await expect(page.locator('#period option:checked')).toContainText(c.head.toLocaleString(L === 'it' ? 'it-IT' : 'en-US'));
+  await page.selectOption('#seenFilter', 'old');
+  c = await counts(page);
+  expect(c.list).toBeLessThan(c.head);
+  expect(c.note).toBe(c.list);
+  await expect(page.locator('#filterNote')).toContainText(tr('why.old'));
+  while (await page.locator('#more').isVisible()) await page.click('#more');
+  await expect(page.locator('#cardRows tr')).toHaveCount(c.list);
+  // "Togli questi filtri" riporta l'elenco all'insieme contato (anche il filtro ricordato nel browser)
+  await page.locator('#clearListFilters').click();
+  c = await counts(page);
+  expect(c.note).toBeNull();
+  expect(c.list).toBe(c.head);
+  await expect(page.locator('#seenFilter')).toHaveValue('all');
+
+  // set collegati e set nascosti: Dominaria United (DMU + DMC, promo nascoste)
+  await pickSet(page, 'dominaria united', 'Dominaria United');
+  const visibleOnly = await counts(page);
+  expect(visibleOnly.list).toBe(visibleOnly.head);
+  await page.locator('label:has(#setHidden)').click();
+  const withHidden = await counts(page);
+  expect(withHidden.list).toBe(withHidden.head);
+  expect(withHidden.head).toBeGreaterThanOrEqual(visibleOnly.head);
+  await page.fill('#search', 'a');
+  c = await counts(page);
+  expect(c.note).toBe(c.list);
+  await expect(page.locator('#filterNote')).toContainText(tr('why.search', { q: 'a' }));
+  await page.fill('#search', '');
+
+  // vista collezione: il titolo conta le possedute; con le mancanti la nota conta l'elenco intero
+  await page.locator('#setInput').click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await uploadCollection(page);
+  c = await counts(page);
+  expect(c.note).toBeNull();
+  expect(c.list).toBe(c.head);
+  await page.mouse.move(0, 0); // niente scheda aperta dal passaggio del mouse sulle righe
+  await page.locator('#optMissing').check();
+  await expect(page.locator('#filterNote')).toBeVisible();
+  c = await counts(page);
+  expect(c.note).toBe(c.list);
+  expect(c.list).toBeGreaterThan(c.head);
+  await expect(page.locator('#filterNote')).toContainText(tr('why.missing'));
+});
+
 test('"Carica altri": 10 carte alla volta, conteggio, focus sulla prima aggiunta, ripartenza da 10', async ({ page }) => {
   await setup(page);
   const rows = page.locator('#cardRows tr');
@@ -548,10 +613,17 @@ test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi spari
   await expect(page.locator('#dustHeading')).toHaveText(tr('dust.title'));
   await expect(page.locator('.dust-lead')).toHaveText(tr('dust.lead'));
   await expect(page.locator('#dustBtn')).toHaveText(tr('dust.button'));
-  // prima della pesca: cornice vuota con le ragnatele, al centro della scena
-  await expect(page.locator('#dustResult .dust-empty')).toHaveAttribute('aria-label', tr('dust.waiting'));
+  // un vero pulsante, con tre ragnatele decorative agli angoli
+  await expect(page.locator('#dustBtn .bweb')).toHaveCount(3);
+  await expect(page.locator('#dustBtn .bweb').first()).toHaveAttribute('aria-hidden', 'true');
+  const box = (await page.locator('#dustBtn').boundingBox())!;
+  expect(box.height).toBeGreaterThanOrEqual(64); // area di tocco ampia
+  // prima della pesca: cornice vuota con le ragnatele, al centro della scena; si può toccare per pescare
+  const frame = page.locator('#dustResult button.dust-empty');
+  await expect(frame).toHaveAttribute('aria-label', tr('dust.tapFrame'));
+  await expect(frame).toContainText(tr('dust.tap'));
   await expect(page.locator('#dustAllWrap')).toBeHidden(); // senza collezione niente interruttore
-  await page.click('#dustBtn');
+  await frame.click();
   const res = page.locator('#dustResult .dust-scene');
   await expect(res).toBeVisible();
   await expect(res).toContainText(head('dust.peak'));
@@ -562,7 +634,10 @@ test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi spari
   await expect(res.locator('.dust-cover')).toHaveCount(0, { timeout: 5000 });
   const names = new Set([await page.locator('#dustTitle').innerText()]);
   for (let i = 0; i < 4; i++) {
+    const before = await page.locator('#dustTitle').innerText();
     await page.click('#dustBtn');
+    // alla pressione le ragnatele del pulsante vengono spazzate via, poi compare la carta nuova
+    await expect(page.locator('#dustTitle')).not.toHaveText(before);
     names.add(await page.locator('#dustTitle').innerText());
   }
   expect(names.size).toBe(5);
@@ -586,7 +661,11 @@ test('"Carta dimenticata" con prefers-reduced-motion: la carta appare subito, se
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await setup(page);
   await page.click('#navDust');
+  // ragnatele del pulsante ferme anche al passaggio del mouse
+  await page.hover('#dustBtn');
+  expect(await page.locator('#dustBtn .bweb svg').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
   await page.click('#dustBtn');
   await expect(page.locator('#dustResult .dust-scene img')).toBeVisible();
   await expect(page.locator('#dustResult .dust-stage:not(.dust-empty) .dust-cover')).toHaveCount(0);
+  await expect(page.locator('#dustBtn')).not.toHaveClass(/sweep/);
 });
