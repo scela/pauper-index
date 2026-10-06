@@ -52,7 +52,18 @@
     <section class="quick" id="quick" aria-labelledby="quickLabel">
       <div class="quick-head">
         <label class="quick-label" id="quickLabel" for="quickInput" data-i18n="quick.label">Controllo rapido di una carta</label>
-        <button class="linkbtn dustbtn" id="dustBtn" type="button" data-i18n="dust.button">Rispolvera una carta</button>
+        <button class="dustbtn" id="dustBtn" type="button" data-i18n-title="dust.hint" title="Pesca una carta che non si vede da più di un anno">
+          <svg class="dust-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <g class="duster" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 19l5.2-5.2"/>
+              <path d="M10.2 13.8c-1.4-4.2.6-8.5 6.6-10.8.7 4.6-1.6 8.9-6.6 10.8z"/>
+              <path d="M10.2 13.8c3.4-2.6 7.6-3 11-1.6-2.4 3.1-6.9 3.8-11 1.6z"/>
+              <path d="M10.2 13.8c1.6-2.9 3.9-5.1 7.3-6.4"/>
+            </g>
+            <circle class="mote" cx="5.2" cy="8.6" r="1"/><circle class="mote" cx="8.2" cy="4.6" r=".75"/><circle class="mote" cx="3.4" cy="12.6" r=".6"/>
+          </svg>
+          <span data-i18n="dust.button">Rispolvera una carta</span>
+        </button>
       </div>
       <div class="qbox">
         <input id="quickInput" type="search" role="combobox" aria-expanded="false" aria-controls="quickList" aria-autocomplete="list"

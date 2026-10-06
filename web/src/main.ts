@@ -691,6 +691,8 @@ function route(): void {
   const about = location.hash === '#informazioni';
   $('#viewMain').hidden = about;
   $('#viewAbout').hidden = !about;
+  // nella pagina Informazioni il blocco legale e la FAQ sulle donazioni sostituiscono il piè di pagina
+  document.querySelector<HTMLElement>('.wrap > .foot')!.hidden = about;
   closeSheet();
   if (about) {
     renderAbout($('#viewAbout'), S.d);

@@ -251,7 +251,7 @@ test('CSV malevolo: nessuno script eseguito, testo mostrato alla lettera', async
   expect(await page.locator('#groupRows img, #groupRows script, #importSummary img').count()).toBe(0);
 });
 
-test('Informazioni: avviso Fan Content Policy ufficiale in inglese, traduzione solo in italiano', async ({ page }) => {
+test('Informazioni: breve, FAQ chiuse, avviso Fan Content Policy ufficiale una sola volta, sintesi solo in italiano', async ({ page }) => {
   await setup(page);
   // due righe: avviso breve e donazioni (solo un link semplice, nessun widget)
   await expect(page.locator('footer p')).toHaveCount(2);
@@ -261,15 +261,30 @@ test('Informazioni: avviso Fan Content Policy ufficiale in inglese, traduzione s
   await page.locator('footer a[href="#informazioni"]').focus();
   await page.keyboard.press('Enter');
   const about = page.locator('#viewAbout');
+  // testo ufficiale della Fan Content Policy: presente, identico, in inglese, una sola volta
   await expect(page.locator('#fcp')).toHaveText(FCP);
   await expect(page.locator('#fcp')).toHaveAttribute('lang', 'en');
-  if (L === 'it') await expect(about).toContainText(tr('about.notice.translation'));
-  else await expect(about).not.toContainText('In italiano');
-  await expect(about).toContainText(tr('about.privacy.1'));
-  await expect(about).toContainText(tr('about.limits.2'));
-  await expect(about).toContainText(tr('about.how.6'));
-  await expect(about.locator('a[href^="mailto:massadalbe@hotmail.com"]')).toHaveCount(1);
+  expect((await about.innerText()).split('Fan Content Policy').length - 1).toBe(1);
+  if (L === 'it') await expect(about.locator('.legal')).toContainText(tr('about.legal.summary'));
+  else await expect(about.locator('.legal p')).toHaveCount(3);
+  await expect(about.locator('.legal')).toContainText(tr('about.legal.affiliation'));
+  await expect(about.locator('.legal a[href="https://scryfall.com"]')).toHaveCount(1);
+  await expect(about.locator('.legal a[href="https://github.com/Jiliac/MTGODecklistCache"]')).toHaveCount(1);
+  // tre passi e i dati
+  await expect(about.locator('.steps li')).toHaveCount(3);
+  await expect(about.locator('.steps')).toContainText(tr('about.step1.title'));
+  await expect(about).toContainText(head('about.data.text'));
+  // domande frequenti chiuse di default; le risposte si aprono
+  const faqs = about.locator('details.faq');
+  await expect(faqs).toHaveCount(5);
+  for (let i = 0; i < 5; i++) await expect(faqs.nth(i)).not.toHaveAttribute('open', '');
+  await expect(about.getByText(tr('about.faq.precision.a'))).toBeHidden();
+  await about.getByText(tr('about.faq.precision.q')).click();
+  await expect(about.getByText(tr('about.faq.precision.a'))).toBeVisible();
+  await about.getByText(tr('about.faq.support.q')).click();
   await expect(about.locator('a[href="https://ko-fi.com/pauperindex"]')).toHaveText(tr('donate.link'));
+  await about.getByText(tr('about.faq.report.q')).click();
+  await expect(about.locator('a[href^="mailto:massadalbe@hotmail.com"]')).toHaveCount(1);
   await page.click('#viewAbout a[href="#"]');
   await expect(page.locator('#viewMain')).toBeVisible();
 });

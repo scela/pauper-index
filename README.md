@@ -9,6 +9,30 @@ Pauper Index confronta la tua collezione [ManaBox](https://manabox.app) con la l
 - **Segnalazioni**: massadalbe@hotmail.com
 - **Sostieni il sito**: https://ko-fi.com/pauperindex (il sito resta gratuito e completo)
 
+## Come funziona nel dettaglio
+
+Queste spiegazioni stavano nella pagina Informazioni del sito, che ora è breve.
+
+**Collezione**
+- Si carica l'export CSV di ManaBox (singoli Binder o l'intera collezione) oppure una lista di testo ("4 Nome carta" o "1 Nome (SET) 123"). File e testo vengono letti solo nel browser.
+- Contano come possedute le carte dei Binder; List e mazzi sono esclusi di default (si cambia in "Binder inclusi"). Il testo incollato conta tutto come posseduto.
+- Una carta è riconosciuta in qualunque printing, lingua o finitura: conta la carta, non la stampa.
+
+**Filtri e viste**
+- "Conta anche il side" include le carte giocate solo in sideboard; "Min. mazzi" è il numero di mazzi necessario per entrare nella lista.
+- Le terre base (comprese le Snow-Covered e Wastes) sono sempre escluse.
+- Il controllo rapido dice se una carta è giocata in Pauper anche quando è fuori dalla lista con i filtri attuali e, con la collezione, se la possiedi.
+- Il filtro "Espansione" mostra le carte della lista stampate in quel set a qualsiasi rarità, perché la legalità è della carta e non della stampa. I set collegati sono raggruppati; promo, Secret Lair, The List e set solo digitali sono nascosti di default.
+- "Rispolvera una carta" pesca una carta legale con almeno 20 mazzi nello storico e nessuna apparizione nell'ultimo anno.
+
+**Dati e limiti**
+- Le League di MTGO pubblicano solo le liste 5-0; dal 20 giugno 2024 i Challenge pubblicano solo i primi 32 mazzi. Per questo le percentuali recenti favoriscono i mazzi vincenti.
+- Dei tornei dal vivo ci sono solo quelli con le liste pubblicate su melee.gg, CardsRealm o topdeck.gg.
+- La fonte (MTGODecklistCache) dichiara di non essere più mantenuta attivamente: se smette di aggiornarsi, il sito mostra un avviso e il workflow apre una Issue.
+- Alcuni archivi contengono gli stessi tornei più volte: i duplicati vengono rimossi (regole in `CLAUDE.md`, "Deduplica"). I nomi scritti male o in altre lingue vengono ricondotti alla carta giusta quando possibile.
+- Le finestre (61 giorni, 1 anno, 2 anni, storico) partono dalla data dell'ultimo torneo disponibile. "Copie tipiche" è la mediana delle copie nei mazzi che giocano la carta.
+- La lingua, il tema e l'ordinamento sono ricordati nel browser (localStorage); la collezione in IndexedDB.
+
 ## Come si aggiorna
 
 Il workflow [`Aggiorna e pubblica`](.github/workflows/aggiorna.yml) gira ogni giorno alle 07:23 UTC:

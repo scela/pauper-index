@@ -495,7 +495,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Testi statici** di `index.html`: attributi `data-i18n` (testo), `data-i18n-ph` (placeholder), `data-i18n-aria`, `data-i18n-title`, `data-i18n-content` (meta description). Nelle etichette con campi il testo sta in uno `<span>`.
 - **Etichette delle celle su mobile**: `data-label` tradotto, mostrato con `content: attr(data-label)`. Niente testi nel CSS.
 - **I nomi delle carte restano in inglese**, come su Scryfall. Il gruppo "Testo incollato" si traduce quando viene mostrato (`source === '__pasted__'`).
-- **Avviso Fan Content Policy**: il testo ufficiale inglese (`#fcp`, `lang="en"`) è uguale nelle due lingue. In italiano segue la traduzione, con la nota che fa fede il testo inglese; il piè di pagina ha una riga breve per lingua.
+- **Avviso Fan Content Policy**: il testo ufficiale inglese (`#fcp`, `lang="en"`) è uguale nelle due lingue e compare una sola volta, in fondo alla pagina Informazioni; in italiano c'è solo una riga di sintesi. Il piè di pagina delle altre viste ha una riga breve per lingua.
 - **Novità**: le revisioni hanno titoli ed elenchi tradotti. Il `sommario` generato dalla pipeline è in italiano e si mostra solo in italiano.
 - **Test**:
   - `tests/i18n.test.ts`: stesse chiavi, nessun testo vuoto, stessi segnaposto, formattazione, scelta della lingua;
@@ -509,12 +509,22 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 
 ## Rispolvera una carta (prima della funzione 4)
 
-- Pulsante discreto "Rispolvera una carta" accanto all'etichetta del controllo rapido (`#dustBtn`); risultato in `#dustResult`. Logica in `lib/dust.ts` (testata), interfaccia e animazione in `ui/dust.ts`.
+- Pulsante a pillola "Rispolvera una carta" con l'icona di un piumino (SVG originale, si muove al passaggio del cursore, fermo con `prefers-reduced-motion`) accanto all'etichetta del controllo rapido (`#dustBtn`, tooltip `dust.hint`); risultato in `#dustResult`. Logica in `lib/dust.ts` (testata), interfaccia e animazione in `ui/dust.ts`.
 - **Carte ammesse** (`dustPool`): legali oggi, non terre base, almeno `DUST_MIN_DECKS = 20` mazzi (main+side) nello storico, nessuna apparizione negli ultimi `DUST_QUIET_DAYS = 365` giorni contati dalla data dei dati. Al 2026-10-06: **203 carte** (10 mazzi: 321; 50: 99; 100: 48; 20 mazzi e 2 anni fermi: 142).
 - **Pesca**: con la collezione tra le carte possedute (interruttore "Pesca tra tutte le carte"); senza collezione tra tutte. Nessuna ripetizione nella sessione (oracle_id in sessionStorage `pauper-index:dusted`, cancellato anche da "Cancella i miei dati"); quando sono finite si ricomincia, con un avviso.
 - **Scheda**: immagine (la printing posseduta, altrimenti quella di riferimento; un clic apre gli artwork), mazzi nello storico (main+side o solo main secondo l'opzione del side) tra prima e ultima apparizione, **anno di massima diffusione** in percentuale dei mazzi di quell'anno (`y` / `yt` di `cards.json`, perché i volumi annui cambiano molto), ultima apparizione più recente tra MTGO e cartaceo con il link al torneo, possesso. Pulsanti "Rispolverane un'altra" e "Chiudi".
-- **Animazione** (circa 1,5 s): sopra la carta una copertura (`.dust-cover`) con velo di polvere, puntini e tre ragnatele SVG disegnate dal codice; una "scopa" luminosa passa da sinistra a destra, il velo si toglie con una maschera, i puntini e le ragnatele volano via. Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall). Alla fine di tutte le animazioni la copertura viene **rimossa** (carta intera, artista e copyright compresi). Parte quando l'immagine è caricata. Con `prefers-reduced-motion` la copertura non viene creata. CSP invariata: i valori casuali passano da `style.setProperty` (CSSOM), mai da attributi `style`.
+- **Animazione** (circa 1,5 s, rifatta su richiesta perché la prima sembrava finta): sopra la carta una copertura (`.dust-cover`) con un velo di polvere fatto di rumore SVG (`feTurbulence`: chiazze larghe, grana fine, più densa verso i bordi), granelli e fiocchi, e tre ragnatele d'angolo **generate a caso** a ogni pesca (fili radiali irregolari, spirale che cede verso il centro, tratti spezzati, fili penzolanti, polvere impigliata). Il velo si toglie con una maschera diagonale accompagnata da una nuvoletta di polvere; i granelli volano o cadono quando li raggiunge il bordo; le ragnatele si tendono e si strappano via. Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall). Alla fine di tutte le animazioni la copertura viene **rimossa** (carta intera, artista e copyright compresi). Parte quando l'immagine è caricata. Con `prefers-reduced-motion` la copertura non viene creata. CSP invariata: i valori casuali passano da `style.setProperty` (CSSOM), mai da attributi `style`.
 - Fotogrammi di controllo: `npm run dust-frames` (desktop e mobile, 5 istanti più la fine).
+
+## Pagina Informazioni (riscritta il 2026-10-06)
+
+- Obiettivo: si legge in 30 secondi, ogni concetto compare una sola volta. Struttura in `ui/about.ts`:
+  1. una frase su cosa fa il sito; "Come si usa" in 3 passi con icone SVG originali (carica, filtri, carta con spunta), in griglia su desktop e in colonna su mobile;
+  2. "I dati": una frase con la data dell'ultimo aggiornamento (`meta.generated_at`);
+  3. "Domande frequenti": 5 `<details>` chiusi (giocata in Pauper, precisione delle percentuali, privacy, segnalare un errore, sostenere il sito);
+  4. in fondo un unico blocco legale piccolo (`.legal`): testo ufficiale della Fan Content Policy in inglese (`#fcp`, una sola volta), sintesi in una riga **solo in italiano** (`about.legal.summary`, vuota in inglese), non affiliazione con ManaBox e Scryfall, crediti con i link.
+- Tolti: la traduzione italiana integrale dell'avviso, le ripetizioni e le spiegazioni tecniche, ora nel README ("Come funziona nel dettaglio"). Nella pagina Informazioni il piè di pagina del sito è nascosto, perché il blocco legale e la FAQ sulle donazioni lo sostituiscono.
+- Screenshot prima/dopo: `node scripts/about-shots.mjs <etichetta>` (con preview attivo) in `.cache/screenshots/informazioni-*.png`.
 
 ## Controllo rapido di una carta (funzione 2)
 

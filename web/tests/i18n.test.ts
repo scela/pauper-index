@@ -10,10 +10,10 @@ describe('dizionari', () => {
     expect(Object.keys(DICTS.en).sort()).toEqual([...ALL_KEYS].sort());
   });
 
-  it('nessun testo vuoto (tranne la traduzione dell’avviso, inutile in inglese)', () => {
+  it('nessun testo vuoto (tranne la sintesi italiana dell’avviso, inutile in inglese)', () => {
     for (const lang of ['it', 'en'] as const) {
       for (const k of ALL_KEYS) {
-        if (lang === 'en' && k === 'about.notice.translation') continue;
+        if (lang === 'en' && k === 'about.legal.summary') continue;
         for (const f of forms(DICTS[lang][k])) expect(f.trim(), `${lang}:${k}`).not.toBe('');
       }
     }
