@@ -399,6 +399,27 @@ test('controllo rapido con la collezione: possesso anche per printing straniere 
   await expect(res).toContainText(tr('periodDesc.0'));
 });
 
+test('controllo rapido: se tutti i nomi arrivano dopo la scelta, l’elenco non si riapre da solo', async ({ page }) => {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  await page.route('**/data/cardnames.json', async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await setup(page);
+  const input = page.locator('#quickInput');
+  await input.fill('brainst');
+  await expect(page.locator('#quickList [role="option"]').first()).toContainText('Brainstorm');
+  await input.press('Enter');
+  await expect(page.locator('#quickList')).toBeHidden();
+  const loaded = page.waitForResponse('**/data/cardnames.json');
+  release();
+  await loaded;
+  await page.waitForTimeout(300);
+  await expect(page.locator('#quickList')).toBeHidden();
+  await expect(input).toHaveValue('Brainstorm');
+});
+
 async function pickSet(page: Page, query: string, name: string): Promise<void> {
   const input = page.locator('#setInput');
   await input.click();
@@ -412,7 +433,22 @@ test('espansione: riepilogo, rarità "qui" e set d’ingresso, senza collezione'
   await expect(page.locator('label[for="setInput"]')).toHaveText(tr('set.label'));
   await page.locator('#setInput').click();
   await expect(page.locator('#setList [role="option"]').first()).toBeVisible(); // elenco intero, dal più recente
+  // simboli delle espansioni dallo sprite del sito, già nei suggerimenti (decorativi: il nome è scritto accanto)
+  await page.locator('#setInput').fill('masters 25');
+  const opt = page.locator('#setList [role="option"]', { hasText: 'Masters 25' }).first();
+  await expect(opt.locator('svg.seticon use')).toHaveAttribute('href', 'data/seticons.svg#a25');
+  await expect(opt.locator('svg.seticon')).toHaveAttribute('aria-hidden', 'true');
+  const sprite = await page.request.get('data/seticons.svg');
+  expect(sprite.status()).toBe(200);
+  expect(sprite.headers()['content-type']).toContain('image/svg+xml');
+  expect(await sprite.text()).toContain('<symbol id="a25"');
   await pickSet(page, 'masters 25', 'Masters 25');
+  // dopo la scelta il simbolo resta nel campo, con il nome del set come testo alternativo
+  await expect(page.locator('#setWrap .field-ico svg.seticon')).toHaveAttribute('aria-label', 'Masters 25');
+  // miniature grandi (più che nella vista collezione), caricate in modo lazy
+  const big = page.locator('#cardRows img.thumb.big').first();
+  await expect(big).toHaveAttribute('loading', 'lazy');
+  expect((await big.boundingBox())!.width).toBeGreaterThanOrEqual(80);
   const n = Number((await page.locator('#verdict').innerText()).replace(/[.,]/g, '').match(/\d+/)?.[0]);
   expect(n).toBeGreaterThan(0);
   await expect(page.locator('#verdict')).toHaveText(tr('set.summary', { n }));
@@ -421,6 +457,13 @@ test('espansione: riepilogo, rarità "qui" e set d’ingresso, senza collezione'
   const row = page.locator('#cardRows tr').first();
   await expect(row).toContainText('Lightning Bolt');
   await expect(row.locator('.rarity')).toHaveText(tr('set.notCommon', { rarity: tr('rarity.u'), set: 'Limited Edition Alpha', year: '1993' }));
+  // simbolo del set colorato secondo la rarità della stampa (non comune in Masters 25), con testo alternativo
+  await expect(row.locator('.rarity svg.seticon')).toHaveClass(/rar-u/);
+  await expect(row.locator('.rarity svg.seticon')).toHaveAttribute('aria-label', `Masters 25 · ${tr('rarity.u')}`);
+  // la carta attiva della scheda è la stampa di Masters 25 (prima era la più recente con quell'illustrazione)
+  await row.locator('.cardbtn').click();
+  await expect(page.locator('#sheet dl')).toContainText('Masters 25 (2018)');
+  await page.keyboard.press('Escape');
   await page.fill('#search', '');
   await expect(page.locator('#cardRows .rarity.is-common').first()).toHaveText(tr('set.common'));
   // togliere il filtro con Esc
@@ -458,6 +501,13 @@ test('espansione: set nascosti attivabili; con la collezione "ne possiedi" e "so
   const counterspell = page.locator('#cardRows tr', { hasText: 'Counterspell' });
   await expect(brainstorm.locator('img.thumb.owned')).toHaveCount(1); // la stampa di Ice Age è tua
   await expect(counterspell.locator('img.thumb.owned')).toHaveCount(0); // possiedi Counterspell, ma non di Ice Age
+  await expect(brainstorm.locator('.tag.mine')).toHaveText(tr('sheet.yours'));
+  await expect(counterspell.locator('.tag.mine')).toHaveCount(0);
+  // l'immagine è sempre la stampa di Ice Age, mai la tua printing di Alpha: lo si vede nella scheda
+  await expect(counterspell.locator('.own')).toContainText('LEA');
+  await counterspell.locator('.cardbtn').click();
+  await expect(page.locator('#sheet dl')).toContainText('Ice Age');
+  await expect(page.locator('#sheet .tag')).toBeHidden();
 });
 
 test('"Carica altri": 10 carte alla volta, conteggio, focus sulla prima aggiunta, ripartenza da 10', async ({ page }) => {
@@ -486,37 +536,57 @@ test('"Carica altri": 10 carte alla volta, conteggio, focus sulla prima aggiunta
   await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 1, total: 1 }));
 });
 
-test('"Rispolvera una carta": carta dimenticata, animazione sovrapposta che poi sparisce, niente ripetizioni', async ({ page }) => {
+test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi sparisce, niente ripetizioni', async ({ page }) => {
   const problems = await setup(page);
+  // non è più nella zona del controllo rapido
+  await expect(page.locator('#quick #dustBtn')).toHaveCount(0);
+  await expect(page.locator('#navDust')).toHaveText(tr('nav.dust'));
+  await page.click('#navDust');
+  await expect(page).toHaveURL(/#carta-dimenticata$/);
+  await expect(page.locator('#viewMain')).toBeHidden();
+  await expect(page.locator('#navDust')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#dustHeading')).toHaveText(tr('dust.title'));
+  await expect(page.locator('.dust-lead')).toHaveText(tr('dust.lead'));
   await expect(page.locator('#dustBtn')).toHaveText(tr('dust.button'));
+  // prima della pesca: cornice vuota con le ragnatele, al centro della scena
+  await expect(page.locator('#dustResult .dust-empty')).toHaveAttribute('aria-label', tr('dust.waiting'));
+  await expect(page.locator('#dustAllWrap')).toBeHidden(); // senza collezione niente interruttore
   await page.click('#dustBtn');
-  const res = page.locator('#dustResult .dres');
+  const res = page.locator('#dustResult .dust-scene');
   await expect(res).toBeVisible();
-  await expect(res).toContainText(tr('dust.kicker'));
   await expect(res).toContainText(head('dust.peak'));
-  await expect(page.locator('#dustTitle')).toBeFocused();
+  await expect(res).toContainText(head('dust.last'));
+  await expect(page.locator('#dustBtn')).toHaveText(tr('dust.again'));
   // l'immagine non è mai filtrata; la copertura c'è durante l'animazione e poi viene rimossa
   expect(await res.locator('img').evaluate((el) => getComputedStyle(el).filter)).toBe('none');
   await expect(res.locator('.dust-cover')).toHaveCount(0, { timeout: 5000 });
   const names = new Set([await page.locator('#dustTitle').innerText()]);
   for (let i = 0; i < 4; i++) {
-    await res.getByRole('button', { name: tr('dust.again') }).click();
+    await page.click('#dustBtn');
     names.add(await page.locator('#dustTitle').innerText());
   }
   expect(names.size).toBe(5);
-  // senza collezione niente interruttore; con la collezione sì
-  await expect(res.locator('.dust-all')).toHaveCount(0);
+  // con la collezione compare l'interruttore; se nessuna tua carta è dimenticata lo si dice (prima non compariva nulla)
+  await page.goto('./');
   await uploadCollection(page);
-  await expect(page.locator('#dustResult .dust-all')).toBeVisible();
-  await page.locator('#dustResult').getByRole('button', { name: tr('dust.close') }).click();
-  await expect(page.locator('#dustResult')).toBeEmpty();
+  await page.click('#navDust');
+  await expect(page.locator('#dustAllWrap')).toBeVisible();
+  await page.click('#dustBtn');
+  const scene = page.locator('#dustResult .dust-scene');
+  await expect(scene).toBeVisible();
+  if (await scene.locator('img').count() === 0) {
+    await expect(scene).toContainText(head('dust.noneOwned'));
+    await page.locator('#dustAllWrap').click();
+    await expect(scene.locator('img')).toBeVisible();
+  }
   expect(problems).toEqual([]);
 });
 
-test('"Rispolvera una carta" con prefers-reduced-motion: la carta appare subito, senza copertura', async ({ page }) => {
+test('"Carta dimenticata" con prefers-reduced-motion: la carta appare subito, senza copertura', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await setup(page);
+  await page.click('#navDust');
   await page.click('#dustBtn');
-  await expect(page.locator('#dustResult .dres img')).toBeVisible();
-  await expect(page.locator('#dustResult .dust-cover')).toHaveCount(0);
+  await expect(page.locator('#dustResult .dust-scene img')).toBeVisible();
+  await expect(page.locator('#dustResult .dust-stage:not(.dust-empty) .dust-cover')).toHaveCount(0);
 });

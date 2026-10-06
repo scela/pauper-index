@@ -49,7 +49,8 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
           entries = buildNameIndex(d, all);
           builtFor = d;
           allLoaded = true;
-          if (document.activeElement === input && input.value.trim()) update();
+          // aggiorna i suggerimenti solo se sono ancora aperti: dopo una scelta (Invio, clic) l'elenco non si riapre
+          if (document.activeElement === input && input.value.trim() && !list.hidden) update();
         }
       })
       .catch(() => undefined)

@@ -1,4 +1,4 @@
-// Fotogrammi dell'animazione "Rispolvera una carta", desktop e mobile -> ../.cache/screenshots/ (ignorata da git).
+// Fotogrammi dell'animazione "Rispolvera una carta" (pagina "Carta dimenticata"), desktop e mobile -> ../.cache/screenshots/ (ignorata da git).
 // Richiede il sito in esecuzione: npm run build; npm run preview  (in un'altra finestra)
 // Uso: npm run dust-frames
 import { mkdirSync } from 'node:fs';
@@ -19,13 +19,13 @@ for (const [name, opts] of [
 ]) {
   const ctx = await browser.newContext(opts);
   const page = await ctx.newPage();
-  await page.goto(URL);
-  await page.waitForFunction(() => document.querySelector('#cardRows tr'));
+  await page.goto(URL + '#carta-dimenticata');
+  await page.waitForSelector('#dustResult .dust-scene.is-empty');
   await page.click('#dustBtn');
   // immagine caricata e spazzata partita: si fermano le animazioni e si scorre il tempo a mano
   await page.waitForSelector('.dust-cover.go', { timeout: 10000 });
   await page.evaluate(() => document.getAnimations().forEach((a) => a.pause()));
-  const panel = page.locator('#dustResult .dres');
+  const panel = page.locator('#dustResult .dust-scene');
   await panel.scrollIntoViewIfNeeded();
   for (const [i, ms] of FRAMES.entries()) {
     await page.evaluate((t) => document.getAnimations().forEach((a) => { a.currentTime = t; }), ms);

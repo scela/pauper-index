@@ -22,8 +22,9 @@ Queste spiegazioni stavano nella pagina Informazioni del sito, che ora è breve.
 - "Conta anche il side" include le carte giocate solo in sideboard; "Min. mazzi" è il numero di mazzi necessario per entrare nella lista.
 - Le terre base (comprese le Snow-Covered e Wastes) sono sempre escluse.
 - Il controllo rapido dice se una carta è giocata in Pauper anche quando è fuori dalla lista con i filtri attuali e, con la collezione, se la possiedi.
-- Il filtro "Espansione" mostra le carte della lista stampate in quel set a qualsiasi rarità, perché la legalità è della carta e non della stampa. I set collegati sono raggruppati; promo, Secret Lair, The List e set solo digitali sono nascosti di default.
-- "Rispolvera una carta" pesca una carta legale con almeno 20 mazzi nello storico e nessuna apparizione nell'ultimo anno.
+- Il filtro "Espansione" mostra le carte della lista stampate in quel set a qualsiasi rarità, perché la legalità è della carta e non della stampa. I set collegati sono raggruppati; promo, Secret Lair, The List e set solo digitali sono nascosti di default. In questa vista ogni carta mostra l'immagine della stampa di quel set, con il simbolo dell'espansione colorato secondo la rarità.
+- I simboli delle espansioni sono le icone di Scryfall, scaricate dalla pipeline e servite dal sito in un unico file (`data/seticons.svg`).
+- La pagina "Carta dimenticata" (in testata) pesca una carta legale con almeno 20 mazzi nello storico e nessuna apparizione nell'ultimo anno.
 
 **Dati e limiti**
 - Le League di MTGO pubblicano solo le liste 5-0; dal 20 giugno 2024 i Challenge pubblicano solo i primi 32 mazzi. Per questo le percentuali recenti favoriscono i mazzi vincenti.

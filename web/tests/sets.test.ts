@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildGroups, displayPrint, isHiddenSet, memberCodes, printsInSets, rarityHere, searchGroups, type SetRow } from '../src/lib/sets';
-import { makeData } from './helpers';
+import type { Result } from '../src/lib/compare';
+import { buildGroups, displayPrint, iconOf, isHiddenSet, memberCodes, printsInSets, rarityHere, searchGroups, type SetRow } from '../src/lib/sets';
+import { fanItems } from '../src/ui/sheet';
+import { ID, makeData } from './helpers';
 
 const SETS: SetRow[] = [
   { c: 'dmu', n: 'Dominaria United', d: '2022-09-09', t: 'expansion' },
@@ -56,5 +58,40 @@ describe('rarità "qui"', () => {
     expect(displayPrint(d, 4, new Set(['ice', 'a25']), 'a25')).toBe(1);
     expect(displayPrint(d, 4, new Set(['ice', 'a25']), 'dmu')).toBe(0);
     expect(displayPrint(d, 4, new Set(['dmu']), 'dmu')).toBe(-1);
+  });
+});
+
+describe('simboli delle espansioni', () => {
+  it('icona dallo sprite: il codice, un nome condiviso, oppure nessuna (marchi esclusi dalla pipeline)', () => {
+    expect(iconOf({ c: 'dmu', n: 'Dominaria United', d: '2022-09-09', t: 'expansion' })).toBe('dmu');
+    expect(iconOf({ c: 'pf27', n: 'MagicFest 2027', d: '2027-01-01', t: 'promo', i: 'star' })).toBe('star');
+    expect(iconOf({ c: 'plst', n: 'The List', d: '2020-09-26', t: 'masters', i: '' })).toBe('');
+    expect(iconOf(undefined)).toBe('');
+    // il gruppo usa l'icona del set principale
+    const groups = buildGroups([
+      { c: 'dmu', n: 'Dominaria United', d: '2022-09-09', t: 'expansion' },
+      { c: 'dmc', n: 'Dominaria United Commander', d: '2022-09-09', t: 'commander', p: 'dmu' },
+    ]);
+    expect(groups.get('dmu')!.icon).toBe('dmu');
+  });
+});
+
+describe('scheda nella vista per espansione', () => {
+  const owning = (print: number): Result => ({
+    idx: 4, owned: 1, need: 1, typical: 1, share: 0, status: 'owned', binders: [],
+    prints: [{ row: { n: 'Pyroblast', s: 'ice', sn: 'Ice Age', c: '212', f: '', q: 1, l: 'en', i: '', p: 0 }, print, q: 1, exact: true }],
+  } as unknown as Result);
+
+  it('la stampa del set è la prima del ventaglio; "tua" solo se possiedi proprio quella', () => {
+    const d = makeData();
+    const items = fanItems(d, 4, owning(0), ID(7)); // possiedi la stampa di Ice Age, vista Masters 25
+    expect(items.map((i) => [i.id, i.owned])).toEqual([[ID(7), false], [ID(6), true]]);
+  });
+
+  it('con la stessa illustrazione prevale la stampa del set, non la printing posseduta', () => {
+    const d = makeData();
+    d.prints.p[4] = d.prints.p[4].map((p) => [p[0], p[1], p[2], p[3], 0, p[5], p[6]]); // un solo artwork
+    expect(fanItems(d, 4, owning(0)).map((i) => [i.id, i.owned])).toEqual([[ID(6), true]]);
+    expect(fanItems(d, 4, owning(0), ID(7)).map((i) => [i.id, i.owned])).toEqual([[ID(7), false]]);
   });
 });

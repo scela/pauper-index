@@ -20,11 +20,19 @@ export interface DustCtx {
 
 const SWEEP_MS = 1700; // durata massima dell'animazione (CSS) più un margine
 
+/**
+ * Pagina "Carta dimenticata": pulsante grande e una scena al centro. Prima della pesca la scena mostra una cornice
+ * vuota con polvere e ragnatele ferme; a ogni pesca la carta compare sotto la copertura, che viene spazzata via.
+ */
 export function initDust(ctx: DustCtx): { refresh(): void } {
   const btn = document.getElementById('dustBtn') as HTMLButtonElement;
+  const btnLabel = document.getElementById('dustBtnLabel') as HTMLElement;
   const root = document.getElementById('dustResult') as HTMLElement;
+  const allWrap = document.getElementById('dustAllWrap') as HTMLElement;
+  const allBox = document.getElementById('dustAll') as HTMLInputElement;
   const seen = new Set<string>((ssGet('dusted') || '').split(',').filter(Boolean));
   let fromAll = false;
+  let drawn = false; // almeno una pesca fatta (anche senza risultato)
   let current = -1;
   let note = '';
   let pool: number[] | null = null;
@@ -49,32 +57,32 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
     if (!d) return;
     const r = drawCard(d, poolNow(d), seen);
     ssSet('dusted', [...seen].join(','));
+    drawn = true;
     current = r ? r.idx : -1;
     note = r?.restarted ? t('dust.restarted') : '';
     render(true);
   };
 
+  /** Cornice vuota con la copertura ferma (niente immagine: nessuna carta, nessun retro). */
+  const waiting = () => h('div', { class: 'dust-stage dust-empty', role: 'img', 'aria-label': t('dust.waiting') },
+    dustCover(true));
+
   const render = (animate = false) => {
     const d = ctx.data();
-    if (!d || (current < 0 && !root.hasChildNodes())) return;
     const coll = ctx.collection();
-    const toggle = coll ? h('label', { class: 'chk dust-all' },
-      h('input', { type: 'checkbox', checked: fromAll, onchange: (e: Event) => {
-        fromAll = (e.target as HTMLInputElement).checked;
-        draw();
-      } }), ' ', h('span', null, t('dust.fromAll'))) : null;
-    const again = h('button', { class: 'btn small', type: 'button', onclick: draw }, t('dust.again'));
-    const close = h('button', { class: 'btn quiet small', type: 'button', onclick: () => {
-      current = -1;
-      root.replaceChildren();
-      btn.focus();
-    } }, t('dust.close'));
-
+    allWrap.hidden = !coll;
+    allBox.checked = fromAll;
+    btnLabel.textContent = drawn && current >= 0 ? t('dust.again') : t('dust.button');
+    if (!d) return;
+    if (!drawn) {
+      root.replaceChildren(h('div', { class: 'dust-scene is-empty' }, waiting()));
+      return;
+    }
     if (current < 0) {
       // nessuna carta da pescare (per esempio nessuna carta dimenticata tra quelle possedute)
-      root.replaceChildren(h('div', { class: 'dres' }, h('div', { class: 'qinfo' },
-        h('p', null, coll && !fromAll ? t('dust.noneOwned', { n: fmtInt(fullPool(d).length) }) : t('dust.none')),
-        h('div', { class: 'dust-actions' }, toggle, close))));
+      root.replaceChildren(h('div', { class: 'dust-scene is-empty' }, waiting(),
+        h('div', { class: 'qinfo dust-info' },
+          h('p', null, coll && !fromAll ? t('dust.noneOwned', { n: fmtInt(fullPool(d).length) }) : t('dust.none')))));
       return;
     }
 
@@ -94,8 +102,7 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
       .sort((a, b) => b!.date.localeCompare(a!.date))[0] || null;
 
     const info: (Node | null)[] = [
-      h('p', { class: 'dust-kicker' }, t('dust.kicker')),
-      h('h3', { class: 'qtitle', id: 'dustTitle', tabindex: '-1' }, c.n),
+      h('h3', { class: 'qtitle', id: 'dustTitle' }, c.n),
       h('p', null, t('dust.played', { n: fmtInt(decks), from: fmtDate(c.f), to: fmtDate(c.z) })),
       peak ? h('p', null, t('dust.peak', { year: peak.year, pct: fmtPct(peak.share) })) : null,
       last ? h('p', null, t('dust.last', { date: fmtDate(last.date) }),
@@ -109,7 +116,6 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
         : h('p', { class: 'qnotowned' }, t('quick.notOwned')));
     }
     if (note) info.push(h('p', { class: 'note' }, note));
-    info.push(h('div', { class: 'dust-actions' }, again, toggle, close));
 
     const img = h('img', {
       src: imageUrl(id, 'normal'), alt: t('dust.imageAlt', { name: c.n }), width: 488, height: 680, decoding: 'async',
@@ -117,15 +123,19 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
     });
     const stage = h('button', { class: 'dust-stage', type: 'button', 'aria-label': t('quick.imageAlt', { name: c.n }) }, img);
     stage.addEventListener('click', () => ctx.openArtworks(stage, current, owned));
-    root.replaceChildren(h('div', { class: 'dres' + (owned && owned.total > 0 ? ' is-owned' : '') }, stage, h('div', { class: 'qinfo' }, ...info)));
+    root.replaceChildren(h('div', { class: 'dust-scene' + (owned && owned.total > 0 ? ' is-owned' : '') },
+      stage, h('div', { class: 'qinfo dust-info' }, ...info)));
     if (animate) {
-      (root.querySelector('#dustTitle') as HTMLElement | null)?.focus({ preventScroll: true });
       root.scrollIntoView({ block: 'nearest' });
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) sweep(stage, img);
     }
   };
 
   btn.addEventListener('click', draw);
+  allBox.addEventListener('change', () => {
+    fromAll = allBox.checked;
+    if (drawn) draw();
+  });
   return { refresh: () => render(false) };
 }
 
@@ -164,7 +174,7 @@ const f1 = (n: number) => n.toFixed(1);
  * Copertura: velo di polvere a grana fine e a chiazze (rumore SVG, solo sopra la carta), granelli che volano
  * via quando passa la mano, nuvoletta di polvere sul bordo della spazzata, ragnatele irregolari negli angoli.
  */
-function dustCover(): HTMLElement {
+function dustCover(still = false): HTMLElement {
   const id = ++uid;
   const seed = Math.floor(rand(1, 999));
   // velo: chiazze larghe (bassa frequenza) + grana fine; il colore è un grigio-beige, l'alfa viene dal rumore
@@ -201,7 +211,7 @@ function dustCover(): HTMLElement {
     el.style.setProperty('--t', `${rand(380, 620).toFixed(0)}ms`);
     specks.appendChild(el);
   }
-  return h('div', { class: 'dust-cover', 'aria-hidden': 'true' },
+  return h('div', { class: 'dust-cover' + (still ? ' still' : ''), 'aria-hidden': 'true' },
     h('div', { class: 'dust-film' }, tex),
     cobweb('web-tl', 0.62),
     cobweb('web-tr', 0.4),

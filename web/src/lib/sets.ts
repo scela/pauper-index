@@ -11,6 +11,7 @@ export interface SetRow {
   t: string; // set_type Scryfall
   p?: string; // set padre
   g?: 1; // solo digitale
+  i?: string; // icona nello sprite data/seticons.svg: assente = il codice, "" = nessuna
 }
 
 export interface SetGroup {
@@ -19,6 +20,7 @@ export interface SetGroup {
   date: string;
   hidden: boolean; // il set principale è di un tipo nascosto di default
   members: SetRow[]; // set principale e set collegati
+  icon: string; // icona del set principale ("" se non c'è)
 }
 
 const HIDDEN_TYPES = new Set(['promo', 'memorabilia', 'token', 'alchemy']);
@@ -28,6 +30,12 @@ const HIDDEN_CODES = new Set(['sld', 'slu', 'plst', 'plist']);
 export function isHiddenSet(s: SetRow): boolean {
   return HIDDEN_TYPES.has(s.t) || !!s.g || HIDDEN_CODES.has(s.c) || (!!s.p && HIDDEN_CODES.has(s.p))
     || /^secret lair/i.test(s.n) || /^the list/i.test(s.n);
+}
+
+/** Nome dell'icona del set nello sprite, "" se il set non ne ha (marchi esclusi dalla pipeline). */
+export function iconOf(s: SetRow | undefined): string {
+  if (!s) return '';
+  return s.i ?? s.c;
 }
 
 /** Gruppi: il set principale è l'antenato senza padre (risalendo parent_set_code). */
@@ -46,7 +54,7 @@ export function buildGroups(sets: SetRow[]): Map<string, SetGroup> {
   for (const s of sets) {
     const r = rootOf(s);
     let g = groups.get(r.c);
-    if (!g) groups.set(r.c, (g = { code: r.c, name: r.n, date: r.d, hidden: isHiddenSet(r), members: [] }));
+    if (!g) groups.set(r.c, (g = { code: r.c, name: r.n, date: r.d, hidden: isHiddenSet(r), members: [], icon: iconOf(r) }));
     g.members.push(s);
   }
   return groups;

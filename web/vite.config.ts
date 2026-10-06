@@ -8,7 +8,7 @@ const DATA = resolve(here, '../data');
 
 // Solo questi file di data/ vanno nel sito. I report interni (unresolved.csv, risoluzione.csv,
 // dedup.json, set-ingresso.md, baseline-*.md) contengono testo grezzo delle decklist e restano nel repo.
-const PUBLIC_DATA = ['cards.json', 'printings.json', 'names.json', 'allnames.json', 'cardnames.json', 'sets.json', 'meta.json'];
+const PUBLIC_DATA = ['cards.json', 'printings.json', 'names.json', 'allnames.json', 'cardnames.json', 'sets.json', 'seticons.svg', 'meta.json'];
 // Dalle revisioni solo l'indice pubblico (senza nomi grezzi non risolti).
 const PUBLIC_REVIEWS = /^index\.json$/;
 
@@ -54,7 +54,8 @@ function pauperIndexData(): Plugin {
           res.statusCode = 404;
           return res.end();
         }
-        res.setHeader('Content-Type', rel.endsWith('.md') ? 'text/markdown; charset=utf-8' : 'application/json');
+        res.setHeader('Content-Type', rel.endsWith('.md') ? 'text/markdown; charset=utf-8'
+          : rel.endsWith('.svg') ? 'image/svg+xml' : 'application/json');
         res.end(readFileSync(join(DATA, rel)));
       });
     },

@@ -2,6 +2,8 @@
 :root{
   --bg:#EDF0F3; --surface:#F8F9FB; --ink:#18202B; --muted:#586272; --line:#CBD2DA; --line-strong:#97A3B0;
   --accent:#2F5FA8; --accent-ink:#FFFFFF; --logo:#555555; --accent-soft:#DCE5F3; --danger:#9E3A2B; --warn-bg:#FBEFD9; --warn-ink:#6B4A12;
+  /* simboli delle espansioni per rarità: comune, non comune (argento), rara (oro), mitica (arancio), speciale e bonus */
+  --rar-c:#18202B; --rar-u:#5C6875; --rar-r:#8C6A0E; --rar-m:#BF4510; --rar-s:#6A3E9E;
   --r-s:4px; --r-m:8px;
   --font:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme:light;
@@ -10,12 +12,14 @@
   :root:not([data-theme="light"]){
     --bg:#1B2028; --surface:#232A34; --ink:#E5E9EF; --muted:#9CA6B4; --line:#363F4B; --line-strong:#56616F;
     --accent:#7FA4E6; --accent-ink:#121821; --logo:#C9CFD8; --accent-soft:#2A3850; --danger:#E3907F; --warn-bg:#3A3020; --warn-ink:#F0D9A8;
+    --rar-c:#E5E9EF; --rar-u:#B3BFCC; --rar-r:#E3C063; --rar-m:#F38A4A; --rar-s:#BC9DEA;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#1B2028; --surface:#232A34; --ink:#E5E9EF; --muted:#9CA6B4; --line:#363F4B; --line-strong:#56616F;
   --accent:#7FA4E6; --accent-ink:#121821; --logo:#C9CFD8; --accent-soft:#2A3850; --danger:#E3907F; --warn-bg:#3A3020; --warn-ink:#F0D9A8;
+    --rar-c:#E5E9EF; --rar-u:#B3BFCC; --rar-r:#E3C063; --rar-m:#F38A4A; --rar-s:#BC9DEA;
   color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:border-box}
@@ -39,6 +43,7 @@ h1 a{color:inherit;text-decoration:none}
 .logo{width:1.2em;height:1.2em;flex:none;color:var(--logo)}
 .nav{display:flex;gap:4px;align-items:center;font-size:.9375rem}
 .nav a{font-weight:500;padding:6px}
+.nav a[aria-current="page"]{color:var(--ink);text-decoration-thickness:2px;text-underline-offset:4px}
 .langs{display:inline-flex}
 .langs .btn{padding-inline:6px;min-width:34px;justify-content:center}
 .langs .btn[aria-pressed="true"]{color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:3px}
@@ -62,33 +67,39 @@ h1 a{color:inherit;text-decoration:none}
 /* controllo rapido */
 .quick{margin:0 0 14px}
 .quick-label{display:block;font-weight:600;font-size:.9375rem;margin-bottom:4px}
-.quick-head{display:flex;justify-content:space-between;align-items:center;gap:4px 12px;flex-wrap:wrap;margin-bottom:4px}
-.quick-head .quick-label{margin-bottom:0}
-.dustbtn{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:5px 14px 5px 10px;border-radius:999px;
-  border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);background:var(--accent-soft);color:var(--ink);
-  font:inherit;font-size:.875rem;font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.dustbtn:hover{border-color:var(--accent)}
-.dustbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.dust-ico{width:22px;height:22px;flex:none;color:var(--accent);overflow:visible}
+/* Rispolvera una carta: copertura sopra la carta, mai filtri sull'immagine (regole di Scryfall) */
+.dustpage{display:flex;flex-direction:column;align-items:center;text-align:center;padding:4px 0 8px}
+.dustpage h2{font-size:clamp(1.5rem,4vw,2rem);line-height:1.15;letter-spacing:-.02em;margin:10px 0 6px}
+.dust-lead{max-width:50ch;margin:0 0 20px;color:var(--muted);font-size:1.0625rem;line-height:1.45}
+.dust-controls{display:flex;flex-direction:column;align-items:center;gap:12px}
+.dustbtn{display:inline-flex;align-items:center;gap:10px;min-height:56px;padding:12px 30px 12px 22px;border-radius:999px;border:0;
+  background:var(--accent);color:var(--accent-ink);font:inherit;font-size:1.125rem;font-weight:650;cursor:pointer;
+  box-shadow:0 6px 18px -8px color-mix(in srgb,var(--accent) 80%,transparent)}
+.dustbtn:hover{filter:brightness(1.08)}
+.dustbtn:active{transform:translateY(1px)}
+.dustbtn:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.dust-ico{width:28px;height:28px;flex:none;overflow:visible}
 .dust-ico .duster{transform-origin:5px 19px}
-.dust-ico .mote{fill:currentColor;opacity:.7}
+.dust-ico .mote{fill:currentColor;opacity:.75}
 .dustbtn:hover .duster,.dustbtn:focus-visible .duster{animation:duster-wiggle .7s ease-in-out}
 .dustbtn:hover .mote,.dustbtn:focus-visible .mote{animation:mote-drift .9s ease-out}
 @keyframes duster-wiggle{25%{transform:rotate(-14deg)}55%{transform:rotate(10deg)}80%{transform:rotate(-5deg)}}
 @keyframes mote-drift{to{transform:translate(-3px,-4px);opacity:0}}
 @media (prefers-reduced-motion: reduce){.dustbtn:hover .duster,.dustbtn:hover .mote,.dustbtn:focus-visible .duster,.dustbtn:focus-visible .mote{animation:none}}
-
-/* Rispolvera una carta: copertura sopra la carta, mai filtri sull'immagine (regole di Scryfall) */
-.dres{display:flex;gap:16px;align-items:flex-start;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface)}
-.dres.is-owned{border-color:var(--accent)}
-.dust-kicker{margin:0 0 2px;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.dres .qtitle:focus{outline:none}
-.dres .qtitle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.dust-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:10px}
-.dust-stage{all:unset;position:relative;flex:none;display:block;width:200px;aspect-ratio:488/680;border-radius:10px;overflow:hidden;cursor:pointer;background:var(--line)}
+#dustResult{width:100%;margin-top:26px}
+/* scena: la carta al centro, i dettagli accanto (sotto su mobile) */
+.dust-scene{display:flex;justify-content:center;align-items:center;gap:32px;max-width:880px;margin:0 auto;padding:28px 24px;text-align:left;
+  border:1px solid var(--line);border-radius:16px;background:radial-gradient(ellipse at 50% 45%,var(--surface) 30%,var(--bg) 100%)}
+.dust-scene.is-owned{border-color:var(--accent)}
+.dust-scene.is-empty{flex-direction:column;gap:16px;text-align:center}
+.dust-info{max-width:380px}
+.dust-info .qtitle{font-size:1.375rem;margin-bottom:6px}
+.dust-stage{all:unset;position:relative;flex:none;display:block;width:280px;aspect-ratio:488/680;border-radius:12px;overflow:hidden;cursor:pointer;background:var(--line);
+  box-shadow:0 18px 40px -18px rgba(16,24,40,.55)}
+.dust-empty{cursor:default;border:2px dashed var(--line-strong);background:color-mix(in srgb,var(--line) 55%,var(--surface));box-shadow:none}
 .dust-stage:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.dust-stage img{display:block;width:100%;height:100%;border-radius:10px}
-.dust-cover{position:absolute;inset:0;pointer-events:none;border-radius:10px;overflow:hidden}
+.dust-stage img{display:block;width:100%;height:100%;border-radius:12px}
+.dust-cover{position:absolute;inset:0;pointer-events:none;border-radius:12px;overflow:hidden}
 .dust-film{position:absolute;inset:0;
   -webkit-mask-image:linear-gradient(105deg,transparent 44%,#000 56%);mask-image:linear-gradient(105deg,transparent 44%,#000 56%);
   -webkit-mask-size:220% 100%;mask-size:220% 100%;-webkit-mask-position:100% 0;mask-position:100% 0;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
@@ -132,7 +143,8 @@ h1 a{color:inherit;text-decoration:none}
   35%{transform:scaleX(-1) translate(-4%,3%) skew(6deg,-4deg) scale(1.08,.96);opacity:1}
   to{transform:scaleX(-1) translate(-45%,40%) skew(18deg,-10deg) scale(.6,.5);opacity:0;filter:blur(1.5px)}}
 @keyframes dust-puff{0%{opacity:0;left:-50%}20%{opacity:.9}75%{opacity:.6}100%{opacity:0;left:115%}}
-@media (prefers-reduced-motion: reduce){.dust-cover{display:none}}
+/* con prefers-reduced-motion niente copertura sulla carta; la cornice vuota (ferma) resta */
+@media (prefers-reduced-motion: reduce){.dust-cover:not(.still){display:none}}
 .qbox{position:relative}
 #quickInput{font:inherit;font-size:16px;width:100%;min-height:46px;padding:8px 14px;border:1.5px solid var(--line-strong);border-radius:var(--r-m);background:var(--surface);color:var(--ink)}
 #quickInput:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
@@ -191,8 +203,23 @@ textarea{font:inherit;font-size:16px;width:100%;min-height:64px;resize:vertical;
 .setwrap .qlist{min-width:min(360px,90vw);right:auto}
 .setopts{display:none;flex-wrap:wrap;gap:4px 14px;font-size:.8125rem}
 .setwrap.open .setopts,.setwrap.has-set .setopts{display:flex}
-.rarity{display:block;font-size:.8125rem;color:var(--muted);margin-top:1px}
+.rarity{display:flex;align-items:center;flex-wrap:wrap;gap:2px 6px;font-size:.8125rem;color:var(--muted);margin-top:3px}
 .rarity.is-common{color:var(--accent)}
+.rarity .tag.mine{font-size:.6875rem;padding:0 7px}
+/* simboli delle espansioni (sprite data/seticons.svg): colore da currentColor */
+.seticon{display:inline-block;flex:none;width:1.25em;height:1.25em;vertical-align:-.25em;fill:currentColor;color:var(--ink)}
+.seticon.none{visibility:hidden}
+.seticon.rar-c{color:var(--rar-c)}
+.seticon.rar-u{color:var(--rar-u)}
+.seticon.rar-r{color:var(--rar-r)}
+.seticon.rar-m{color:var(--rar-m)}
+.seticon.rar-s,.seticon.rar-b{color:var(--rar-s)}
+.rarity .seticon{width:1.5em;height:1.5em}
+.qlist .qname{display:inline-flex;align-items:center;gap:10px;min-width:0}
+.qlist .qname .seticon{width:22px;height:22px}
+.setbox .field-ico{position:absolute;left:8px;top:50%;transform:translateY(-50%);display:flex;pointer-events:none}
+.setbox .field-ico .seticon{width:18px;height:18px}
+.setwrap.has-set #setInput{padding-left:32px}
 .chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
 .chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
 .chk input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
@@ -220,6 +247,7 @@ table{width:100%;border-collapse:collapse}
 .thumbs{display:flex;gap:3px;flex:none}
 .thumb{display:block;width:40px;height:auto;aspect-ratio:488/680;border-radius:3px;background:var(--line)}
 .thumb.owned{outline:2px solid var(--accent);outline-offset:1px}
+.thumb.big{width:112px;border-radius:5px}
 .more-n{align-self:center;font-size:.75rem;color:var(--muted)}
 .badge{display:inline-block;font-size:.6875rem;font-weight:600;padding:0 6px;border-radius:999px;border:1px solid currentColor;margin-left:6px;vertical-align:2px;text-transform:uppercase;letter-spacing:.02em}
 .badge.new{color:var(--accent)}
@@ -332,16 +360,18 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .search{margin-left:0;width:100%}
   .top{flex-wrap:wrap;row-gap:2px}
   h1{font-size:1.625rem;white-space:nowrap}
-  .nav{font-size:.875rem;white-space:nowrap;margin-left:-6px}
+  .nav{font-size:.875rem;flex-wrap:wrap;row-gap:0;margin-left:-6px}
+  .nav a{white-space:nowrap}
   .nav .btn{white-space:nowrap}
   .f-field:first-child{flex:1;min-width:0}
   .f-field:first-child select{flex:1;min-width:0;width:100%}
   .filters{gap:8px 12px}
   .chips{flex-wrap:nowrap;overflow-x:auto;width:100%;padding:2px 0;scrollbar-width:none}
   .qimg img{width:96px}
-  .dres{flex-direction:column;align-items:center}
-  .dres .qinfo{align-self:stretch}
-  .dust-stage{width:min(240px,70vw)}
+  .dust-scene{flex-direction:column;gap:18px;padding:20px 14px}
+  .dust-info{align-self:stretch;max-width:none}
+  .dust-stage{width:min(260px,72vw)}
+  .dustbtn{width:100%;justify-content:center}
   .steps{grid-template-columns:1fr;gap:8px}
   .step{flex-direction:row;align-items:center;gap:14px;padding:12px}
   .step-badge{flex:none}
@@ -372,4 +402,5 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .groups td.g-act{grid-column:2;grid-row:1}
   .sheet{position:fixed;left:0 !important;right:0;bottom:0;top:auto !important;width:100%;max-height:88vh;border-radius:14px 14px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
   .fan{justify-content:flex-start}
+  .thumb.big{width:88px}
 }

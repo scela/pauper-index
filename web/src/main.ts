@@ -15,7 +15,8 @@ import { clearAll, idbGet, idbSet, lsGet, lsSet } from './lib/store';
 import { parseTextList } from './lib/text';
 import type { Group, Role, Row } from './lib/types';
 import { collectionIndex, type CollectionIndex, type Owned } from './lib/quick';
-import { buildGroups, displayPrint, memberCodes, printsInSets, rarityHere, type SetGroup, type SetRow } from './lib/sets';
+import { buildGroups, displayPrint, iconOf, memberCodes, printsInSets, rarityHere, type SetGroup, type SetRow } from './lib/sets';
+import { setIcon } from './ui/seticon';
 import { renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
 import { initDust } from './ui/dust';
@@ -65,6 +66,7 @@ const S = {
   cix: null as CollectionIndex | null,
   // filtro per espansione
   setGroups: null as Map<string, SetGroup> | null,
+  setRows: new Map<string, SetRow>(),
   setFilter: null as string | null,
   setCodes: null as Set<string> | null,
   setHidden: false,
@@ -285,7 +287,10 @@ async function loadSetGroups(): Promise<Map<string, SetGroup> | null> {
   if (S.setGroups) return S.setGroups;
   setsLoading ??= fetch('data/sets.json')
     .then((r) => (r.ok ? r.json() : null))
-    .then((rows: SetRow[] | null) => (S.setGroups = rows ? buildGroups(rows) : null))
+    .then((rows: SetRow[] | null) => {
+      if (rows) S.setRows = new Map(rows.map((r) => [r.c, r]));
+      return (S.setGroups = rows ? buildGroups(rows) : null);
+    })
     .catch(() => null);
   return setsLoading;
 }
@@ -422,26 +427,42 @@ function ownedPrintInSet(x: Result): Result['prints'][number] | undefined {
   return x.prints.find((p) => inSet.has(p.row.i || (p.print >= 0 ? prints[p.print][0] : '')));
 }
 
+interface SetView {
+  id: string; // Scryfall ID della stampa di questo set: sempre lei, mai la printing posseduta né quella di riferimento
+  mine: boolean; // possiedi proprio questa stampa
+  set: string;
+  rarity: string;
+  label: string;
+  common: boolean;
+}
+
 /** Vista per espansione: immagine della stampa di quel set ed etichetta della rarità "qui". */
-function setThumb(x: Result): { thumb: { id: string; owned: boolean }; label: string; common: boolean } | null {
+function setThumb(x: Result): SetView | null {
   const d = S.d!;
   const codes = S.setCodes!;
   const prints = d.prints.p[x.idx] || [];
   const pi = displayPrint(d, x.idx, codes, S.setFilter!);
   if (pi < 0) return null;
-  const id = prints[pi][0];
-  const ownedHere = ownedPrintInSet(x);
-  const ownedId = ownedHere ? (ownedHere.row.i || prints[ownedHere.print][0]) : '';
+  const p = prints[pi];
+  const mine = x.prints.some((o) => o.print === pi || o.row.i === p[0]
+    || (!!o.row.c && o.row.s.toLowerCase() === p[1] && o.row.c === p[2]));
   const r = rarityHere(d, x.idx, codes)!;
+  const pr = p[6] || 's';
+  const rarity = t(`rarity.${pr}` as Key);
   let label: string;
-  if (r.common) label = t('set.common');
-  else {
-    const rarity = t(`rarity.${r.rarity}` as Key);
+  if (pr === 'c') label = t('set.common');
+  else if (r.common) {
+    // questa stampa non è comune, ma un'altra del gruppo sì (per esempio nel set Commander collegato)
+    const ci = printsInSets(d, x.idx, codes).find((i) => prints[i][6] === 'c')!;
+    label = t('set.commonOther', { rarity, set: setName(prints[ci][1]) });
+  } else {
     const entry = r.entrySet ? d.cards.sets[r.entrySet] : null;
     label = entry ? t('set.notCommon', { rarity, set: entry[0], year: entry[1].slice(0, 4) }) : t('set.notCommonPlain', { rarity });
   }
-  return { thumb: { id: ownedId || id, owned: !!ownedHere }, label, common: r.common };
+  return { id: p[0], mine, set: p[1], rarity: pr, label, common: pr === 'c' || r.common };
 }
+
+const setName = (code: string) => S.setRows.get(code)?.n || S.d!.prints.sets[code]?.[0] || code.toUpperCase();
 
 function thumbIds(x: Result): { id: string; owned: boolean }[] {
   const d = S.d!;
@@ -476,7 +497,7 @@ function renderRows(): void {
     const c = d.cards.c[x.idx];
     const st = c.s[S.opts.win];
     const setView = S.setCodes ? setThumb(x) : null;
-    const thumbs = setView ? [setView.thumb] : thumbIds(x);
+    const thumbs = setView ? [{ id: setView.id, owned: setView.mine }] : thumbIds(x);
     const refId = d.prints.p[x.idx]?.[c.r]?.[0];
     const entry = c.e ? d.cards.sets[c.e] : null;
     const status = coll && x.status !== 'owned'
@@ -489,14 +510,21 @@ function renderRows(): void {
     const btn = h('button', { class: 'cardbtn', type: 'button', dataset: { idx: String(x.idx) }, 'aria-haspopup': 'dialog', 'aria-label': t('card.open', { name: c.n }) },
       h('span', { class: 'thumbs' },
         ...thumbs.slice(0, 3).map((th) => h('img', {
-          class: 'thumb' + (th.owned ? ' owned' : ''), src: imageUrl(th.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204,
+          class: 'thumb' + (th.owned ? ' owned' : '') + (setView ? ' big' : ''), src: imageUrl(th.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204,
+          // vista per espansione: miniatura grande, con l'immagine "normal" sugli schermi ad alta densità
+          srcset: setView ? `${imageUrl(th.id, 'small')} 146w, ${imageUrl(th.id, 'normal')} 488w` : undefined,
+          sizes: setView ? '(max-width: 640px) 88px, 112px' : undefined,
           dataset: refId ? { fallback: imageUrl(refId, 'small') } : undefined,
         })),
         thumbs.length > 3 ? h('span', { class: 'more-n' }, `+${thumbs.length - 3}`) : null),
       h('span', { class: 'nmwrap' }, h('span', { class: 'nm' }, c.n), status,
         isNew(c.e) ? h('span', { class: 'badge new' }, t('badge.new')) : null,
         c.l === 'b' ? h('span', { class: 'badge banned' }, t('badge.banned')) : null,
-        setView ? h('span', { class: 'rarity' + (setView.common ? ' is-common' : '') }, setView.label) : null, own));
+        setView ? h('span', { class: 'rarity' + (setView.common ? ' is-common' : '') },
+          setIcon(iconOf(S.setRows.get(setView.set)), `${setName(setView.set)} · ${t(`rarity.${setView.rarity}` as Key)}`, setView.rarity),
+          h('span', null, setView.label),
+          setView.mine ? h('span', { class: 'tag mine' }, t('sheet.yours')) : null) : null,
+        own));
     return h('tr', { class: coll ? `r-${x.status}` : '' },
       h('td', { class: 'c-name' }, btn),
       h('td', { class: 'c-qty num', 'data-label': t('mobile.qty') }, coll ? String(x.owned) : String(x.typical)),
@@ -630,8 +658,10 @@ function openFor(btn: HTMLElement, mode: 'hover' | 'click'): void {
   const idx = Number(btn.dataset.idx);
   const res = S.results.find((x) => x.idx === idx) || null;
   const approx = !!res && res.prints.length > 0 && res.prints.every((p) => !p.exact);
+  // vista per espansione: la carta attiva della scheda è la stampa di quel set
+  const focusId = S.setCodes && res ? setThumb(res)?.id : undefined;
   openSheet(btn, {
-    d, opts: S.opts, idx, res: hasColl() ? res : null, approx,
+    d, opts: S.opts, idx, res: hasColl() ? res : null, approx, focusId,
     onShowAll: (items, title) => renderGrid($('#gridDialog') as HTMLDialogElement, items, title),
   }, mode);
 }
@@ -689,15 +719,19 @@ function changeLang(l: Lang): void {
 
 function route(): void {
   const about = location.hash === '#informazioni';
-  $('#viewMain').hidden = about;
+  const forgotten = location.hash === '#carta-dimenticata';
+  $('#viewMain').hidden = about || forgotten;
   $('#viewAbout').hidden = !about;
+  $('#viewDust').hidden = !forgotten;
+  for (const [id, on] of [['#navAbout', about], ['#navDust', forgotten]] as const) {
+    if (on) $(id).setAttribute('aria-current', 'page');
+    else $(id).removeAttribute('aria-current');
+  }
   // nella pagina Informazioni il blocco legale e la FAQ sulle donazioni sostituiscono il piè di pagina
   document.querySelector<HTMLElement>('.wrap > .foot')!.hidden = about;
   closeSheet();
-  if (about) {
-    renderAbout($('#viewAbout'), S.d);
-    window.scrollTo(0, 0);
-  }
+  if (about) renderAbout($('#viewAbout'), S.d);
+  if (about || forgotten) window.scrollTo(0, 0);
 }
 
 /* ---------- eventi ---------- */
@@ -931,6 +965,7 @@ function wire(): void {
   document.addEventListener('error', (e) => {
     const img = e.target;
     if (img instanceof HTMLImageElement && img.dataset.fallback && img.src !== img.dataset.fallback) {
+      img.removeAttribute('srcset');
       img.src = img.dataset.fallback;
       delete img.dataset.fallback;
     }

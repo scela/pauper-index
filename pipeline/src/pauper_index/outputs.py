@@ -163,6 +163,15 @@ def build_sets(db: CardDB, order: list[str], sets_info: dict) -> list[dict]:
     return out
 
 
+def with_icons(rows: list[dict], icons: dict[str, str]) -> list[dict]:
+    """Icona del set nello sprite (data/seticons.svg): `i` manca se è il codice stesso, "" se non c'è."""
+    for r in rows:
+        name = icons.get(r["c"], "")
+        if name != r["c"]:
+            r["i"] = name
+    return rows
+
+
 def build_names(db: CardDB, order: list[str]) -> dict[str, int]:
     pos = {o: i for i, o in enumerate(order)}
     out = {}

@@ -3,6 +3,7 @@
 import { t } from '../i18n';
 import { h } from '../lib/dom';
 import { searchGroups, type SetGroup } from '../lib/sets';
+import { setIcon } from './seticon';
 
 export interface SetPickerCtx {
   /** Gruppi di set (carica data/sets.json al primo uso). */
@@ -17,6 +18,9 @@ export function initSetPicker(ctx: SetPickerCtx): { refresh(): void } {
   const wrap = document.getElementById('setWrap')!;
   const input = document.getElementById('setInput') as HTMLInputElement;
   const list = document.getElementById('setList') as HTMLUListElement;
+  // simbolo dell'espansione scelta, dentro il campo (a sinistra del testo)
+  const fieldIcon = h('span', { class: 'field-ico', hidden: true });
+  input.before(fieldIcon);
   let items: (SetGroup | 'hidden')[] = [];
   let active = -1;
 
@@ -53,7 +57,8 @@ export function initSetPicker(ctx: SetPickerCtx): { refresh(): void } {
       ? items.map((g, i) => h('li', { id: `sopt-${i}`, role: 'option', 'aria-selected': 'false', dataset: { i: String(i) } },
         ...(g === 'hidden'
           ? [h('span', { class: 'qnone-hint' }, t('set.noResults')), h('span', { class: 'qaction' }, t('set.searchHidden'))]
-          : [h('span', { class: 'qname' }, g.name), h('span', { class: 'qtag' }, `${g.code.toUpperCase()} · ${g.date.slice(0, 4)}`)])))
+          : [h('span', { class: 'qname' }, setIcon(g.icon, null), h('span', null, g.name)),
+            h('span', { class: 'qtag' }, `${g.code.toUpperCase()} · ${g.date.slice(0, 4)}`)])))
       : [h('li', { class: 'qnone', role: 'presentation' }, t('set.noResults'))]));
     list.hidden = false;
     input.setAttribute('aria-expanded', 'true');
@@ -120,6 +125,8 @@ export function initSetPicker(ctx: SetPickerCtx): { refresh(): void } {
     refresh() {
       const sel = ctx.selected();
       wrap.classList.toggle('has-set', !!sel);
+      fieldIcon.hidden = !sel;
+      fieldIcon.replaceChildren(...(sel ? [setIcon(sel.icon, sel.name)] : []));
       if (document.activeElement !== input) input.value = sel ? label(sel) : '';
       if (!list.hidden) void open();
     },

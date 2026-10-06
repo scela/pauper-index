@@ -36,6 +36,7 @@
   <header class="top">
     <h1><a href="#" class="home"><svg class="logo" aria-hidden="true" focusable="false"><use href="/logo.svg#logo"></use></svg>Pauper Index</a></h1>
     <nav class="nav" data-i18n-aria="nav.aria" aria-label="Navigazione">
+      <a href="#carta-dimenticata" id="navDust" data-i18n="nav.dust">Carta dimenticata</a>
       <a href="#informazioni" id="navAbout" data-i18n="nav.about">Informazioni</a>
       <span class="langs" role="group" data-i18n-aria="nav.lang" aria-label="Lingua">
         <button class="btn quiet small" type="button" data-lang="it" lang="it" aria-label="Italiano">IT</button>
@@ -50,21 +51,7 @@
   <div id="viewMain">
 
     <section class="quick" id="quick" aria-labelledby="quickLabel">
-      <div class="quick-head">
-        <label class="quick-label" id="quickLabel" for="quickInput" data-i18n="quick.label">Controllo rapido di una carta</label>
-        <button class="dustbtn" id="dustBtn" type="button" data-i18n-title="dust.hint" title="Pesca una carta che non si vede da più di un anno">
-          <svg class="dust-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <g class="duster" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 19l5.2-5.2"/>
-              <path d="M10.2 13.8c-1.4-4.2.6-8.5 6.6-10.8.7 4.6-1.6 8.9-6.6 10.8z"/>
-              <path d="M10.2 13.8c3.4-2.6 7.6-3 11-1.6-2.4 3.1-6.9 3.8-11 1.6z"/>
-              <path d="M10.2 13.8c1.6-2.9 3.9-5.1 7.3-6.4"/>
-            </g>
-            <circle class="mote" cx="5.2" cy="8.6" r="1"/><circle class="mote" cx="8.2" cy="4.6" r=".75"/><circle class="mote" cx="3.4" cy="12.6" r=".6"/>
-          </svg>
-          <span data-i18n="dust.button">Rispolvera una carta</span>
-        </button>
-      </div>
+      <label class="quick-label" id="quickLabel" for="quickInput" data-i18n="quick.label">Controllo rapido di una carta</label>
       <div class="qbox">
         <input id="quickInput" type="search" role="combobox" aria-expanded="false" aria-controls="quickList" aria-autocomplete="list"
           autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"
@@ -72,7 +59,6 @@
         <ul id="quickList" class="qlist" role="listbox" data-i18n-aria="quick.suggestions" aria-label="Suggerimenti" hidden></ul>
       </div>
       <div id="quickResult" aria-live="polite"></div>
-      <div id="dustResult" aria-live="polite"></div>
     </section>
 
     <section class="loadsec" id="loadArea" data-i18n-aria="load.aria" aria-label="Carica la collezione">
@@ -202,6 +188,29 @@
         </details>
         <button class="btn quiet small" id="clearData" type="button" data-i18n="clear.button">Cancella i miei dati</button>
       </div>
+    </section>
+  </div>
+
+  <div id="viewDust" hidden>
+    <section class="dustpage" aria-labelledby="dustHeading">
+      <h2 id="dustHeading" data-i18n="dust.title">Carta dimenticata</h2>
+      <p class="dust-lead" data-i18n="dust.lead">Riscopri una carta che si giocava in Pauper ma che non compare in nessun mazzo da oltre un anno.</p>
+      <div class="dust-controls">
+        <button class="dustbtn" id="dustBtn" type="button">
+          <svg class="dust-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <g class="duster" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 19l5.2-5.2"/>
+              <path d="M10.2 13.8c-1.4-4.2.6-8.5 6.6-10.8.7 4.6-1.6 8.9-6.6 10.8z"/>
+              <path d="M10.2 13.8c3.4-2.6 7.6-3 11-1.6-2.4 3.1-6.9 3.8-11 1.6z"/>
+              <path d="M10.2 13.8c1.6-2.9 3.9-5.1 7.3-6.4"/>
+            </g>
+            <circle class="mote" cx="5.2" cy="8.6" r="1"/><circle class="mote" cx="8.2" cy="4.6" r=".75"/><circle class="mote" cx="3.4" cy="12.6" r=".6"/>
+          </svg>
+          <span id="dustBtnLabel" data-i18n="dust.button">Rispolvera una carta</span>
+        </button>
+        <label class="chk dust-all" id="dustAllWrap" hidden><input type="checkbox" id="dustAll"> <span data-i18n="dust.fromAll">Pesca tra tutte le carte, non solo le tue</span></label>
+      </div>
+      <div id="dustResult" aria-live="polite"></div>
     </section>
   </div>
 

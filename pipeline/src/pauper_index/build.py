@@ -5,7 +5,7 @@ import time
 from collections import Counter
 from dataclasses import dataclass
 
-from . import config, outputs
+from . import config, outputs, seticons
 from .carddb import CardDB
 from .dedup import dedupe
 from .names import clean, norm
@@ -117,7 +117,9 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     outputs.write_lines_json(config.DATA / "cards.json", head, "c", rows)
     phead, prows = outputs.build_printings(db, order, ctx.sets_info)
     outputs.write_lines_json(config.DATA / "printings.json", phead, "p", prows)
-    outputs.write_json(config.DATA / "sets.json", outputs.build_sets(db, order, ctx.sets_info))
+    set_rows = outputs.build_sets(db, order, ctx.sets_info)
+    icons = seticons.build_sprite([r["c"] for r in set_rows], ctx.sets_info, online, config.DATA / "seticons.svg", log)
+    outputs.write_json(config.DATA / "sets.json", outputs.with_icons(set_rows, icons))
     outputs.write_json(config.DATA / "names.json", outputs.build_names(db, order))
     outputs.write_json(config.DATA / "allnames.json", outputs.build_all_names(db))
     outputs.write_json(config.DATA / "cardnames.json", outputs.build_card_names(db))
@@ -175,7 +177,7 @@ def build(online: bool = True, fetch: bool = True) -> dict:
 
     sizes = [outputs.size_info(config.DATA / f)
              for f in ("cards.json", "printings.json", "names.json", "allnames.json", "cardnames.json", "sets.json",
-                       "meta.json")]
+                       "seticons.svg", "meta.json")]
     names_hist = distinct_names(kept)
     names_y1 = distinct_names(kept, y1)
     summary = {

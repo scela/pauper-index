@@ -15,7 +15,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
 - User-Agent `PauperIndex/0.1`;
 - variabili d'ambiente `PAUPER_INDEX_*`.
 
-## Stato attuale (2026-10-06)
+## Stato attuale (2026-10-07)
 
 - **Online**: sito https://pauperindex.com (dominio personalizzato; www e il vecchio https://scela.github.io/pauper-index/ reindirizzano lì), repository pubblico https://github.com/scela/pauper-index. Aggiornamento automatico ogni giorno alle 07:23 UTC, più l'avvio manuale (Actions → "Aggiorna e pubblica" → Run workflow).
 - **Fasi**:
@@ -29,9 +29,10 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] Funzione 2: controllo rapido di una carta (vedi "Controllo rapido")
   - [x] Funzione 3: filtro per espansione (vedi "Filtro per espansione")
   - [x] "Carica altri" (10 carte alla volta) e "Rispolvera una carta" (vedi le sezioni omonime), prima della funzione 4
+  - [x] 2026-10-07: simboli delle espansioni (vedi "Simboli delle espansioni"), stampa del set nella vista per espansione e "Rispolvera" spostata nella pagina "Carta dimenticata"
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo "Carica altri" e "Rispolvera una carta", 2026-10-06): 91 pytest, 51 Vitest, 78 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo simboli, vista per espansione e "Carta dimenticata", 2026-10-07): 96 pytest, 54 Vitest, 82 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -88,8 +89,8 @@ web/                    frontend (Vite + TypeScript)
 ```
 
 **File principali**:
-- Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `review.py` (revisioni, snapshot, allarme), `scryfall.py` (client con limiti di frequenza), `config.py`.
-- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
+- Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `seticons.py` (simboli delle espansioni), `review.py` (revisioni, snapshot, allarme), `scryfall.py` (client con limiti di frequenza), `config.py`.
+- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata"), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
 - Test: `pipeline/tests/`, `web/tests/` (Vitest), `web/e2e/smoke.spec.ts` (Playwright).
 - Automazione: `.github/workflows/aggiorna.yml`.
 - Documentazione: questo file, `README.md` (avvio manuale, file manuali, comandi locali), `docs/IDEE.md`.
@@ -120,6 +121,7 @@ npm test                             # Vitest (logica, sicurezza, i18n, test loc
 npx playwright install chromium; npm run e2e   # Playwright sulla build: desktop e mobile, IT e EN
 npm run screenshots                  # con preview attivo: schermate in .cache/screenshots/
 npm run dust-frames                  # con preview attivo: fotogrammi dell'animazione "Rispolvera" in .cache/screenshots/
+node scripts/feature-shots.mjs <etichetta>   # con preview attivo: espansioni e "Carta dimenticata", desktop/mobile/scuro
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
 # Stato della CI
@@ -289,7 +291,9 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 
 **`cardnames.json`** (aggiunto con la funzione 2): `[[nome, legalità l|b|n], …]` di tutte le carte giocabili in carta o su MTGO (escluse quelle solo Arena), ordinate per nome. Circa 33.800 voci, 246 KB compressi. Serve ai suggerimenti del controllo rapido; si scarica solo al primo uso del campo.
 
-**`sets.json`** (aggiunto con la funzione 3): `[{c, n, d, t, p?, g?}]`, cioè codice, nome, uscita, `set_type`, set padre, `g: 1` se solo digitale. Contiene i set in cui è stampata almeno una carta giocata, più i loro set padre, dal più recente. Circa 500 set, **8 KB compressi**; si scarica al primo uso del filtro.
+**`sets.json`** (aggiunto con la funzione 3): `[{c, n, d, t, p?, g?, i?}]`, cioè codice, nome, uscita, `set_type`, set padre, `g: 1` se solo digitale, `i` icona nello sprite (assente = il codice stesso; per esempio `"star"` per le icone condivise; `""` = nessuna icona). Contiene i set in cui è stampata almeno una carta giocata, più i loro set padre, dal più recente. Circa 500 set, **8 KB compressi**; si scarica al primo uso del filtro.
+
+**`seticons.svg`** (aggiunto il 2026-10-07): sprite con un `<symbol id="nome" viewBox data-v>` per ogni icona dei set di `sets.json` (vedi "Simboli delle espansioni"). 333 icone, **285 KB grezzi, 102 KB con gzip**; si scarica solo quando si apre il selettore o si sceglie un'espansione.
 
 **`meta.json`**: generazione, ultimo torneo, totali per finestra, date dei bulk, commit della fonte, stato (`ok`/`ferma`), deduplica, statistiche di risoluzione.
 
@@ -311,6 +315,7 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 | `cards.json` | 1,38 MB (v2, con `y`) | 0,40 MB |
 | `printings.json` | 1,46 MB | 0,70 MB |
 | `names.json` | 0,13 MB | 0,05 MB |
+| `seticons.svg` (2026-10-07) | 0,29 MB | 0,10 MB |
 
 ## Decisioni prese
 
@@ -365,7 +370,7 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
   - i crediti (Scryfall, MTGODecklistCache e i siti di origine);
   - i limiti dei dati (vedi "Cosa contengono i dati MTGO") e la data dell'aggiornamento;
   - come segnalare un errore.
-- **Nessun logo né simbolo** di Wizards (simboli di mana compresi), ManaBox o Scryfall.
+- **Nessun logo né simbolo** di Wizards (simboli di mana compresi), ManaBox o Scryfall. **Eccezione** (decisa dall'utente il 2026-10-07): i **simboli delle espansioni** sono ammessi solo come piccole icone per identificare i set (selettore "Espansione" e rarità nella vista per espansione). Restano esclusi simboli di mana, logo di Magic, logo di Wizards e retro delle carte; per questo la pipeline non usa le icone `planeswalker` (The List), `default` (la "M" generica di Magic) e `dci` (logo DCI).
 - **Nota privacy**: nessun account, nessun cookie, nessuna analytics; la collezione resta nel browser; GitHub Pages può registrare dati tecnici di accesso; le immagini arrivano dai server di Scryfall.
 
 ### Sicurezza
@@ -425,7 +430,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - `tests/`: Vitest. `private.test.ts` gira solo se trova `reference/private/esempio-testo.txt` e stampa solo conteggi. `e2e/`: Playwright, progetti desktop e "mobile" (iPhone 13 emulato su Chromium). `tests/fixtures/`: dati sintetici.
 - `vite.config.ts`, con un plugin che:
   - in sviluppo serve `/data/*` da `../data`;
-  - in build copia in `dist/data/` **solo** `cards`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `meta` e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
+  - in build copia in `dist/data/` **solo** `cards`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `seticons.svg`, `meta` e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
   - inietta la CSP (meta tag) **solo in build**, perché il dev server di Vite usa stili inline.
 
 **Decisioni**:
@@ -507,14 +512,19 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - Ordinamento, filtri, ricerca, riepiloghi ed export lavorano sempre sulla lista completa (`S.results` / `S.view`); ogni cambio di filtro, ordinamento o ricerca riparte da 10.
 - Dopo "Carica altri" il focus va sulla prima carta aggiunta, **senza** aprire la scheda (`focusNoSheet`).
 
-## Rispolvera una carta (prima della funzione 4)
+## Rispolvera una carta: pagina "Carta dimenticata" (riprogettata il 2026-10-07)
 
-- Pulsante a pillola "Rispolvera una carta" con l'icona di un piumino (SVG originale, si muove al passaggio del cursore, fermo con `prefers-reduced-motion`) accanto all'etichetta del controllo rapido (`#dustBtn`, tooltip `dust.hint`); risultato in `#dustResult`. Logica in `lib/dust.ts` (testata), interfaccia e animazione in `ui/dust.ts`.
-- **Carte ammesse** (`dustPool`): legali oggi, non terre base, almeno `DUST_MIN_DECKS = 20` mazzi (main+side) nello storico, nessuna apparizione negli ultimi `DUST_QUIET_DAYS = 365` giorni contati dalla data dei dati. Al 2026-10-06: **203 carte** (10 mazzi: 321; 50: 99; 100: 48; 20 mazzi e 2 anni fermi: 142).
-- **Pesca**: con la collezione tra le carte possedute (interruttore "Pesca tra tutte le carte"); senza collezione tra tutte. Nessuna ripetizione nella sessione (oracle_id in sessionStorage `pauper-index:dusted`, cancellato anche da "Cancella i miei dati"); quando sono finite si ricomincia, con un avviso.
-- **Scheda**: immagine (la printing posseduta, altrimenti quella di riferimento; un clic apre gli artwork), mazzi nello storico (main+side o solo main secondo l'opzione del side) tra prima e ultima apparizione, **anno di massima diffusione** in percentuale dei mazzi di quell'anno (`y` / `yt` di `cards.json`, perché i volumi annui cambiano molto), ultima apparizione più recente tra MTGO e cartaceo con il link al torneo, possesso. Pulsanti "Rispolverane un'altra" e "Chiudi".
-- **Animazione** (circa 1,5 s, rifatta su richiesta perché la prima sembrava finta): sopra la carta una copertura (`.dust-cover`) con un velo di polvere fatto di rumore SVG (`feTurbulence`: chiazze larghe, grana fine, più densa verso i bordi), granelli e fiocchi, e tre ragnatele d'angolo **generate a caso** a ogni pesca (fili radiali irregolari, spirale che cede verso il centro, tratti spezzati, fili penzolanti, polvere impigliata). Il velo si toglie con una maschera diagonale accompagnata da una nuvoletta di polvere; i granelli volano o cadono quando li raggiunge il bordo; le ragnatele si tendono e si strappano via. Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall). Alla fine di tutte le animazioni la copertura viene **rimossa** (carta intera, artista e copyright compresi). Parte quando l'immagine è caricata. Con `prefers-reduced-motion` la copertura non viene creata. CSP invariata: i valori casuali passano da `style.setProperty` (CSSOM), mai da attributi `style`.
-- Fotogrammi di controllo: `npm run dust-frames` (desktop e mobile, 5 istanti più la fine).
+- **Pagina a sé** (`#viewDust`, hash `#carta-dimenticata`), raggiungibile dalla testata con la voce "Carta dimenticata" / "Forgotten card" (`#navDust`, prima di Informazioni; `aria-current="page"` sulla voce attiva). Non è più nella zona del controllo rapido. Contiene:
+  - il titolo e la frase "Riscopri una carta che si giocava in Pauper ma che non compare in nessun mazzo da oltre un anno" (`dust.lead`);
+  - il pulsante grande "Rispolvera una carta" / "Dust off a card" (`#dustBtn`, icona del piumino), che dopo la prima pesca diventa "Rispolverane un'altra"; sotto, solo con la collezione, l'interruttore "Pesca tra tutte le carte" (`#dustAll`);
+  - la **scena** (`#dustResult .dust-scene`), con la carta al centro e i dettagli accanto (sotto su mobile).
+- Prima della pesca la scena mostra una **cornice vuota** (`.dust-empty`, nessuna immagine né retro di carta) con polvere e ragnatele ferme (`dustCover(true)`, classe `still`, visibile anche con `prefers-reduced-motion`).
+- Logica in `lib/dust.ts` (testata), interfaccia e animazione in `ui/dust.ts`.
+- **Carte ammesse** (`dustPool`): legali oggi, non terre base, almeno `DUST_MIN_DECKS = 20` mazzi (main+side) nello storico, nessuna apparizione negli ultimi `DUST_QUIET_DAYS = 365` giorni contati dalla data dei dati. Al 2026-10-06: **203 carte**.
+- **Pesca**: con la collezione tra le carte possedute (interruttore "Pesca tra tutte le carte"); senza collezione tra tutte. Nessuna ripetizione nella sessione (oracle_id in sessionStorage `pauper-index:dusted`, cancellato anche da "Cancella i miei dati"); quando sono finite si ricomincia, con un avviso. Se nessuna carta posseduta è dimenticata, la scena lo dice (prima, al primo clic non compariva nulla: corretto).
+- **Dettagli**: immagine (la printing posseduta, altrimenti quella di riferimento; un clic apre gli artwork), mazzi nello storico tra prima e ultima apparizione, **anno di massima diffusione** in percentuale dei mazzi di quell'anno (`y` / `yt`), ultima apparizione più recente tra MTGO e cartaceo con il link al torneo, possesso. Tolti i pulsanti "Chiudi" e "Rispolverane un'altra" dentro il risultato, perché c'è il pulsante grande.
+- **Animazione** (circa 1,5 s, invariata): copertura `.dust-cover` con velo di polvere (rumore SVG), granelli, fiocchi e tre ragnatele generate a caso, spazzati via con una maschera diagonale. Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall); a fine animazione la copertura viene rimossa. Parte quando l'immagine è caricata. Con `prefers-reduced-motion` nessuna copertura sulla carta. CSP invariata: i valori casuali passano da `style.setProperty`.
+- Fotogrammi di controllo: `npm run dust-frames` (desktop e mobile, 5 istanti più la fine, dalla pagina `#carta-dimenticata`).
 
 ## Pagina Informazioni (riscritta il 2026-10-06)
 
@@ -556,8 +566,31 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - immagine: la stampa del set principale (preferendo la comune), poi la comune, poi la prima;
   - etichetta: "Comune qui", oppure "{Rarità} qui · comune in {set d'ingresso} ({anno})". Basta una stampa comune nel gruppo perché la carta sia "comune qui";
   - senza collezione si esplora; con la collezione si vedono **tutte** le carte, con "mancante" sulle altre, e c'è l'opzione "Solo quelle che possiedi". L'opzione "Mostra anche le mancanti" in fondo si nasconde, perché qui non serve.
+- **Stampa del set** (corretto il 2026-10-07): la miniatura di ogni riga e la carta attiva della scheda sono **sempre** la stampa del set selezionato (`displayPrint`), con o senza collezione.
+  - Prima la miniatura usava la printing posseduta se era nel gruppo (anche di un set collegato, o in un'altra lingua). La scheda apriva la printing posseduta o quella di riferimento, perché il ventaglio sceglie un artwork per `illustration_id` preferendo la posseduta e poi la più recente in inglese: in Masters 25, per esempio, la scheda di Nihil Spellbomb mostrava la stampa di The List. Ora `openSheet` riceve `focusId`: `fanItems` sceglie quella stampa nel suo gruppo di illustrazione e la mette per prima, e la carta attiva è lei.
+  - Le tue printing restano secondarie: bordo ed etichetta "Tua" solo se possiedi **proprio quella stampa** (stesso Scryfall ID, stessa printing o stesso set e numero), più l'elenco delle printing possedute sotto il nome.
+  - **Miniature più grandi**: 112 px (88 px su mobile) contro i 40 px della vista collezione, `loading="lazy"`, con `srcset` small/normal per gli schermi ad alta densità.
+  - **Simbolo del set** accanto all'etichetta di rarità, colorato secondo la rarità di quella stampa (vedi "Simboli delle espansioni"), con testo alternativo "Set · Rarità". Il testo resta: "Comune qui"; "{Rarità} · comune qui in {set}" se questa stampa non è comune ma un'altra del gruppo sì; altrimenti "{Rarità} qui · comune in {set d'ingresso} ({anno})".
 
+- **Controllo rapido, corretto il 2026-10-07**: se `cardnames.json` arrivava dopo la scelta di una carta con Invio, il caricamento riapriva l'elenco dei suggerimenti (test intermittente). Ora i suggerimenti si aggiornano all'arrivo dei nomi solo se l'elenco è ancora aperto; c'è un test con la risposta ritardata.
 - **Campi con suggerimenti** (controllo rapido ed espansione): la chiusura dell'elenco dopo il blur è differita (per permettere il clic su un suggerimento), ma viene **annullata** se il campo torna attivo prima che scatti. Prima un timer vecchio poteva chiudere l'elenco appena riaperto e svuotare il campo; il difetto è stato trovato da un test intermittente in CI.
+
+## Simboli delle espansioni (2026-10-07)
+
+- **Scelta: sprite servito dal sito**, non `svgs.scryfall.io`. Motivi:
+  - **CSP invariata**: il file è sullo stesso dominio e si usa con `<svg><use href="data/seticons.svg#nome">`, come il logo. Con le icone remote serviva aggiungere `https://svgs.scryfall.io` a `img-src`;
+  - **colori**: con `<use>` il tracciato eredita `currentColor`, quindi il simbolo segue il tema scuro e prende i colori di rarità. Un `<img>` SVG remoto non si può ricolorare (servirebbero filtri CSS);
+  - **privacy**: nessuna richiesta in più verso Scryfall, quindi la nota privacy non cambia. Aggiornati solo i crediti: "carte, immagini e simboli delle espansioni".
+- **Pipeline** (`seticons.py`, chiamato da `build`): per ogni set di `sets.json` legge `icon_svg_uri` da `/sets` e scarica l'icona (`svgs.scryfall.io`, senza limiti di frequenza). Poi la **ripulisce** (solo i tracciati visibili, con `fill-rule`; niente colori, id, stili, script; i tracciati con `fill="none"` si scartano) e la riporta a una griglia di 240 unità, con coordinate intere e relative, arrotondate in assoluto (nessun errore che si accumula; a 24 px su schermo 2x un'unità vale circa 0,2 px). Si passa da 644 KB / 276 KB gzip a 285 KB / 102 KB gzip.
+  - **Incrementale**: lo sprite è committato; si riscarica solo un'icona nuova o con la versione cambiata (`?ts` dell'URL, salvato in `data-v`). Senza rete restano le icone già presenti.
+  - Icone escluse perché sono marchi: `planeswalker`, `default`, `dci`. Per quei set `i: ""` e il sito non mostra nulla.
+- **Sito** (`ui/seticon.ts`, `setIcon`):
+  - nel selettore accanto a ogni nome, decorativa (`aria-hidden`), perché il nome è scritto accanto;
+  - dentro il campo dopo la scelta, con `role="img"` e `aria-label` = nome del set;
+  - nella vista per espansione accanto alla rarità, con `aria-label` "Set · Rarità".
+
+  Il nome dell'icona è validato (`[a-z0-9_-]`).
+- **Colori di rarità** (variabili `--rar-*`, chiaro / scuro): comune `#18202B` / `#E5E9EF` (colore del testo), non comune `#5C6875` / `#B3BFCC`, rara `#8C6A0E` / `#E3C063`, mitica `#BF4510` / `#F38A4A`, speciale e bonus `#6A3E9E` / `#BC9DEA`. Contrasto di almeno 4,5:1 sullo sfondo delle schede.
 
 ## Logo (2026-10-06)
 

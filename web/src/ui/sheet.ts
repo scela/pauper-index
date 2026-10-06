@@ -25,8 +25,11 @@ export interface FanItem {
   lang: string;
 }
 
-/** Un elemento per artwork: preferisce la printing posseduta, altrimenti la più recente in inglese. */
-export function fanItems(d: Data, idx: number, res: Result | null): FanItem[] {
+/**
+ * Un elemento per artwork: preferisce la stampa indicata (`focusId`, la stampa del set nella vista per espansione),
+ * poi la printing posseduta, altrimenti la più recente in inglese.
+ */
+export function fanItems(d: Data, idx: number, res: Result | null, focusId?: string): FanItem[] {
   const prints = d.prints.p[idx] || [];
   const ownedIds = new Set<string>();
   const extra: FanItem[] = [];
@@ -51,17 +54,19 @@ export function fanItems(d: Data, idx: number, res: Result | null): FanItem[] {
   }
   const items: FanItem[] = [];
   for (const list of groups.values()) {
+    const focus = focusId ? list.find((p) => p[0] === focusId) : undefined;
     const owned = list.find((p) => ownedIds.has(p[0]));
-    const pick = owned || [...list].reverse().find((p) => !p[7]) || list[list.length - 1];
+    const pick = focus || owned || [...list].reverse().find((p) => !p[7]) || list[list.length - 1];
     const s = d.prints.sets[pick[1]];
     items.push({
       id: pick[0], set: pick[1], cn: pick[2], artist: d.prints.artists[pick[3]] || '', setName: s?.[0] || pick[1].toUpperCase(),
-      date: s?.[1] || '', back: pick[5] === 1, owned: !!owned, lang: pick[7] || 'en',
+      date: s?.[1] || '', back: pick[5] === 1, owned: ownedIds.has(pick[0]), lang: pick[7] || 'en',
     });
   }
   const seen = new Set(items.map((i) => i.id));
   const all = [...extra.filter((e) => !seen.has(e.id)), ...items];
-  return all.sort((a, b) => Number(b.owned) - Number(a.owned) || b.date.localeCompare(a.date));
+  const first = (i: FanItem) => Number(!!focusId && i.id === focusId);
+  return all.sort((a, b) => first(b) - first(a) || Number(b.owned) - Number(a.owned) || b.date.localeCompare(a.date));
 }
 
 let current: { anchor: HTMLElement; idx: number; mode: 'hover' | 'click' } | null = null;
@@ -138,6 +143,7 @@ export interface SheetInput {
   idx: number;
   res: Result | null;
   approx: boolean; // printing non indicata (testo senza set/numero)
+  focusId?: string; // stampa da mostrare come carta attiva (vista per espansione)
   onShowAll: (items: FanItem[], title: string) => void;
 }
 
@@ -145,12 +151,13 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
   cancelClose();
   const { d, idx, res, opts } = input;
   const c = d.cards.c[idx];
-  const items = fanItems(d, idx, res);
+  const items = fanItems(d, idx, res, input.focusId);
   const el = sheetEl();
   current = { anchor, idx, mode };
 
   const ref = d.prints.p[idx]?.[c.r];
-  let active = items.find((i) => i.owned) || items.find((i) => ref && i.id === ref[0]) || items[0];
+  let active = (input.focusId && items.find((i) => i.id === input.focusId))
+    || items.find((i) => i.owned) || items.find((i) => ref && i.id === ref[0]) || items[0];
   let face: 'front' | 'back' = 'front';
 
   const img = h('img', { alt: '', width: 488, height: 680, decoding: 'async' });
