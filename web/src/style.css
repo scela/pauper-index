@@ -1,7 +1,7 @@
 /* Colori e componenti dal prototipo (reference/ce-lho.html); font di sistema, nessuna richiesta esterna. */
 :root{
   --bg:#EDF0F3; --surface:#F8F9FB; --ink:#18202B; --muted:#586272; --line:#CBD2DA; --line-strong:#97A3B0;
-  --accent:#2F5FA8; --accent-ink:#FFFFFF; --accent-soft:#DCE5F3; --danger:#9E3A2B; --warn-bg:#FBEFD9; --warn-ink:#6B4A12;
+  --accent:#2F5FA8; --accent-ink:#FFFFFF; --logo:#555555; --accent-soft:#DCE5F3; --danger:#9E3A2B; --warn-bg:#FBEFD9; --warn-ink:#6B4A12;
   --r-s:4px; --r-m:8px;
   --font:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme:light;
@@ -9,13 +9,13 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#1B2028; --surface:#232A34; --ink:#E5E9EF; --muted:#9CA6B4; --line:#363F4B; --line-strong:#56616F;
-    --accent:#7FA4E6; --accent-ink:#121821; --accent-soft:#2A3850; --danger:#E3907F; --warn-bg:#3A3020; --warn-ink:#F0D9A8;
+    --accent:#7FA4E6; --accent-ink:#121821; --logo:#C9CFD8; --accent-soft:#2A3850; --danger:#E3907F; --warn-bg:#3A3020; --warn-ink:#F0D9A8;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#1B2028; --surface:#232A34; --ink:#E5E9EF; --muted:#9CA6B4; --line:#363F4B; --line-strong:#56616F;
-  --accent:#7FA4E6; --accent-ink:#121821; --accent-soft:#2A3850; --danger:#E3907F; --warn-bg:#3A3020; --warn-ink:#F0D9A8;
+  --accent:#7FA4E6; --accent-ink:#121821; --logo:#C9CFD8; --accent-soft:#2A3850; --danger:#E3907F; --warn-bg:#3A3020; --warn-ink:#F0D9A8;
   color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:border-box}
@@ -35,6 +35,8 @@ a{color:var(--accent)}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 h1{font-size:clamp(1.75rem,4.5vw,2.5rem);line-height:1;letter-spacing:-0.03em;font-weight:700;margin:0}
 h1 a{color:inherit;text-decoration:none}
+.home{display:inline-flex;align-items:center;gap:.28em}
+.logo{width:1.2em;height:1.2em;flex:none;color:var(--logo)}
 .nav{display:flex;gap:4px;align-items:center;font-size:.9375rem}
 .nav a{font-weight:500;padding:6px}
 .langs{display:inline-flex}
@@ -223,6 +225,7 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 /* piè di pagina, toast, pannello di copia */
 .foot{margin-top:24px;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:.75rem}
 .foot p{margin:0}
+.foot .donate{margin-top:2px}
 .foot a{display:inline-block;padding:4px 0;white-space:nowrap}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r-s);font-size:.9375rem;max-width:calc(100% - 32px);opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
 .toast.show{opacity:1}

@@ -10,6 +10,8 @@ export const SITE_TITLE = 'Pauper Index';
 // Testo esatto richiesto da company.wizards.com/en/legal/fancontentpolicy (verificato il 2026-10-05).
 export const FCP_NOTICE = `${SITE_TITLE} is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.`;
 export const REPORT_EMAIL = 'massadalbe@hotmail.com';
+// Solo un link semplice: nessuno script o widget esterno (CSP invariata).
+export const DONATE_URL = 'https://ko-fi.com/pauperindex';
 
 const ext = (href: string, text: string) => h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text);
 const items = (prefix: string, n: number) =>
@@ -51,6 +53,10 @@ export function renderAbout(root: HTMLElement, d: Data | null): void {
     h('section', null,
       h('h3', null, t('about.report')),
       h('p', null, ...tNodes('about.report.text', { email: mail }))),
+
+    h('section', null,
+      h('h3', null, t('about.support')),
+      h('p', null, ...tNodes('about.support.text', { link: ext(DONATE_URL, t('donate.link')) }))),
 
     h('p', null, h('a', { href: '#' }, t('about.back'))),
   ));

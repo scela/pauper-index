@@ -252,8 +252,11 @@ test('CSV malevolo: nessuno script eseguito, testo mostrato alla lettera', async
 
 test('Informazioni: avviso Fan Content Policy ufficiale in inglese, traduzione solo in italiano', async ({ page }) => {
   await setup(page);
-  await expect(page.locator('footer p')).toHaveCount(1);
+  // due righe: avviso breve e donazioni (solo un link semplice, nessun widget)
+  await expect(page.locator('footer p')).toHaveCount(2);
   await expect(page.locator('footer')).toContainText(tr('foot.line'));
+  await expect(page.locator('footer .donate')).toHaveText(`${tr('donate.lead')} ${tr('donate.link')}`);
+  await expect(page.locator('footer a[href="https://ko-fi.com/pauperindex"]')).toHaveText(tr('donate.link'));
   await page.locator('footer a[href="#informazioni"]').focus();
   await page.keyboard.press('Enter');
   const about = page.locator('#viewAbout');
@@ -265,6 +268,7 @@ test('Informazioni: avviso Fan Content Policy ufficiale in inglese, traduzione s
   await expect(about).toContainText(tr('about.limits.2'));
   await expect(about).toContainText(tr('about.how.6'));
   await expect(about.locator('a[href^="mailto:massadalbe@hotmail.com"]')).toHaveCount(1);
+  await expect(about.locator('a[href="https://ko-fi.com/pauperindex"]')).toHaveText(tr('donate.link'));
   await page.click('#viewAbout a[href="#"]');
   await expect(page.locator('#viewMain')).toBeVisible();
 });
@@ -426,8 +430,9 @@ test('espansione: set nascosti attivabili; con la collezione "ne possiedi" e "so
 
   await uploadCollection(page);
   await pickSet(page, 'ice age', 'Ice Age');
-  // Brainstorm (stampa di Ice Age) e Counterspell (posseduta in Alpha, stampata anche in Ice Age): conta la carta
-  await expect(page.locator('#verdict')).toContainText(tr('set.summaryOwned', { n: 2 }).trim());
+  // Brainstorm (stampa di Ice Age) e Counterspell (posseduta in Alpha, stampata anche in Ice Age): conta la carta;
+  // tra parentesi solo quelle possedute nella stampa di questa espansione (Brainstorm)
+  await expect(page.locator('#verdict')).toContainText(tr('set.summaryOwned', { n: 2, here: 1 }).trim());
   await expect(page.locator('label:has(#optMissing)')).toBeHidden();
   // di default si vedono anche le mancanti (esplorazione)
   await expect(page.locator('#cardRows')).toContainText(tr('badge.missing'));

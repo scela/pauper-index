@@ -355,7 +355,8 @@ function renderResults(): void {
   let sub: string;
   const g = selectedGroup();
   if (g) {
-    v = t('set.summary', { n: R.length }) + (coll ? t('set.summaryOwned', { n: fmtInt(owned) }) : '');
+    const here = coll ? R.filter((x) => x.owned > 0 && ownedPrintInSet(x)).length : 0;
+    v = t('set.summary', { n: R.length }) + (coll ? t('set.summaryOwned', { n: fmtInt(owned), here: fmtInt(here) }) : '');
     sub = t('set.sub', { name: g.name, year: g.date.slice(0, 4), period });
   } else if (!S.groups.length) {
     v = t('res.list', { n: R.length });
@@ -408,6 +409,14 @@ function isNew(entry: string | undefined): boolean {
   return age >= 0 && age < NEW_DAYS;
 }
 
+/** La prima stampa posseduta che appartiene ai set del gruppo selezionato (se c'è). */
+function ownedPrintInSet(x: Result): Result['prints'][number] | undefined {
+  const d = S.d!;
+  const prints = d.prints.p[x.idx] || [];
+  const inSet = new Set(printsInSets(d, x.idx, S.setCodes!).map((i) => prints[i][0]));
+  return x.prints.find((p) => inSet.has(p.row.i || (p.print >= 0 ? prints[p.print][0] : '')));
+}
+
 /** Vista per espansione: immagine della stampa di quel set ed etichetta della rarità "qui". */
 function setThumb(x: Result): { thumb: { id: string; owned: boolean }; label: string; common: boolean } | null {
   const d = S.d!;
@@ -416,8 +425,7 @@ function setThumb(x: Result): { thumb: { id: string; owned: boolean }; label: st
   const pi = displayPrint(d, x.idx, codes, S.setFilter!);
   if (pi < 0) return null;
   const id = prints[pi][0];
-  const inSet = new Set(printsInSets(d, x.idx, codes).map((i) => prints[i][0]));
-  const ownedHere = x.prints.find((p) => inSet.has(p.row.i || (p.print >= 0 ? prints[p.print][0] : '')));
+  const ownedHere = ownedPrintInSet(x);
   const ownedId = ownedHere ? (ownedHere.row.i || prints[ownedHere.print][0]) : '';
   const r = rarityHere(d, x.idx, codes)!;
   let label: string;

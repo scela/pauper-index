@@ -168,6 +168,8 @@ export const en: Record<Key, Msg> = {
 
   'foot.line': 'Pauper Index is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards.',
   'foot.link': 'About, credits and privacy',
+  'donate.lead': 'Pauper Index is free. If you find it useful, you can',
+  'donate.link': 'buy me a Counterspell',
 
   'sheet.close': 'Close',
   'sheet.closeAria': 'Close card details',
@@ -228,7 +230,7 @@ export const en: Record<Key, Msg> = {
   'set.searchHidden': 'Also search promos, Secret Lair, The List and digital-only sets',
   'set.onlyOwned': 'Only cards you own',
   'set.summary': { one: 'In this set: {n} card played in Pauper', other: 'In this set: {n} cards played in Pauper' },
-  'set.summaryOwned': ' · you own {n}',
+  'set.summaryOwned': ' · you own {n} ({here} in this set)',
   'set.sub': '{name} ({year}) · period: {period}',
   'set.common': 'Common here',
   'set.notCommon': '{rarity} here · common in {set} ({year})',
@@ -276,5 +278,7 @@ export const en: Record<Key, Msg> = {
   'about.report': 'Report an error',
   'about.report.text': 'Write to {email}, saying which card, what you expected and what you see. Do not attach your collection.',
   'about.report.subject': 'Pauper Index: report',
+  'about.support': 'Support the site',
+  'about.support.text': 'Pauper Index is free and will stay free: no feature is reserved for donors. If you find it useful, you can {link} on Ko-fi.',
   'about.back': '← Back to the comparison',
 };

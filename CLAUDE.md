@@ -17,7 +17,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
 
 ## Stato attuale (2026-10-06)
 
-- **Online**: sito https://scela.github.io/pauper-index/, repository pubblico https://github.com/scela/pauper-index. Aggiornamento automatico ogni giorno alle 07:23 UTC, più l'avvio manuale (Actions → "Aggiorna e pubblica" → Run workflow).
+- **Online**: sito https://pauperindex.com (dominio personalizzato; www e il vecchio https://scela.github.io/pauper-index/ reindirizzano lì), repository pubblico https://github.com/scela/pauper-index. Aggiornamento automatico ogni giorno alle 07:23 UTC, più l'avvio manuale (Actions → "Aggiorna e pubblica" → Run workflow).
 - **Fasi**:
   - [x] Fase 0: setup e ispezione dei formati
   - [x] Fase 1: pipeline in locale, test, confronto con la baseline
@@ -30,7 +30,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] Funzione 3: filtro per espansione (vedi "Filtro per espansione")
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi all'ultimo commit `3549f78`): 90 pytest, 47 Vitest, 66 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo logo, donazioni e dominio, 2026-10-06): 90 pytest, 47 Vitest, 66 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -38,9 +38,8 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
 
 In quest'ordine, ciascuno **solo dopo il via dell'utente**, fermandosi alla fine con un report:
 
-1. **Donazioni**: da definire con l'utente (piattaforma e testo). Vincoli già noti: nessun paywall (regole Scryfall), nessuno script o iframe esterno (CSP: solo un link semplice), testo in IT e EN, nessun logo di Wizards, ManaBox o Scryfall.
-2. **Dominio personalizzato**: da definire con l'utente (nome e registrar). Su GitHub Pages servono il dominio nelle impostazioni di Pages, i record DNS e l'HTTPS obbligatorio. Da verificare dopo: `base` di Vite, link assoluti, `REPORT_EMAIL`, manifest e README.
-3. **Funzione 4, "Mazzi che puoi costruire"** (richiesta dell'utente, da implementare **dopo aver spiegato la soluzione scelta per gli archetipi** e aver avuto l'approvazione):
+1. ~~Donazioni~~, ~~dominio personalizzato~~ e ~~logo~~: fatti il 2026-10-06 (vedi "Logo", "Donazioni" e "Dominio").
+2. **Funzione 4, "Mazzi che puoi costruire"** (richiesta dell'utente, da implementare **dopo aver spiegato la soluzione scelta per gli archetipi** e aver avuto l'approvazione):
    - **Dati**: decklist degli ultimi 61 giorni, con un'opzione per periodi più lunghi se le dimensioni lo permettono. Nessun nome di giocatore. Le liste identiche si uniscono, mostrando quante volte compaiono. Si caricano solo quando si apre la sezione; vanno misurate le dimensioni.
    - **Archetipi**: la fonte non li indica. Valutare se esiste una classificazione open source degli archetipi Pauper con licenza compatibile; altrimenti raggruppare i mazzi simili tramite le carte più caratteristiche, e usare quelle carte come nome provvisorio del gruppo.
    - **Completamento**: percentuale delle carte del mazzo possedute, tenendo conto delle copie (per ogni carta il minimo tra copie possedute e richieste). Le terre base normali sono escluse dal calcolo e sempre disponibili. Opzione solo main / main più side.
@@ -48,7 +47,7 @@ In quest'ordine, ciascuno **solo dopo il via dell'utente**, fermandosi alla fine
    - **Export**: carte mancanti in formato "1 Nome" (lista acquisti) e decklist completa in testo importabile in ManaBox.
    - **Calcolo nel browser**; se è pesante, in un web worker (oggi la CSP ha `worker-src 'none'`: va aperta a `'self'`).
    - Testi in IT e EN.
-4. **Fase 4**: rifinitura e README completo.
+3. **Fase 4**: rifinitura e README completo.
 
 Idee per dopo, non pianificate: `docs/IDEE.md`.
 
@@ -119,7 +118,7 @@ npm run build; npm run preview       # build di produzione con CSP su http://loc
 npm test                             # Vitest (logica, sicurezza, i18n, test locali su reference/private)
 npx playwright install chromium; npm run e2e   # Playwright sulla build: desktop e mobile, IT e EN
 npm run screenshots                  # con preview attivo: schermate in .cache/screenshots/
-npm run icons                        # rigenera le icone PNG da public/icon.svg
+npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
 # Stato della CI
 gh run list --workflow aggiorna.yml --limit 5; gh pr list
@@ -441,7 +440,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Persistenza**: IndexedDB (database `pauper-index`) per la collezione; localStorage solo per tema, ordinamento e filtro, con prefisso `pauper-index:`. "Cancella i miei dati" elimina il database e **solo** le chiavi `pauper-index:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
 - **Tabella**: pagine da 100 righe ("Mostra altre"). Ordinamento per percentuale di mazzi, nome, ultima apparizione (recente o meno recente). Filtro "viste negli ultimi 6 mesi / non viste da oltre 6 mesi", rispetto alla data dei dati.
 - **Segnalare un errore**: link `mailto:massadalbe@hotmail.com` nella pagina Informazioni (`REPORT_EMAIL` in `web/src/ui/about.ts`).
-- **Icone**: `public/icon.svg` più PNG generate con `npm run icons` (Chromium di Playwright) e committate. Nessun simbolo di Wizards.
+- **Icone**: generate da `logo/logo.svg` con `npm run icons` e committate (vedi "Logo"). Nessun simbolo di Wizards.
 
 ## Automazione e pubblicazione (Fase 3)
 
@@ -524,15 +523,35 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Nascosti di default, attivabili con un'opzione sotto il campo** (`isHiddenSet`): set di tipo promo, memorabilia, token e alchemy, set solo digitali, Secret Lair, The List, e i set il cui padre è Secret Lair o The List. Se la ricerca non trova nulla tra i set visibili, l'elenco propone "Cerca anche tra promo, Secret Lair…", perché l'opzione sotto il campo è coperta dall'elenco aperto.
 - **Vista per espansione**:
   - la lista (con i filtri attivi) si restringe alle carte con almeno una stampa nei set del gruppo, **a qualsiasi rarità**: la legalità è della carta. Anche gli export seguono la selezione;
-  - riepilogo in testa: "In questo set: N carte giocate in Pauper", più " · ne possiedi M" con la collezione. M conta le carte possedute **in qualsiasi stampa**; la stampa di quel set, se è tua, ha il bordo sulla miniatura;
+  - riepilogo in testa: "In questo set: N carte giocate in Pauper", più " · ne possiedi M (K in questa espansione)" con la collezione (decisione all'approvazione della funzione 3). M conta le carte possedute **in qualsiasi stampa**, K solo quelle di cui possiedi una stampa dei set del gruppo; quella stampa ha il bordo sulla miniatura;
   - immagine: la stampa del set principale (preferendo la comune), poi la comune, poi la prima;
   - etichetta: "Comune qui", oppure "{Rarità} qui · comune in {set d'ingresso} ({anno})". Basta una stampa comune nel gruppo perché la carta sia "comune qui";
   - senza collezione si esplora; con la collezione si vedono **tutte** le carte, con "mancante" sulle altre, e c'è l'opzione "Solo quelle che possiedi". L'opzione "Mostra anche le mancanti" in fondo si nasconde, perché qui non serve.
 
 - **Campi con suggerimenti** (controllo rapido ed espansione): la chiusura dell'elenco dopo il blur è differita (per permettere il clic su un suggerimento), ma viene **annullata** se il campo torna attivo prima che scatti. Prima un timer vecchio poteva chiudere l'elenco appena riaperto e svuotare il campo; il difetto è stato trovato da un test intermittente in CI.
 
+## Logo (2026-10-06)
+
+- **Originale**: `logo/logo.svg` (dell'utente, un solo tracciato `#555555`). Nessun elemento di Wizards (simboli di mana, logo di Magic, retro delle carte, planeswalker).
+- **`npm run icons`** (`web/scripts/icons.mjs`) genera tutto da lì, senza dipendenze in più: tracciato compattato (coordinate relative, viewBox ritagliato), PNG disegnate in un canvas di Chromium e salvate come PNG indicizzate con zlib al massimo.
+  - `public/logo.svg`: `<symbol id="logo">` con `fill="currentColor"`, usato in testata con `<svg class="logo"><use href="/logo.svg#logo">`; il colore viene da `--logo` (`#555555` chiaro, `#C9CFD8` scuro), quindi segue anche il tema scelto a mano;
+  - `public/icon.svg`: favicon con `prefers-color-scheme` (stessi due colori);
+  - `apple-touch-icon.png` (180, quadrato pieno), `icon-192/512.png` (angoli arrotondati), `icon-maskable-512.png` (logo al 56%, dentro l'area sicura), `og-image.png` (1200×630, logo + "Pauper Index" + dominio): tutte su sfondo scuro `#1B2028` con il logo `#C9CFD8`.
+- **Varianti scelte dall'utente**: in tema scuro il logo diventa grigio chiaro senza riquadro; icone della schermata Home su sfondo scuro. Il testo dell'og-image usa il font di sistema della macchina che rigenera (Segoe UI su Windows).
+
+## Donazioni (2026-10-06)
+
+- Link semplice a https://ko-fi.com/pauperindex (`DONATE_URL` in `web/src/ui/about.ts`): una riga nel piè di pagina (`.donate`, chiavi `donate.lead` + `donate.link`) e la sezione "Sostenere il sito" in Informazioni (`about.support*`). Nessuno script né widget, CSP invariata; nessun banner, popup o funzione riservata a chi dona.
+
+## Dominio (2026-10-06)
+
+- **pauperindex.com** (registrar Porkbun, DNS Porkbun): 4 record A e 4 AAAA di GitHub Pages sul dominio principale, CNAME `www` → `scela.github.io`, MX e SPF di Porkbun per l'inoltro email, TXT `_github-pages-challenge-scela` (dominio verificato nell'account). Nessun record CAA.
+- Dominio impostato nelle impostazioni di Pages via API (`gh api -X PUT repos/scela/pauper-index/pages -f cname=pauperindex.com`); con il deploy da Actions **non serve** il file `CNAME`. GitHub reindirizza `www` e `scela.github.io/pauper-index/` al dominio principale.
+- **Attenzione**: dopo il cambio del dominio il sito resta in 404 finché non c'è un **nuovo deploy** (rilanciare solo il job di deploy di una vecchia esecuzione fallisce per "Multiple artifacts named github-pages": serve un'esecuzione nuova, per esempio Run workflow).
+- `base` di Vite: `/`; manifest con `start_url` e `scope` `/`; link canonico e meta Open Graph assoluti su `https://pauperindex.com/` (descrizione OG in italiano e inglese nella stessa frase, perché i crawler non eseguono JavaScript).
+
 ## Repository e privacy dei commit
 
-- Repository pubblico https://github.com/scela/pauper-index, sito https://scela.github.io/pauper-index/ (Pages da GitHub Actions, HTTPS obbligatorio).
+- Repository pubblico https://github.com/scela/pauper-index, sito https://pauperindex.com (Pages da GitHub Actions, HTTPS obbligatorio).
 - Email dei commit: **solo** l'indirizzo noreply `132697821+scela@users.noreply.github.com`, impostato nella configurazione **locale** del repository. Prima del primo push la storia è stata riscritta (con l'autorizzazione dell'utente) per togliere l'email personale; i commit del bot usano `41898282+github-actions[bot]@users.noreply.github.com`.
 - Prima di ogni push che tocca file nuovi: nessun file di `reference/private/` e nessuna riga dei file privati nei commit.

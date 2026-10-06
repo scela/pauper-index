@@ -170,6 +170,8 @@ export const it = {
 
   'foot.line': 'Pauper Index è Fan Content non ufficiale consentito dalla Fan Content Policy, non approvato da Wizards.',
   'foot.link': 'Informazioni, crediti e privacy',
+  'donate.lead': 'Pauper Index è gratuito. Se ti è utile, puoi',
+  'donate.link': 'comprarmi una Counterspell',
 
   'sheet.close': 'Chiudi',
   'sheet.closeAria': 'Chiudi la scheda',
@@ -230,7 +232,7 @@ export const it = {
   'set.searchHidden': 'Cerca anche tra promo, Secret Lair, The List e set digitali',
   'set.onlyOwned': 'Solo quelle che possiedi',
   'set.summary': { one: 'In questo set: {n} carta giocata in Pauper', other: 'In questo set: {n} carte giocate in Pauper' },
-  'set.summaryOwned': ' · ne possiedi {n}',
+  'set.summaryOwned': ' · ne possiedi {n} ({here} in questa espansione)',
   'set.sub': '{name} ({year}) · periodo: {period}',
   'set.common': 'Comune qui',
   'set.notCommon': '{rarity} qui · comune in {set} ({year})',
@@ -278,6 +280,8 @@ export const it = {
   'about.report': 'Segnalare un errore',
   'about.report.text': 'Scrivi a {email}, indicando la carta, cosa ti aspettavi e cosa vedi. Non allegare la tua collezione.',
   'about.report.subject': 'Pauper Index: segnalazione',
+  'about.support': 'Sostenere il sito',
+  'about.support.text': 'Pauper Index è gratuito e lo resterà: nessuna funzione è riservata a chi dona. Se ti è utile, puoi {link} su Ko-fi.',
   'about.back': '← Torna al confronto',
 } satisfies Record<string, Msg>;
 

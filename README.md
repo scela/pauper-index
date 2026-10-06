@@ -4,9 +4,10 @@ Di tutte le carte giocate in Pauper, quali possiedi, in qualunque printing?
 
 Pauper Index confronta la tua collezione [ManaBox](https://manabox.app) con la lista delle carte giocate nei tornei Pauper (MTGO e cartaceo). La lista è integrata nel sito e si aggiorna da sola **ogni giorno**; tu carichi solo la tua collezione, che resta nel browser.
 
-- **Sito**: https://scela.github.io/pauper-index/
+- **Sito**: https://pauperindex.com (il vecchio indirizzo https://scela.github.io/pauper-index/ reindirizza qui)
 - **Dati**: decklist da [MTGODecklistCache](https://github.com/Jiliac/MTGODecklistCache), carte, legalità e immagini da [Scryfall](https://scryfall.com).
 - **Segnalazioni**: massadalbe@hotmail.com
+- **Sostieni il sito**: https://ko-fi.com/pauperindex (il sito resta gratuito e completo)
 
 ## Come si aggiorna
 

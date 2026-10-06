@@ -75,7 +75,8 @@ function pauperIndexData(): Plugin {
 }
 
 export default defineConfig({
-  base: './',
+  // sito alla radice del dominio personalizzato (https://pauperindex.com/)
+  base: '/',
   plugins: [pauperIndexData()],
   build: { target: 'es2022', sourcemap: false },
   server: { port: 5173, strictPort: true },

@@ -6,3 +6,5 @@
 - **Prezzi Cardmarket da Scryfall**: valore delle carte possedute e costo delle mancanti, anche per i mazzi da completare.
 - **Confronto tra due collezioni**.
 - **Condivisione diretta del CSV da ManaBox al sito installato** (Web Share Target nel manifest). Funziona solo su Android, con il sito installato come app; su iPhone non è supportato.
+- **Link di affiliazione per le carte mancanti** (per esempio verso un negozio online): da verificare quali programmi esistono (Cardmarket, TCGplayer, Card Kingdom e altri), le loro condizioni e la compatibilità con le regole di Scryfall e con la CSP (solo link semplici, nessuno script).
+- **Contatore di visite senza cookie**: da verificare rispetto alla normativa privacy (GDPR e direttiva ePrivacy: dati raccolti, IP, consenso, informativa) e alla CSP; oggi la pagina Informazioni dichiara "nessuna analytics".
