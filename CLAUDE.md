@@ -15,26 +15,84 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
 - User-Agent `PauperIndex/0.1`;
 - variabili d'ambiente `PAUPER_INDEX_*`.
 
-## Stato
+## Stato attuale (2026-10-06)
 
-- [x] Fase 0: setup e ispezione dei formati
-- [x] Fase 1: pipeline in locale, test, confronto con la baseline
-- [x] Fase 2: frontend
-- [x] Fase 3: GitHub Actions e deploy (sito: https://scela.github.io/pauper-index/, repo: https://github.com/scela/pauper-index)
-- [ ] Fase 4: rifinitura e README
+- **Online**: sito https://scela.github.io/pauper-index/, repository pubblico https://github.com/scela/pauper-index. Aggiornamento automatico ogni giorno alle 07:23 UTC, più l'avvio manuale (Actions → "Aggiorna e pubblica" → Run workflow).
+- **Fasi**:
+  - [x] Fase 0: setup e ispezione dei formati
+  - [x] Fase 1: pipeline in locale, test, confronto con la baseline
+  - [x] Fase 2: frontend (con il layout rivisto dopo la fase)
+  - [x] Fase 3: GitHub Actions, deploy su Pages, keepalive, allarmi
+  - [ ] Fase 4: rifinitura e README completo
+- **Funzioni aggiunte dopo la Fase 3** (una alla volta, con approvazione dopo ciascuna):
+  - [x] Funzione 1: interfaccia in italiano e inglese (vedi "Lingue")
+  - [x] Funzione 2: controllo rapido di una carta (vedi "Controllo rapido")
+  - [x] Funzione 3: filtro per espansione (vedi "Filtro per espansione")
+  - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
+- **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
+- **Test** (tutti verdi all'ultimo commit `3549f78`): 90 pytest, 47 Vitest, 66 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
+- **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
+
+## Prossimi passi
+
+In quest'ordine, ciascuno **solo dopo il via dell'utente**, fermandosi alla fine con un report:
+
+1. **Donazioni**: da definire con l'utente (piattaforma e testo). Vincoli già noti: nessun paywall (regole Scryfall), nessuno script o iframe esterno (CSP: solo un link semplice), testo in IT e EN, nessun logo di Wizards, ManaBox o Scryfall.
+2. **Dominio personalizzato**: da definire con l'utente (nome e registrar). Su GitHub Pages servono il dominio nelle impostazioni di Pages, i record DNS e l'HTTPS obbligatorio. Da verificare dopo: `base` di Vite, link assoluti, `REPORT_EMAIL`, manifest e README.
+3. **Funzione 4, "Mazzi che puoi costruire"** (richiesta dell'utente, da implementare **dopo aver spiegato la soluzione scelta per gli archetipi** e aver avuto l'approvazione):
+   - **Dati**: decklist degli ultimi 61 giorni, con un'opzione per periodi più lunghi se le dimensioni lo permettono. Nessun nome di giocatore. Le liste identiche si uniscono, mostrando quante volte compaiono. Si caricano solo quando si apre la sezione; vanno misurate le dimensioni.
+   - **Archetipi**: la fonte non li indica. Valutare se esiste una classificazione open source degli archetipi Pauper con licenza compatibile; altrimenti raggruppare i mazzi simili tramite le carte più caratteristiche, e usare quelle carte come nome provvisorio del gruppo.
+   - **Completamento**: percentuale delle carte del mazzo possedute, tenendo conto delle copie (per ogni carta il minimo tra copie possedute e richieste). Le terre base normali sono escluse dal calcolo e sempre disponibili. Opzione solo main / main più side.
+   - **Visualizzazione**: elenco ordinato per completamento, con percentuale, carte mancanti con quantità, data, torneo, piazzamento e link al torneo; filtro per completamento minimo.
+   - **Export**: carte mancanti in formato "1 Nome" (lista acquisti) e decklist completa in testo importabile in ManaBox.
+   - **Calcolo nel browser**; se è pesante, in un web worker (oggi la CSP ha `worker-src 'none'`: va aperta a `'self'`).
+   - Testi in IT e EN.
+4. **Fase 4**: rifinitura e README completo.
+
+Idee per dopo, non pianificate: `docs/IDEE.md`.
+
+## Regole di lavoro (decise dall'utente)
+
+**Privacy**:
+- `reference/private/` contiene dati personali (export ManaBox reali): si apre **solo** per capire il formato dell'export e per i test in locale. Nessun suo contenuto finisce in file committati, fixture comprese: le fixture sono sintetiche. I test locali (`web/tests/private.test.ts`) stampano solo conteggi.
+- Prima di ogni push che aggiunge file: nessun file di `reference/private/` e nessuna riga dei file privati nei commit.
+- Mai i nomi dei giocatori (`Player`) né `AnchorUri` negli output.
+- Email dei commit: solo l'indirizzo noreply (vedi "Repository e privacy dei commit").
+
+**Cartelle**: non cercare né aprire file fuori dalla cartella del progetto (Desktop, Download o altre cartelle personali). Se manca un file, si chiede all'utente. I file temporanei vanno nello scratchpad della sessione o in `.cache/` (ignorata).
+
+**Test**:
+- Se un test fallisce perché il comportamento è cambiato **di proposito**, si può aggiornare il test.
+- Se fallisce per un comportamento che **potrebbe essere un difetto**, si corregge il codice, non il test.
+- Se non è chiaro quale dei due casi sia, ci si ferma e si chiede all'utente.
+- In ogni report vanno elencati i test modificati, ciascuno con il motivo in una riga.
+
+**Dependabot**: le sue Pull Request attivano il job `test` (evento `pull_request`: solo test, nessuna pubblicazione e nessuna Issue). Si controllano e si uniscono (squash) **solo se tutti i test passano**; nei report si dice cosa è stato unito.
+
+**Modo di lavorare**: una fase o una funzione alla volta; alla fine ci si ferma con un report (cosa è stato fatto, test modificati, PR unite, cosa verificare). Ogni testo nuovo dell'interfaccia va in IT e in EN.
 
 ## Struttura
 
 ```
-docs/SPEC.md            specifica
-reference/              prototipo (ce-lho.html) e script (pauper_sync.py) da portare
+docs/SPEC.md            specifica dell'utente (non modificarla)
+docs/IDEE.md            idee da valutare dopo la prima versione
+reference/              prototipo (ce-lho.html) e script (pauper_sync.py) da cui si è partiti
 reference/private/      export ManaBox personali: IGNORATA da git, non copiarne mai il contenuto
-baseline/               pauper-2026-09-14.csv: List ManaBox della ricerca precedente (carte giocate negli ultimi 12 mesi)
-pipeline/               pacchetto Python pauper_index (Fase 1)
+baseline/               pauper-2026-09-14.csv: List ManaBox della ricerca precedente (carte giocate negli ultimi 12 mesi), committata
+pipeline/               pacchetto Python pauper_index e test
 data/                   output committati, letti dal frontend; data/manual/ contiene i file curati a mano
-web/                    frontend (Fase 2)
-.cache/                 IGNORATA: clone della fonte, bulk Scryfall, cache HTTP
+web/                    frontend (Vite + TypeScript)
+.github/                workflow aggiorna.yml, dependabot.yml, keepalive.txt
+.cache/                 IGNORATA: clone della fonte, bulk Scryfall, cache HTTP, screenshot
 ```
+
+**File principali**:
+- Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `review.py` (revisioni, snapshot, allarme), `scryfall.py` (client con limiti di frequenza), `config.py`.
+- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
+- Test: `pipeline/tests/`, `web/tests/` (Vitest), `web/e2e/smoke.spec.ts` (Playwright).
+- Automazione: `.github/workflows/aggiorna.yml`.
+- Documentazione: questo file, `README.md` (avvio manuale, file manuali, comandi locali), `docs/IDEE.md`.
 
 ## Ambiente e comandi
 
@@ -43,13 +101,28 @@ Sviluppo su Windows 11 (PowerShell, Git for Windows); la CI gira su Ubuntu.
 - Node 24.
 
 ```powershell
-python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -e "pipeline[dev]"   # Fase 1
-.\.venv\Scripts\python -m pytest pipeline
-cd web; npm ci                       # Fase 2 (lockfile: web/package-lock.json)
+# Pipeline (dalla radice del repo)
+python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -e "pipeline[dev]"
+.\.venv\Scripts\python -m pauper_index build      # aggiorna fonte e bulk, ricalcola, scrive data/
+.\.venv\Scripts\python -m pauper_index review     # revisioni dei set scadute (--force SET, --today AAAA-MM-GG)
+.\.venv\Scripts\python -m pauper_index alarm      # allarme "fonte ferma"
+.\.venv\Scripts\python -m pauper_index changed    # cambiamenti significativi in data/ (usato dalla CI)
+.\.venv\Scripts\python -m pauper_index sets       # report dei set d'ingresso
+.\.venv\Scripts\python -m pauper_index baseline   # confronto con la baseline
+#   build: --offline (niente rete, usa cache e fuzzy_matches.csv), --no-fetch (non aggiorna la fonte)
+.\.venv\Scripts\python -m pytest pipeline; .\.venv\Scripts\ruff check pipeline
+
+# Frontend (cartella web)
+cd web; npm ci                       # lockfile: web/package-lock.json
 npm run dev                          # sviluppo su http://localhost:5173 (senza CSP)
 npm run build; npm run preview       # build di produzione con CSP su http://localhost:4173
-npm test                             # Vitest (logica, sicurezza, test locali su reference/private)
-npx playwright install chromium; npm run e2e   # smoke test desktop + mobile sulla build
+npm test                             # Vitest (logica, sicurezza, i18n, test locali su reference/private)
+npx playwright install chromium; npm run e2e   # Playwright sulla build: desktop e mobile, IT e EN
+npm run screenshots                  # con preview attivo: schermate in .cache/screenshots/
+npm run icons                        # rigenera le icone PNG da public/icon.svg
+
+# Stato della CI
+gh run list --workflow aggiorna.yml --limit 5; gh pr list
 ```
 
 ## Convenzioni
@@ -178,15 +251,9 @@ Le carte dei 12 mesi (3.084) non cambiano.
 - **Nomi in altre lingue**: `GET /cards/search?q=lang:any !"<nome>"` trova il nome stampato in qualsiasi lingua, anche senza accenti. Con le virgolette ma senza `!` non funziona.
 - **Immagini**: `https://cards.scryfall.io/{small|normal|large}/{front|back}/{id[0]}/{id[1]}/{id}.jpg?{ts}`. Funzionano anche senza `?ts`, quindi l'URL si ricava dallo Scryfall ID di qualsiasi printing, anche di quelle non presenti in `default_cards` (lingue diverse).
 
-## Pipeline: comandi
+## Pipeline: tempi
 
-```powershell
-.\.venv\Scripts\python -m pauper_index build      # aggiorna fonte e bulk, ricalcola, scrive data/
-.\.venv\Scripts\python -m pauper_index sets       # data/reviews/set-ingresso.md
-.\.venv\Scripts\python -m pauper_index baseline   # data/reviews/baseline-2026-09-14.md
-#   --offline: niente rete (usa cache e fuzzy_matches.csv); --no-fetch: non aggiorna la fonte
-.\.venv\Scripts\python -m pytest pipeline; .\.venv\Scripts\ruff check pipeline
-```
+I comandi sono in "Ambiente e comandi". `sets` scrive `data/reviews/set-ingresso.md`, `baseline` scrive `data/reviews/baseline-2026-09-14.md`.
 
 Tempi in locale: build offline circa 26 s; prima build online circa 90 s (circa 120 richieste Scryfall a 0,55 s, poi in cache).
 
@@ -350,11 +417,12 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - `compare` (abbinamento, definizione della lista, confronto);
   - `exports`, `format`, `store`;
   - `dom`: `h()`, l'unico modo di creare elementi; il testo passa sempre da `textContent`.
-- `src/ui/`: `sheet` (scheda e ventaglio), `about` (Informazioni). `src/main.ts`: stato, eventi, rendering.
+  - `quick` (controllo rapido) e `sets` (gruppi di set e rarità per set), aggiunti con le funzioni 2 e 3.
+- `src/ui/`: `sheet` (scheda e ventaglio), `about` (Informazioni), `quick` e `setpicker` (campi con suggerimenti). `src/i18n/`: dizionari. `src/main.ts`: stato, eventi, rendering.
 - `tests/`: Vitest. `private.test.ts` gira solo se trova `reference/private/esempio-testo.txt` e stampa solo conteggi. `e2e/`: Playwright, progetti desktop e "mobile" (iPhone 13 emulato su Chromium). `tests/fixtures/`: dati sintetici.
 - `vite.config.ts`, con un plugin che:
   - in sviluppo serve `/data/*` da `../data`;
-  - in build copia in `dist/data/` **solo** `cards`, `printings`, `names`, `allnames`, `meta` e `reviews/<set>.(json|md)` / `reviews/index.json`. I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`) restano fuori dal sito;
+  - in build copia in `dist/data/` **solo** `cards`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `meta` e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
   - inietta la CSP (meta tag) **solo in build**, perché il dev server di Vite usa stili inline.
 
 **Decisioni**:
@@ -462,19 +530,6 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - senza collezione si esplora; con la collezione si vedono **tutte** le carte, con "mancante" sulle altre, e c'è l'opzione "Solo quelle che possiedi". L'opzione "Mostra anche le mancanti" in fondo si nasconde, perché qui non serve.
 
 - **Campi con suggerimenti** (controllo rapido ed espansione): la chiusura dell'elenco dopo il blur è differita (per permettere il clic su un suggerimento), ma viene **annullata** se il campo torna attivo prima che scatti. Prima un timer vecchio poteva chiudere l'elenco appena riaperto e svuotare il campo; il difetto è stato trovato da un test intermittente in CI.
-
-## Regola sui test (decisa dall'utente)
-
-- Se un test fallisce perché il comportamento è cambiato **di proposito**, si può aggiornare il test.
-- Se fallisce per un comportamento che **potrebbe essere un difetto**, si corregge il codice, non il test.
-- Se non è chiaro quale dei due casi sia, ci si ferma e si chiede all'utente.
-- In ogni report vanno elencati i test modificati, ciascuno con il motivo in una riga.
-
-## Dependabot
-
-Le Pull Request di Dependabot attivano il job `test` (evento `pull_request`: solo test, nessuna pubblicazione e nessuna Issue). Si uniscono (squash) **solo se tutti i test passano**, e si riporta all'utente cosa è stato unito.
-
-## Decisioni in sospeso
 
 ## Repository e privacy dei commit
 
