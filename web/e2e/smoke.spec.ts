@@ -56,8 +56,9 @@ test('lingua del browser, testi statici, area di caricamento, filtri e lista, co
   await expect(page.locator('#period option').first()).toContainText(tr('period.0'));
   const n = Number((await page.locator('#verdict').innerText()).replace(/[.,]/g, '').match(/\d+/)?.[0]);
   await expect(page.locator('#verdict')).toHaveText(tr('res.list', { n }));
-  await expect(page.locator('#cardRows tr')).toHaveCount(100);
-  await expect(page.locator('#more')).toContainText(head('res.more'));
+  await expect(page.locator('#cardRows tr')).toHaveCount(10);
+  await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 10, total: n.toLocaleString(L === 'it' ? 'it-IT' : 'en-US') }));
+  await expect(page.locator('#more')).toHaveText(tr('res.loadMore'));
   await expect(page.locator('#extraColl')).toBeHidden();
   await expect(page.locator('.box, .tick, #assign, #optBasics')).toHaveCount(0);
   // date nella lingua scelta (data di data/meta.json)
@@ -442,4 +443,65 @@ test('espansione: set nascosti attivabili; con la collezione "ne possiedi" e "so
   const counterspell = page.locator('#cardRows tr', { hasText: 'Counterspell' });
   await expect(brainstorm.locator('img.thumb.owned')).toHaveCount(1); // la stampa di Ice Age è tua
   await expect(counterspell.locator('img.thumb.owned')).toHaveCount(0); // possiedi Counterspell, ma non di Ice Age
+});
+
+test('"Carica altri": 10 carte alla volta, conteggio, focus sulla prima aggiunta, ripartenza da 10', async ({ page }) => {
+  await setup(page);
+  const rows = page.locator('#cardRows tr');
+  const total = (await page.locator('#verdict').innerText()).replace(/[.,]/g, '').match(/\d+/)![0];
+  const fmt = (x: number) => x.toLocaleString(L === 'it' ? 'it-IT' : 'en-US');
+  await expect(rows).toHaveCount(10);
+  const firstByShare = await page.locator('#cardRows .nm').nth(0).innerText();
+  await page.locator('#more').focus();
+  await page.keyboard.press('Enter');
+  await expect(rows).toHaveCount(20);
+  await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 10 + 10, total: fmt(Number(total)) }));
+  // il focus è sulla prima carta aggiunta, e la scheda non si apre da sola
+  await expect(page.locator('#cardRows .cardbtn').nth(10)).toBeFocused();
+  await expect(page.locator('#sheet')).toBeHidden();
+  // l'ordinamento lavora sulla lista completa e riparte da 10
+  await page.selectOption('#sort', 'name');
+  await expect(rows).toHaveCount(10);
+  await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 10, total: fmt(Number(total)) }));
+  expect(await page.locator('#cardRows .nm').nth(0).innerText()).not.toBe(firstByShare);
+  // la ricerca filtra la lista completa, non solo le carte visibili
+  await page.fill('#search', 'pyroblast');
+  await expect(rows).toHaveCount(1);
+  await expect(page.locator('#more')).toBeHidden();
+  await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 1, total: 1 }));
+});
+
+test('"Rispolvera una carta": carta dimenticata, animazione sovrapposta che poi sparisce, niente ripetizioni', async ({ page }) => {
+  const problems = await setup(page);
+  await expect(page.locator('#dustBtn')).toHaveText(tr('dust.button'));
+  await page.click('#dustBtn');
+  const res = page.locator('#dustResult .dres');
+  await expect(res).toBeVisible();
+  await expect(res).toContainText(tr('dust.kicker'));
+  await expect(res).toContainText(head('dust.peak'));
+  await expect(page.locator('#dustTitle')).toBeFocused();
+  // l'immagine non è mai filtrata; la copertura c'è durante l'animazione e poi viene rimossa
+  expect(await res.locator('img').evaluate((el) => getComputedStyle(el).filter)).toBe('none');
+  await expect(res.locator('.dust-cover')).toHaveCount(0, { timeout: 5000 });
+  const names = new Set([await page.locator('#dustTitle').innerText()]);
+  for (let i = 0; i < 4; i++) {
+    await res.getByRole('button', { name: tr('dust.again') }).click();
+    names.add(await page.locator('#dustTitle').innerText());
+  }
+  expect(names.size).toBe(5);
+  // senza collezione niente interruttore; con la collezione sì
+  await expect(res.locator('.dust-all')).toHaveCount(0);
+  await uploadCollection(page);
+  await expect(page.locator('#dustResult .dust-all')).toBeVisible();
+  await page.locator('#dustResult').getByRole('button', { name: tr('dust.close') }).click();
+  await expect(page.locator('#dustResult')).toBeEmpty();
+  expect(problems).toEqual([]);
+});
+
+test('"Rispolvera una carta" con prefers-reduced-motion: la carta appare subito, senza copertura', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await setup(page);
+  await page.click('#dustBtn');
+  await expect(page.locator('#dustResult .dres img')).toBeVisible();
+  await expect(page.locator('#dustResult .dust-cover')).toHaveCount(0);
 });

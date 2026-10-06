@@ -14,6 +14,8 @@ export interface CardRow {
   z: string;
   lm?: LastSeen;
   lp?: LastSeen;
+  /** mazzi per anno nello storico: [primo anno, mazzi, …] (cards.json v2) */
+  y?: number[];
   r: number;
 }
 
@@ -25,6 +27,8 @@ export interface CardsFile {
   sets: Record<string, [string, string, string]>;
   t: [string, string, string, 'm' | 'p'][];
   c: CardRow[];
+  /** mazzi totali per anno: [primo anno, mazzi, …] (v2) */
+  yt?: number[];
 }
 
 // [scryfall_id, set, numero, indice artista, gruppo illustrazione, retro 0|1, rarità c|u|r|m|s|b, lingua?]

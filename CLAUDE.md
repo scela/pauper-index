@@ -28,9 +28,10 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] Funzione 1: interfaccia in italiano e inglese (vedi "Lingue")
   - [x] Funzione 2: controllo rapido di una carta (vedi "Controllo rapido")
   - [x] Funzione 3: filtro per espansione (vedi "Filtro per espansione")
+  - [x] "Carica altri" (10 carte alla volta) e "Rispolvera una carta" (vedi le sezioni omonime), prima della funzione 4
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo logo, donazioni e dominio, 2026-10-06): 90 pytest, 47 Vitest, 66 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo "Carica altri" e "Rispolvera una carta", 2026-10-06): 91 pytest, 51 Vitest, 78 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -118,6 +119,7 @@ npm run build; npm run preview       # build di produzione con CSP su http://loc
 npm test                             # Vitest (logica, sicurezza, i18n, test locali su reference/private)
 npx playwright install chromium; npm run e2e   # Playwright sulla build: desktop e mobile, IT e EN
 npm run screenshots                  # con preview attivo: schermate in .cache/screenshots/
+npm run dust-frames                  # con preview attivo: fotogrammi dell'animazione "Rispolvera" in .cache/screenshots/
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
 # Stato della CI
@@ -260,7 +262,7 @@ Tempi in locale: build offline circa 26 s; prima build online circa 90 s (circa 
 
 Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff leggibili.
 
-**`cards.json`**: `{v, anchor, w, tot, sets, t, c}`
+**`cards.json`** (v2): `{v, anchor, w, tot, sets, t, yt, c}`
 - `anchor`: data dell'ultimo mazzo; le finestre sono ancorate qui.
 - `w`: `[61, 365, 730, 0]`, dove 0 = storico.
 - `tot[i]`: `[mazzi, tornei]` della finestra i.
@@ -271,7 +273,9 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
   - `s[i]`: `0` oppure `[mazzi main+side, mazzi main, copie totali, mediana copie main+side, mediana copie main]`;
   - `f` / `z`: prima e ultima apparizione;
   - `lm` / `lp`: ultima apparizione MTGO e cartacea, `[indice in t, risultato (rank intero o "5-0"), copie main, copie side]`;
-  - `r`: indice della printing di riferimento in `printings.json`.
+  - `r`: indice della printing di riferimento in `printings.json`;
+  - `y` (v2, per "Rispolvera una carta"): mazzi per anno su tutto lo storico, `[primo anno, mazzi, …]` dal primo all'ultimo anno in cui è giocata (anni vuoti = 0).
+- `yt` (v2): mazzi totali per anno, `[primo anno, mazzi, …]`; serve a calcolare la quota per anno. `y` e `yt` aggiungono circa 0,12 MB grezzi e **0,04 MB con gzip**.
 
 **`printings.json`**: `{v, sets: {codice: [nome, uscita]}, artists: [...], p}`
 - `p[i]`: printing della carta i di `cards.json`, nella forma `[scryfall_id, set, numero, indice artista, gruppo illustrazione, retro 0|1, rarità c|u|r|m|s|b, (lingua se non en)]` (versione 2: la rarità è stata aggiunta con il filtro per espansione).
@@ -304,7 +308,7 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 
 | File | Grezzo | gzip |
 |---|---|---|
-| `cards.json` | 1,22 MB | 0,35 MB |
+| `cards.json` | 1,38 MB (v2, con `y`) | 0,40 MB |
 | `printings.json` | 1,46 MB | 0,70 MB |
 | `names.json` | 0,13 MB | 0,05 MB |
 
@@ -438,7 +442,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **"Conta le copie"**: opzione **tolta** su richiesta dell'utente (dopo la funzione 2). Una carta è posseduta se ne hai almeno una copia; export "1 Nome" e List riallineata con quantità 1. Le copie tipiche (mediana) restano solo come informazione, nella scheda e nel controllo rapido.
 - **Ventaglio**: un artwork per `illustration_id`, preferendo la printing posseduta, poi la più recente in inglese. Al massimo 7, più "Mostra tutte" che apre una griglia in un `<dialog>`. Le carte sono **distanziate e ruotate di pochi gradi, senza sovrapporsi**, per non coprire artista e copyright (regole di Scryfall). La carta attiva è mostrata intera e più grande.
 - **Persistenza**: IndexedDB (database `pauper-index`) per la collezione; localStorage solo per tema, ordinamento e filtro, con prefisso `pauper-index:`. "Cancella i miei dati" elimina il database e **solo** le chiavi `pauper-index:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
-- **Tabella**: pagine da 100 righe ("Mostra altre"). Ordinamento per percentuale di mazzi, nome, ultima apparizione (recente o meno recente). Filtro "viste negli ultimi 6 mesi / non viste da oltre 6 mesi", rispetto alla data dei dati.
+- **Tabella**: 10 righe alla volta (vedi "Carica altri"). Ordinamento per percentuale di mazzi, nome, ultima apparizione (recente o meno recente). Filtro "viste negli ultimi 6 mesi / non viste da oltre 6 mesi", rispetto alla data dei dati.
 - **Segnalare un errore**: link `mailto:massadalbe@hotmail.com` nella pagina Informazioni (`REPORT_EMAIL` in `web/src/ui/about.ts`).
 - **Icone**: generate da `logo/logo.svg` con `npm run icons` e committate (vedi "Logo"). Nessun simbolo di Wizards.
 
@@ -496,6 +500,21 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Test**:
   - `tests/i18n.test.ts`: stesse chiavi, nessun testo vuoto, stessi segnaposto, formattazione, scelta della lingua;
   - Playwright con quattro progetti (`desktop-it`, `desktop-en`, `mobile-it`, `mobile-en`, scelti con `locale`), con i testi attesi presi dagli stessi dizionari.
+
+## "Carica altri" (prima della funzione 4)
+
+- Ogni elenco di carte mostra **10 carte** (`PAGE` in `main.ts`); sotto, "Mostrate N di M" (`#shownCount`, `res.shown`) e il pulsante "Carica altri" (`#more`, `res.loadMore`), che ne aggiunge altre 10. Vale per la vista collezione, la vista per espansione e le mancanti; varrà anche per i mazzi della funzione 4.
+- Ordinamento, filtri, ricerca, riepiloghi ed export lavorano sempre sulla lista completa (`S.results` / `S.view`); ogni cambio di filtro, ordinamento o ricerca riparte da 10.
+- Dopo "Carica altri" il focus va sulla prima carta aggiunta, **senza** aprire la scheda (`focusNoSheet`).
+
+## Rispolvera una carta (prima della funzione 4)
+
+- Pulsante discreto "Rispolvera una carta" accanto all'etichetta del controllo rapido (`#dustBtn`); risultato in `#dustResult`. Logica in `lib/dust.ts` (testata), interfaccia e animazione in `ui/dust.ts`.
+- **Carte ammesse** (`dustPool`): legali oggi, non terre base, almeno `DUST_MIN_DECKS = 20` mazzi (main+side) nello storico, nessuna apparizione negli ultimi `DUST_QUIET_DAYS = 365` giorni contati dalla data dei dati. Al 2026-10-06: **203 carte** (10 mazzi: 321; 50: 99; 100: 48; 20 mazzi e 2 anni fermi: 142).
+- **Pesca**: con la collezione tra le carte possedute (interruttore "Pesca tra tutte le carte"); senza collezione tra tutte. Nessuna ripetizione nella sessione (oracle_id in sessionStorage `pauper-index:dusted`, cancellato anche da "Cancella i miei dati"); quando sono finite si ricomincia, con un avviso.
+- **Scheda**: immagine (la printing posseduta, altrimenti quella di riferimento; un clic apre gli artwork), mazzi nello storico (main+side o solo main secondo l'opzione del side) tra prima e ultima apparizione, **anno di massima diffusione** in percentuale dei mazzi di quell'anno (`y` / `yt` di `cards.json`, perché i volumi annui cambiano molto), ultima apparizione più recente tra MTGO e cartaceo con il link al torneo, possesso. Pulsanti "Rispolverane un'altra" e "Chiudi".
+- **Animazione** (circa 1,5 s): sopra la carta una copertura (`.dust-cover`) con velo di polvere, puntini e tre ragnatele SVG disegnate dal codice; una "scopa" luminosa passa da sinistra a destra, il velo si toglie con una maschera, i puntini e le ragnatele volano via. Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall). Alla fine di tutte le animazioni la copertura viene **rimossa** (carta intera, artista e copyright compresi). Parte quando l'immagine è caricata. Con `prefers-reduced-motion` la copertura non viene creata. CSP invariata: i valori casuali passano da `style.setProperty` (CSSOM), mai da attributi `style`.
+- Fotogrammi di controllo: `npm run dust-frames` (desktop e mobile, 5 istanti più la fine).
 
 ## Controllo rapido di una carta (funzione 2)
 

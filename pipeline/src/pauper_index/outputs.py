@@ -4,6 +4,8 @@ import csv
 import datetime as dt
 import gzip
 import json
+from collections import Counter
+from collections.abc import Mapping
 from pathlib import Path
 
 from .carddb import LV_ALT, LV_NAME, CardDB
@@ -40,6 +42,11 @@ def _last(st: CardStats, kind: str, t_index: dict[int, int]) -> list | None:
     return [t_index[ti], result, m, s]
 
 
+def year_series(counts: Mapping[int, int], first: int, last: int) -> list[int]:
+    """[primo anno, mazzi del primo anno, …, mazzi dell'ultimo anno] (anni senza mazzi = 0)."""
+    return [first, *(counts.get(y, 0) for y in range(first, last + 1))]
+
+
 def build_cards(db: CardDB, stats: dict[str, CardStats], tournaments, entries, sets_info, windows,
                 totals, anchor: int) -> tuple[dict, list, list[str]]:
     order = sorted(stats, key=lambda o: (db.cards[o].name.casefold(), o))
@@ -51,6 +58,13 @@ def build_cards(db: CardDB, stats: dict[str, CardStats], tournaments, entries, s
     t_index = {ti: n for n, ti in enumerate(t_ids)}
     t_rows = [[iso(tournaments[i].day), tournaments[i].name, tournaments[i].uri, tournaments[i].kind]
               for i in t_ids]
+
+    # mazzi per anno (tutti, deduplicati): servono a calcolare l'anno di massima diffusione in percentuale
+    year_tot: Counter = Counter()
+    for t in tournaments:
+        for d in t.decks:
+            year_tot[dt.date.fromordinal(d.day).year] += 1
+    y_first, y_last = min(year_tot), max(year_tot)
 
     entry_sets = {}
     rows = []
@@ -73,6 +87,7 @@ def build_cards(db: CardDB, stats: dict[str, CardStats], tournaments, entries, s
         row["s"] = ws
         row["f"] = iso(st.first)
         row["z"] = iso(st.last)
+        row["y"] = year_series(st.years, min(st.years), max(st.years))
         for kind, k in (("m", "lm"), ("p", "lp")):
             v = _last(st, kind, t_index)
             if v is not None:
@@ -82,13 +97,14 @@ def build_cards(db: CardDB, stats: dict[str, CardStats], tournaments, entries, s
         rows.append(row)
 
     head = {
-        "v": 1,
+        "v": 2,
         "anchor": iso(anchor),
         "w": [n or 0 for n in windows],
         "tot": [[x["decks"], x["tournaments"]] for x in totals],
         "sets": {k: [v.get("name", k), v.get("released_at", ""), v.get("set_type", "")]
                  for k, v in sorted(entry_sets.items())},
         "t": t_rows,
+        "yt": year_series(year_tot, y_first, y_last),
     }
     return head, rows, order
 

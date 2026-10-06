@@ -30,6 +30,14 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs | 
   return el;
 }
 
+/** Elementi SVG (solo grafica, senza testo): attributi impostati uno per uno, mai markup. */
+export function svg(tag: string, attrs: Record<string, string | number> = {}, ...children: SVGElement[]): SVGElement {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+  for (const c of children) el.appendChild(c);
+  return el;
+}
+
 export function append(el: Node, ...children: Child[]): void {
   for (const c of children) {
     if (c === null || c === undefined || c === false) continue;

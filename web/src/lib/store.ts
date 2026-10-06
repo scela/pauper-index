@@ -58,17 +58,37 @@ export function lsSet(key: string, value: string): void {
   }
 }
 
-/** "Cancella i miei dati": elimina il database IndexedDB e le chiavi localStorage dell'app. */
-export async function clearAll(): Promise<void> {
+/** sessionStorage: dura quanto la scheda del browser (per esempio le carte già rispolverate). */
+export function ssGet(key: string): string | null {
   try {
-    const keys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(LS_PREFIX)) keys.push(k);
-    }
-    keys.forEach((k) => localStorage.removeItem(k));
+    return sessionStorage.getItem(LS_PREFIX + key);
+  } catch {
+    return null;
+  }
+}
+
+export function ssSet(key: string, value: string): void {
+  try {
+    sessionStorage.setItem(LS_PREFIX + key, value);
   } catch {
     /* ignora */
+  }
+}
+
+/** "Cancella i miei dati": elimina il database IndexedDB e le chiavi localStorage e sessionStorage dell'app. */
+export async function clearAll(): Promise<void> {
+  for (const get of [() => localStorage, () => sessionStorage]) {
+    try {
+      const st = get();
+      const keys: string[] = [];
+      for (let i = 0; i < st.length; i++) {
+        const k = st.key(i);
+        if (k && k.startsWith(LS_PREFIX)) keys.push(k);
+      }
+      keys.forEach((k) => st.removeItem(k));
+    } catch {
+      /* ignora */
+    }
   }
   await new Promise<void>((resolve) => {
     try {

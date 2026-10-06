@@ -18,10 +18,12 @@ import { collectionIndex, type CollectionIndex, type Owned } from './lib/quick';
 import { buildGroups, displayPrint, memberCodes, printsInSets, rarityHere, type SetGroup, type SetRow } from './lib/sets';
 import { renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
+import { initDust } from './ui/dust';
 import { initQuick } from './ui/quick';
 import { cancelClose, closeSheet, isHoverBlocked, isOpenFor, openSheet, recentlyClosed, renderGrid, scheduleClose, unblockHover } from './ui/sheet';
 
-const PAGE = 100;
+// Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa.
+const PAGE = 10;
 const NEW_DAYS = 60;
 const STALE_DAYS = 182;
 const STALE_SOURCE_DAYS = 21;
@@ -69,12 +71,14 @@ const S = {
   setOwned: false,
 };
 let quick: { refresh(): void } | null = null;
+let dust: { refresh(): void } | null = null;
 let setPicker: { refresh(): void } | null = null;
 let setsLoading: Promise<Map<string, SetGroup> | null> | null = null;
 let toastTimer: number | undefined;
 let resetTimer: number | undefined;
 let hoverTimer: number | undefined;
 let saveTimer: number | undefined;
+let focusNoSheet = false;
 
 /* ---------- utilità ---------- */
 
@@ -271,6 +275,7 @@ function render(): void {
   renderResults();
   renderExtra();
   quick?.refresh();
+  dust?.refresh();
   setPicker?.refresh();
 }
 
@@ -457,9 +462,10 @@ function renderRows(): void {
   const coll = hasColl();
   S.view = filtered();
   const rows = S.view.slice(0, S.shown);
-  const more = $('#more');
-  more.hidden = S.view.length <= rows.length;
-  more.textContent = t('res.more', { n: fmtInt(Math.min(PAGE, S.view.length - rows.length)), rest: fmtInt(S.view.length - rows.length) });
+  $('#more').hidden = S.view.length <= rows.length;
+  const count = $('#shownCount');
+  count.hidden = !rows.length;
+  count.textContent = t('res.shown', { n: fmtInt(rows.length), total: fmtInt(S.view.length) });
   if (!rows.length) {
     $('#cardRows').replaceChildren(h('tr', { class: 'nores' }, h('td', { colspan: 5 },
       S.query || S.seen !== 'all' ? t('res.noMatch') : S.setCodes ? (S.setOwned ? t('res.noOwned') : t('set.empty'))
@@ -783,8 +789,16 @@ function wire(): void {
     renderRows();
   });
   $('#more').addEventListener('click', () => {
+    const first = S.shown;
     S.shown += PAGE;
     renderRows();
+    // accessibilità: il focus va sulla prima carta aggiunta (senza aprire la scheda)
+    const btn = $('#cardRows').querySelectorAll<HTMLElement>('.cardbtn')[first];
+    if (btn) {
+      focusNoSheet = true;
+      btn.focus();
+      focusNoSheet = false;
+    }
   });
   $('#setHidden').addEventListener('change', (e) => {
     S.setHidden = (e.target as HTMLInputElement).checked;
@@ -852,7 +866,7 @@ function wire(): void {
   });
   rows.addEventListener('focusin', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
-    if (b && b.matches(':focus-visible') && !isOpenFor(Number(b.dataset.idx)) && !recentlyClosed()) openFor(b, 'hover');
+    if (b && !focusNoSheet && b.matches(':focus-visible') && !isOpenFor(Number(b.dataset.idx)) && !recentlyClosed()) openFor(b, 'hover');
   });
   rows.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
@@ -869,7 +883,7 @@ function wire(): void {
   });
   document.addEventListener('pointerdown', (e) => {
     const el = e.target as HTMLElement;
-    if (!sheet.hidden && !sheet.contains(el) && !el.closest('.cardbtn, .qimg, .qres .btn') && !el.closest('dialog')) closeSheet();
+    if (!sheet.hidden && !sheet.contains(el) && !el.closest('.cardbtn, .qimg, .qres .btn, .dust-stage') && !el.closest('dialog')) closeSheet();
   });
 
   // cancella i miei dati (conferma in due tempi)
@@ -936,6 +950,9 @@ async function main(): Promise<void> {
     },
   });
   quick = initQuick({
+    data: () => S.d, opts: () => S.opts, collection: () => (hasColl() ? S.cix : null), openArtworks: openArtworksFor,
+  });
+  dust = initDust({
     data: () => S.d, opts: () => S.opts, collection: () => (hasColl() ? S.cix : null), openArtworks: openArtworksFor,
   });
   route();

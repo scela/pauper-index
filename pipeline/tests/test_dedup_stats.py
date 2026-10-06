@@ -7,6 +7,7 @@ from array import array
 import pytest
 
 from pauper_index.dedup import dedupe
+from pauper_index.outputs import year_series
 from pauper_index.source import (
     Deck,
     NameTable,
@@ -158,6 +159,13 @@ def test_stats_windows_median_and_last_seen():
     assert b.last_seen["m"][0] == D0 and b.last_seen["p"][2] == 1 and b.last_seen["p"][3] == 1
     assert g.last_seen["m"][3:] == (0, 1)
     assert None not in stats
+    # mazzi per anno (main+side) su tutto lo storico
+    assert g.years == {dt.date.fromordinal(D0).year: 1, dt.date.fromordinal(old).year: 1}
+    assert sum(b.years.values()) == 5
+
+
+def test_year_series_fills_gaps():
+    assert year_series({2019: 3, 2021: 1}, 2018, 2021) == [2018, 0, 3, 0, 1]
 
 
 def test_median_high():

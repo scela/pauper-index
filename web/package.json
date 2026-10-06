@@ -10,7 +10,8 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "icons": "node scripts/icons.mjs",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "dust-frames": "node scripts/dust-frames.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

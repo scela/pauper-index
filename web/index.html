@@ -50,7 +50,10 @@
   <div id="viewMain">
 
     <section class="quick" id="quick" aria-labelledby="quickLabel">
-      <label class="quick-label" id="quickLabel" for="quickInput" data-i18n="quick.label">Controllo rapido di una carta</label>
+      <div class="quick-head">
+        <label class="quick-label" id="quickLabel" for="quickInput" data-i18n="quick.label">Controllo rapido di una carta</label>
+        <button class="linkbtn dustbtn" id="dustBtn" type="button" data-i18n="dust.button">Rispolvera una carta</button>
+      </div>
       <div class="qbox">
         <input id="quickInput" type="search" role="combobox" aria-expanded="false" aria-controls="quickList" aria-autocomplete="list"
           autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"
@@ -58,6 +61,7 @@
         <ul id="quickList" class="qlist" role="listbox" data-i18n-aria="quick.suggestions" aria-label="Suggerimenti" hidden></ul>
       </div>
       <div id="quickResult" aria-live="polite"></div>
+      <div id="dustResult" aria-live="polite"></div>
     </section>
 
     <section class="loadsec" id="loadArea" data-i18n-aria="load.aria" aria-label="Carica la collezione">
@@ -137,7 +141,10 @@
           <tbody id="cardRows"></tbody>
         </table>
       </div>
-      <button class="btn more" id="more" type="button" hidden></button>
+      <div class="morebar">
+        <p class="shown" id="shownCount" aria-live="polite" hidden></p>
+        <button class="btn more" id="more" type="button" hidden data-i18n="res.loadMore">Carica altri</button>
+      </div>
     </section>
 
     <section class="extra" id="extra" data-i18n-aria="extra.aria" aria-label="Altre opzioni">

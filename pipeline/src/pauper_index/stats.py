@@ -6,6 +6,7 @@ Le finestre sono ancorate alla data dell'ultimo mazzo (vedi CLAUDE.md): un mazzo
 
 from collections import Counter
 from dataclasses import dataclass, field
+from datetime import date
 
 from .source import Tournament
 
@@ -21,6 +22,7 @@ class CardStats:
     first: int = 0
     last: int = 0
     last_seen: dict = field(default_factory=dict)  # "m"/"p" -> (giorno, indice torneo, risultato, main, side)
+    years: Counter = field(default_factory=Counter)  # anno -> mazzi (main+side), su tutto lo storico
 
     def __post_init__(self):
         self.decks_any = [0] * self.nw
@@ -73,6 +75,7 @@ def compute(tournaments: list[Tournament], keymap: list[int], key_oids: list[str
             if cutoff is not None and d.day > cutoff:
                 continue
             ws = window_index(d.day, anchor, windows)
+            year = date.fromordinal(d.day).year
             t_windows.update(ws)
             for w in ws:
                 totals[w]["decks"] += 1
@@ -90,6 +93,7 @@ def compute(tournaments: list[Tournament], keymap: list[int], key_oids: list[str
                     st = stats[oid] = CardStats(nw, first=d.day, last=d.day)
                 st.first = min(st.first, d.day)
                 st.last = max(st.last, d.day)
+                st.years[year] += 1
                 for w in ws:
                     st.decks_any[w] += 1
                     st.copies[w] += m + s
