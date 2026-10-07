@@ -45,6 +45,11 @@ test('lingua del browser, testi statici, area di caricamento, filtri e lista, co
   await expect(page.locator(`[data-lang="${L}"]`)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveCount(1);
   await expect(page.locator('h1')).toHaveText('Pauper Index');
+  // nome del sito in New Rocker ridotto, servito dal sito (con la licenza); il resto della pagina nel font di sistema
+  expect(await page.locator('h1 .brand').evaluate((el) => getComputedStyle(el).fontFamily)).toContain('Pauper Index Title');
+  expect(await page.locator('#verdict').evaluate((el) => getComputedStyle(el).fontFamily)).not.toContain('Pauper Index Title');
+  expect(await page.evaluate(async () => (await document.fonts.load('400 40px "Pauper Index Title"', 'Pauper Index')).length)).toBe(1);
+  expect((await page.request.get('fonts/OFL-NewRocker.txt')).ok()).toBe(true);
   await expect(page).toHaveTitle('Pauper Index');
   await expect(page.locator('#navAbout')).toHaveText(tr('nav.about'));
   await expect(page.locator('#drop strong')).toHaveText(tr('load.dropTitle'));
@@ -605,7 +610,16 @@ test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi spari
   const problems = await setup(page);
   // non è più nella zona del controllo rapido
   await expect(page.locator('#quick #dustBtn')).toHaveCount(0);
-  await expect(page.locator('#navDust')).toHaveText(tr('nav.dust'));
+  await expect(page.locator('#navDust')).toHaveAccessibleName(tr('nav.dust'));
+  // nella testata è un pulsante compatto (pieno di colore, con icona e ragnatela), "Informazioni" un link discreto
+  await expect(page.locator('#navDust .nd-ico')).toHaveCount(1);
+  await expect(page.locator('#navDust .nd-web')).toHaveCount(1);
+  expect(await page.locator('#navDust').evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('gradient');
+  expect(await page.locator('#navAbout').evaluate((el) => getComputedStyle(el).backgroundImage)).toBe('none');
+  // etichetta breve solo sugli schermi stretti
+  const short = await page.locator('#navDust .nd-short').isVisible();
+  expect(short).toBe((page.viewportSize()?.width ?? 1280) <= 400);
+  await expect(page.locator('#navDust ' + (short ? '.nd-short' : '.nd-full'))).toHaveText(tr(short ? 'nav.dustShort' : 'nav.dust'));
   await page.click('#navDust');
   await expect(page).toHaveURL(/#carta-dimenticata$/);
   await expect(page.locator('#viewMain')).toBeHidden();
@@ -660,6 +674,9 @@ test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi spari
 test('"Carta dimenticata" con prefers-reduced-motion: la carta appare subito, senza copertura', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await setup(page);
+  // la ragnatela del pulsante in testata resta ferma al passaggio del mouse
+  await page.hover('#navDust');
+  expect(await page.locator('#navDust .nd-web').evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
   await page.click('#navDust');
   // ragnatele del pulsante ferme anche al passaggio del mouse
   await page.hover('#dustBtn');

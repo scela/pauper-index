@@ -39,15 +39,42 @@ a{color:var(--accent)}
 .num{font-variant-numeric:tabular-nums}
 .note{color:var(--muted);font-size:.8125rem;margin:6px 0 0}
 
+/* nome del sito: New Rocker (SIL OFL 1.1) ridotto ai caratteri di "Pauper Index" e rinominato
+   (Reserved Font Name), servito dal sito; licenza in public/fonts/OFL-NewRocker.txt */
+@font-face{font-family:"Pauper Index Title";src:url("/fonts/pauper-index-title.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+
 /* testata */
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 h1{font-size:clamp(1.75rem,4.5vw,2.5rem);line-height:1;letter-spacing:-0.03em;font-weight:700;margin:0}
 h1 a{color:inherit;text-decoration:none}
+.home .brand{font-family:"Pauper Index Title",var(--font);font-weight:400;letter-spacing:.01em}
 .home{display:inline-flex;align-items:center;gap:.28em}
 .logo{width:1.2em;height:1.2em;flex:none;color:var(--logo)}
 .nav{display:flex;gap:4px;align-items:center;font-size:.9375rem}
-.nav a{font-weight:500;padding:6px}
-.nav a[aria-current="page"]{color:var(--ink);text-decoration-thickness:2px;text-underline-offset:4px}
+.nav{gap:6px}
+/* "Informazioni": link discreto */
+.navlink{font-weight:500;padding:6px;color:var(--muted);text-decoration:none}
+.navlink:hover,.navlink[aria-current="page"]{color:var(--ink);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+/* "Carta dimenticata": pulsante compatto nello stile del pulsante grande della pagina */
+.navdust{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:5px 16px 5px 10px;margin:0 4px 4px 0;
+  border-radius:10px;text-decoration:none;font-weight:650;white-space:nowrap;color:var(--accent-ink);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 82%,#fff) 0%,var(--accent) 55%,color-mix(in srgb,var(--accent) 88%,#000) 100%);
+  box-shadow:0 3px 0 var(--btn-ledge),0 7px 14px -8px rgba(10,20,40,.55),inset 0 1px 0 rgba(255,255,255,.3);transition:transform .08s,box-shadow .08s,filter .15s}
+.navdust:hover{filter:brightness(1.07)}
+.navdust:active,.navdust[aria-current="page"]{transform:translateY(2px);box-shadow:0 1px 0 var(--btn-ledge),0 4px 8px -6px rgba(10,20,40,.5),inset 0 1px 0 rgba(255,255,255,.25)}
+.navdust:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.nd-ico{width:20px;height:20px;flex:none;overflow:visible;transform-origin:3px 21px}
+.nd-ico .handle{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.nd-ico .collar{fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round}
+.nd-ico .plume{fill:currentColor}
+.nd-ico .p2{opacity:.8}
+.nd-ico .p3{opacity:.65}
+.nd-web{position:absolute;top:0;right:0;width:20px;height:20px;transform:scaleX(-1);pointer-events:none;fill:none;stroke:var(--btn-web);stroke-width:1.1;stroke-linecap:round}
+.nd-short{display:none}
+.navdust:hover .nd-web{animation:nd-sway 1.4s ease-in-out infinite alternate;transform-origin:100% 0}
+.navdust:hover .nd-ico{animation:duster-wiggle .7s ease-in-out}
+@keyframes nd-sway{from{transform:scaleX(-1) rotate(-4deg)}to{transform:scaleX(-1) rotate(5deg) scale(1.06)}}
+@media (prefers-reduced-motion: reduce){.navdust:hover .nd-web,.navdust:hover .nd-ico{animation:none}.navdust{transition:none}}
 .langs{display:inline-flex}
 .langs .btn{padding-inline:6px;min-width:34px;justify-content:center}
 .langs .btn[aria-pressed="true"]{color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:3px}
@@ -401,8 +428,8 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .search{margin-left:0;width:100%}
   .top{flex-wrap:wrap;row-gap:2px}
   h1{font-size:1.625rem;white-space:nowrap}
-  .nav{font-size:.875rem;flex-wrap:wrap;row-gap:0;margin-left:-6px}
-  .nav a{white-space:nowrap}
+  .nav{font-size:.875rem;flex-wrap:wrap;row-gap:4px;margin-left:0;margin-top:6px}
+  .navdust{min-height:40px}
   .nav .btn{white-space:nowrap}
   .f-field:first-child{flex:1;min-width:0}
   .f-field:first-child select{flex:1;min-width:0;width:100%}
@@ -424,6 +451,10 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .sheet-body{grid-template-columns:1fr}
   .active-card img{max-width:min(240px,60vw)}
   .fan-item img{width:64px}
+}
+@media (max-width:400px){
+  .nd-full{display:none}
+  .nd-short{display:inline}
 }
 @media (max-width:640px){
   .cards thead{display:none}

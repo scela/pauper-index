@@ -7,6 +7,7 @@ export const en: Record<Key, Msg> = {
   'nav.aria': 'Navigation',
   'nav.about': 'About',
   'nav.dust': 'Forgotten card',
+  'nav.dustShort': 'Forgotten',
   'nav.lang': 'Language',
   'theme.toDark': 'Dark theme',
   'theme.toLight': 'Light theme',

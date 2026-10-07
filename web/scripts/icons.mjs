@@ -123,9 +123,16 @@ const targets = [
   ['og-image.png', 1200, 630, { og: true }],
 ];
 
+// font del nome (public/fonts, vedi scripts/title-font.py): solo per "Pauper Index" nell'og-image
+const TITLE_FONT = `data:font/woff2;base64,${readFileSync(resolve(pub, 'fonts/pauper-index-title.woff2')).toString('base64')}`;
+
 const browser = await chromium.launch();
 const page = await browser.newPage();
 await page.setContent('<html><body></body></html>');
+await page.evaluate(async (src) => {
+  const f = new FontFace('Pauper Index Title', `url(${src})`);
+  document.fonts.add(await f.load());
+}, TITLE_FONT);
 for (const [name, w, h, o] of targets) {
   const px = await page.evaluate(async ({ w, h, o, logo, vw, vh, c }) => {
     const img = new Image();
@@ -142,7 +149,7 @@ for (const [name, w, h, o] of targets) {
       const lh = 400;
       const lw = lh * vw / vh;
       const title = 'Pauper Index';
-      ctx.font = '700 112px system-ui, "Segoe UI", sans-serif';
+      ctx.font = '400 120px "Pauper Index Title"';
       const tw = ctx.measureText(title).width;
       const gap = 56;
       const x0 = Math.round((w - (lw + gap + tw)) / 2);

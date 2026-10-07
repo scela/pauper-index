@@ -9,6 +9,7 @@ export const it = {
   'nav.aria': 'Navigazione',
   'nav.about': 'Informazioni',
   'nav.dust': 'Carta dimenticata',
+  'nav.dustShort': 'Dimenticata',
   'nav.lang': 'Lingua',
   'theme.toDark': 'Tema scuro',
   'theme.toLight': 'Tema chiaro',

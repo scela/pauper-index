@@ -31,9 +31,11 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] "Carica altri" (10 carte alla volta) e "Rispolvera una carta" (vedi le sezioni omonime), prima della funzione 4
   - [x] 2026-10-07: simboli delle espansioni (vedi "Simboli delle espansioni"), stampa del set nella vista per espansione e "Rispolvera" spostata nella pagina "Carta dimenticata"
   - [x] 2026-10-07: riepiloghi coerenti con l'elenco (vedi "Riepiloghi ed elenco") e pulsante "Rispolvera una carta" in rilievo, con le ragnatele
+  - [x] 2026-10-07: "Carta dimenticata" in testata come pulsante compatto (vedi "Testata")
+  - [x] 2026-10-07: nome "Pauper Index" in New Rocker, scelto dall'utente (vedi "Testata")
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo riepiloghi coerenti e nuovo pulsante, 2026-10-07): 96 pytest, 58 Vitest, 86 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo pulsante in testata e font del nome, 2026-10-07): 96 pytest, 58 Vitest, 86 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -124,6 +126,7 @@ npm run screenshots                  # con preview attivo: schermate in .cache/s
 npm run dust-frames                  # con preview attivo: fotogrammi dell'animazione "Rispolvera" in .cache/screenshots/
 node scripts/feature-shots.mjs <etichetta>   # con preview attivo: espansioni e "Carta dimenticata", desktop/mobile/scuro
 node scripts/dust-button-shots.mjs <etichetta>   # con preview attivo: pulsante "Rispolvera", desktop/mobile, chiaro/scuro
+node scripts/header-shots.mjs <etichetta>        # con preview attivo: testata, desktop/mobile/mobile piccolo, chiaro/scuro, IT/EN, con focus
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
 # Stato della CI
@@ -436,7 +439,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - inietta la CSP (meta tag) **solo in build**, perché il dev server di Vite usa stili inline.
 
 **Decisioni**:
-- **Font di sistema** al posto di Geist: nessuna richiesta esterna e nessun file di font da servire.
+- **Font di sistema** al posto di Geist: nessuna richiesta esterna. Unica eccezione (2026-10-07): il nome "Pauper Index" in New Rocker ridotto, servito dal sito (vedi "Testata").
 - **CSP**: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://cards.scryfall.io data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'`. `<meta name="referrer" content="no-referrer">`, così le richieste di immagini a Scryfall non rivelano la pagina.
 - **Ruoli dei gruppi**: solo "Inclusa" o "Esclusa" (in "Binder inclusi"). Binder di tipo `deck` o `list` sono esclusi di default; il testo incollato è un gruppo "Testo incollato" che conta come posseduto.
 - **Abbinamento di una riga**:
@@ -534,6 +537,22 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Animazione** (circa 1,5 s, invariata): copertura `.dust-cover` con velo di polvere (rumore SVG), granelli, fiocchi e tre ragnatele generate a caso, spazzati via con una maschera diagonale. Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall); a fine animazione la copertura viene rimossa. Parte quando l'immagine è caricata. Con `prefers-reduced-motion` nessuna copertura sulla carta. CSP invariata: i valori casuali passano da `style.setProperty`.
 - Fotogrammi di controllo: `npm run dust-frames` (desktop e mobile, 5 istanti più la fine, dalla pagina `#carta-dimenticata`).
 
+## Testata (2026-10-07)
+
+- **"Carta dimenticata"** (`#navDust`, classe `navdust`) è un pulsante compatto nello stile del pulsante grande della pagina:
+  - pieno di colore, in rilievo (`--btn-ledge`), con l'icona del piumino e una piccola ragnatela fissa nell'angolo in alto a destra (`.nd-web`), che oscilla al passaggio del mouse;
+  - sulla propria pagina appare premuto (`aria-current="page"`);
+  - focus: contorno di 3 px nel colore del testo;
+  - con `prefers-reduced-motion` niente movimento.
+- Nome accessibile da `aria-label` (`nav.dust`). Fino a 400 px di larghezza compare l'etichetta breve (`nav.dustShort`: "Dimenticata" / "Forgotten") al posto di quella piena.
+- **"Informazioni"** (`.navlink`) è un link discreto: colore attenuato, sottolineato solo al passaggio del mouse o sulla propria pagina.
+- **Font del nome: New Rocker** (scelto dall'utente il 2026-10-07 tra Grenze Gotisch, Fruktur, Pirata One, Metal Mania, New Rocker e Germania One; scartati i due Unifraktur, dove la "I" diventa "J").
+  - Usato **solo** per "Pauper Index" nel titolo della testata (`h1 .brand`) e nell'og-image; il resto del sito resta nel font di sistema.
+  - **Licenza**: SIL OFL 1.1 con Reserved Font Name "New Rocker". La versione ridotta è una "Modified Version", quindi il suo nome interno è **"Pauper Index Title"** (anche in CSS) e "New Rocker" compare solo in copyright e licenza. Testo della licenza in `web/public/fonts/OFL-NewRocker.txt`, pubblicato anche nel sito accanto al font.
+  - **File**: `web/public/fonts/pauper-index-title.woff2`, 7,6 KB, con i soli glifi di "Pauper Index" (11, più `.notdef`). Il grosso del peso è il testo della licenza, lasciato dentro il font. Servito dal sito con `font-display: swap` e `<link rel="preload">`; CSP invariata (`font-src 'self'`).
+  - **Rigenerare** (solo se cambia il testo del titolo): `web/scripts/title-font.py` con fonttools in un ambiente virtuale temporaneo (fonttools non è una dipendenza del progetto); sorgente `NewRocker-Regular.ttf` dal repository google/fonts. Il testo da coprire è la costante `TEXT`: un carattere nuovo nel titolo non sarebbe coperto.
+  - **og-image**: `npm run icons` carica lo stesso file con `FontFace` per disegnare "Pauper Index"; "pauperindex.com" resta nel font di sistema.
+
 ## Riepiloghi ed elenco (2026-10-07)
 
 - **Regola**: ogni riepilogo conta esattamente l'insieme che l'elenco può mostrare; se i filtri dell'elenco ne mostrano un altro, lo si dice.
@@ -619,7 +638,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **`npm run icons`** (`web/scripts/icons.mjs`) genera tutto da lì, senza dipendenze in più: tracciato compattato (coordinate relative, viewBox ritagliato), PNG disegnate in un canvas di Chromium e salvate come PNG indicizzate con zlib al massimo.
   - `public/logo.svg`: `<symbol id="logo">` con `fill="currentColor"`, usato in testata con `<svg class="logo"><use href="/logo.svg#logo">`; il colore viene da `--logo` (`#555555` chiaro, `#C9CFD8` scuro), quindi segue anche il tema scelto a mano;
   - `public/icon.svg`: favicon con `prefers-color-scheme` (stessi due colori);
-  - `apple-touch-icon.png` (180, quadrato pieno), `icon-192/512.png` (angoli arrotondati), `icon-maskable-512.png` (logo al 56%, dentro l'area sicura), `og-image.png` (1200×630, logo + "Pauper Index" + dominio): tutte su sfondo scuro `#1B2028` con il logo `#C9CFD8`.
+  - `apple-touch-icon.png` (180, quadrato pieno), `icon-192/512.png` (angoli arrotondati), `icon-maskable-512.png` (logo al 56%, dentro l'area sicura), `og-image.png` (1200×630, logo + "Pauper Index" in New Rocker + dominio): tutte su sfondo scuro `#1B2028` con il logo `#C9CFD8`.
 - **Varianti scelte dall'utente**: in tema scuro il logo diventa grigio chiaro senza riquadro; icone della schermata Home su sfondo scuro. Il testo dell'og-image usa il font di sistema della macchina che rigenera (Segoe UI su Windows).
 
 ## Donazioni (2026-10-06)
