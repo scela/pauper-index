@@ -981,6 +981,9 @@ function wire(): void {
     toast(t('clear.done'));
   });
 
+  // logo e nome: tornano alla pagina principale ricaricandola (la collezione si ripristina da IndexedDB);
+  // i filtri dell'elenco ripartono azzerati: ricerca e "Solo quelle che possiedi" non sono salvati, "Ultima apparizione" sì
+  $('#home').addEventListener('click', () => lsSet('seen', 'all'));
   $('#theme').addEventListener('click', () => {
     const dark = document.documentElement.dataset.theme
       ? document.documentElement.dataset.theme === 'dark'

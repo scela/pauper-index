@@ -35,7 +35,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] 2026-10-07: nome "Pauper Index" in New Rocker, scelto dall'utente (vedi "Testata")
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo pulsante in testata e font del nome, 2026-10-07): 96 pytest, 58 Vitest, 86 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo il link della testata alla pagina principale, 2026-10-07): 96 pytest, 58 Vitest, 90 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -545,6 +545,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - focus: contorno di 3 px nel colore del testo;
   - con `prefers-reduced-motion` niente movimento.
 - Nome accessibile da `aria-label` (`nav.dust`). Fino a 400 px di larghezza compare l'etichetta breve (`nav.dustShort`: "Dimenticata" / "Forgotten") al posto di quella piena.
+- **Logo e nome** (`#home`, `href="/"`, nome accessibile `nav.home`: "Pauper Index, pagina principale" / "Pauper Index, home page"): da qualsiasi sezione (Informazioni, Carta dimenticata, in futuro Mazzi) e dalla pagina principale stessa **ricaricano** la pagina principale. La collezione si ripristina da IndexedDB; prima di navigare si azzera "Ultima apparizione" (`pauper-index:seen`), l'unico filtro dell'elenco ricordato nel browser, mentre ricerca e "Solo quelle che possiedi" ripartono comunque azzerati. Aspetto invariato: manina, leggera trasparenza e logo appena ruotato al passaggio del mouse (fermo con `prefers-reduced-motion`), contorno di focus di 3 px.
 - **"Informazioni"** (`.navlink`) è un link discreto: colore attenuato, sottolineato solo al passaggio del mouse o sulla propria pagina.
 - **Font del nome: New Rocker** (scelto dall'utente il 2026-10-07 tra Grenze Gotisch, Fruktur, Pirata One, Metal Mania, New Rocker e Germania One; scartati i due Unifraktur, dove la "I" diventa "J").
   - Usato **solo** per "Pauper Index" nel titolo della testata (`h1 .brand`) e nell'og-image; il resto del sito resta nel font di sistema.

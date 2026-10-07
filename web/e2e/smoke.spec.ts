@@ -425,6 +425,40 @@ test('controllo rapido: se tutti i nomi arrivano dopo la scelta, l’elenco non 
   await expect(input).toHaveValue('Brainstorm');
 });
 
+test('logo e nome: link alla pagina principale da ogni sezione, collezione conservata, filtri azzerati', async ({ page }) => {
+  await setup(page);
+  const home = page.locator('#home');
+  await expect(home).toHaveAccessibleName(tr('nav.home'));
+  await expect(home).toHaveAttribute('href', '/');
+  expect(await home.evaluate((el) => getComputedStyle(el).cursor)).toBe('pointer');
+  // focus da tastiera visibile
+  await home.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  expect(await home.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid');
+
+  await uploadCollection(page);
+  for (const section of ['#navAbout', '#navDust']) {
+    // filtri dell'elenco attivi, poi una sezione, poi il logo
+    await page.selectOption('#seenFilter', 'old');
+    await page.fill('#search', 'bolt');
+    await page.click(section);
+    await expect(page.locator('#viewMain')).toBeHidden();
+    await page.click('#home');
+    await expect(page).toHaveURL(/:\d+\/$/); // radice del sito, senza #sezione
+    await expect(page.locator('#viewMain')).toBeVisible();
+    await expect(page.locator('#loaded')).toContainText(tr('load.collection').trim()); // collezione ancora caricata
+    await expect(page.locator('#seenFilter')).toHaveValue('all');
+    await expect(page.locator('#search')).toHaveValue('');
+    await expect(page.locator('#filterNote')).toBeHidden();
+  }
+  // già sulla pagina principale: la ricarica
+  await page.evaluate(() => { (window as unknown as { marker: number }).marker = 1; });
+  await page.click('#home');
+  await expect(page.locator('#loaded')).toContainText(tr('load.collection').trim());
+  expect(await page.evaluate(() => (window as unknown as { marker?: number }).marker)).toBeUndefined();
+});
+
 async function pickSet(page: Page, query: string, name: string): Promise<void> {
   const input = page.locator('#setInput');
   await input.click();

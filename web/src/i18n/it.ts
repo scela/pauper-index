@@ -8,6 +8,7 @@ export const it = {
   'skip': 'Vai al contenuto',
   'nav.aria': 'Navigazione',
   'nav.about': 'Informazioni',
+  'nav.home': 'Pauper Index, pagina principale',
   'nav.dust': 'Carta dimenticata',
   'nav.dustShort': 'Dimenticata',
   'nav.lang': 'Lingua',

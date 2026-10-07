@@ -6,6 +6,7 @@ export const en: Record<Key, Msg> = {
   'skip': 'Skip to content',
   'nav.aria': 'Navigation',
   'nav.about': 'About',
+  'nav.home': 'Pauper Index, home page',
   'nav.dust': 'Forgotten card',
   'nav.dustShort': 'Forgotten',
   'nav.lang': 'Language',

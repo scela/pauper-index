@@ -46,7 +46,13 @@ a{color:var(--accent)}
 /* testata */
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 h1{font-size:clamp(1.75rem,4.5vw,2.5rem);line-height:1;letter-spacing:-0.03em;font-weight:700;margin:0}
-h1 a{color:inherit;text-decoration:none}
+h1 a{color:inherit;text-decoration:none;cursor:pointer}
+.home{border-radius:var(--r-m);transition:opacity .15s}
+.home:hover{opacity:.82}
+.home .logo{transition:transform .2s ease}
+.home:hover .logo{transform:rotate(-6deg) scale(1.05)}
+.home:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+@media (prefers-reduced-motion: reduce){.home,.home .logo{transition:none}.home:hover .logo{transform:none}}
 .home .brand{font-family:"Pauper Index Title",var(--font);font-weight:400;letter-spacing:.01em}
 .home{display:inline-flex;align-items:center;gap:.28em}
 .logo{width:1.2em;height:1.2em;flex:none;color:var(--logo)}
