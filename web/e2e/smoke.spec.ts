@@ -508,6 +508,35 @@ test('"Rimuovi collezione": via subito, Annulla per 8 secondi, poi cancellata da
   await expect(page.locator('#period')).toHaveValue('3');
 });
 
+test('visita successiva: preferenze ricordate (periodo, espansione), filtri che nascondono carte azzerati', async ({ page }) => {
+  await setup(page);
+  await uploadCollection(page);
+  await page.selectOption('#period', '3');
+  await pickSet(page, 'ice age', 'Ice Age');
+  await page.locator('label:has(#setOwned)').click();
+  await page.selectOption('#seenFilter', 'old');
+  await page.fill('#search', 'storm');
+  await page.reload();
+  await expect(page.locator('#dataline')).toContainText(head('data.line'));
+  // preferenze: collezione, periodo ed espansione restano
+  await expect(page.locator('#loaded')).toContainText(tr('load.collection').trim());
+  await expect(page.locator('#period')).toHaveValue('3');
+  await expect(page.locator('#setWrap')).toHaveClass(/has-set/);
+  await expect(page.locator('#setInput')).toHaveValue(/Ice Age/);
+  // filtri che nascondono carte: azzerati
+  await expect(page.locator('#seenFilter')).toHaveValue('all');
+  await expect(page.locator('#search')).toHaveValue('');
+  await expect(page.locator('#setOwned')).not.toBeChecked();
+  await expect(page.locator('#filterNote')).toBeHidden();
+  // togliere l'espansione: la visita successiva parte senza
+  await page.locator('#setInput').click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await expect(page.locator('#dataline')).toContainText(head('data.line'));
+  await expect(page.locator('#setWrap')).not.toHaveClass(/has-set/);
+});
+
 async function pickSet(page: Page, query: string, name: string): Promise<void> {
   const input = page.locator('#setInput');
   await input.click();

@@ -10,7 +10,7 @@ import { imageUrl, loadData, type Data } from './lib/data';
 import { $, h, svg } from './lib/dom';
 import { realignedCSV, textList } from './lib/exports';
 import { daysBetween, fmtDate, fmtInt, fmtPct, fmtPrint } from './lib/format';
-import { clearAll, idbGet, idbSet, lsGet, lsSet } from './lib/store';
+import { clearAll, idbGet, idbSet, lsDel, lsGet, lsSet } from './lib/store';
 import { parseTextList } from './lib/text';
 import type { Group, Role, Row } from './lib/types';
 import { collectionIndex, type CollectionIndex, type Owned } from './lib/quick';
@@ -54,7 +54,8 @@ const S = {
   showMissing: false,
   savedAt: null as number | null,
   query: '',
-  seen: (lsGet('seen') as Seen) || 'all',
+  // i filtri che nascondono carte (ultima apparizione, ricerca, "Solo quelle che possiedi") non si salvano mai
+  seen: 'all' as Seen,
   sort: (lsGet('sort') as 'share' | 'name' | 'recent' | 'oldest') || 'share',
   results: [] as Result[],
   view: [] as Result[],
@@ -173,7 +174,6 @@ function removeCollection(): void {
   };
   // via solo la collezione: periodo, lingua, tema e le altre preferenze restano; i filtri dell'elenco ripartono azzerati
   Object.assign(S, { groups: [], roles: {}, summaries: [], showMissing: false, query: '', seen: 'all', setOwned: false, replacing: false });
-  lsSet('seen', 'all');
   ($('#search') as HTMLInputElement).value = '';
   ($('#seenFilter') as HTMLSelectElement).value = 'all';
   showErrors([]);
@@ -202,7 +202,6 @@ function undoRemoval(): void {
     groups: r.groups, roles: r.roles, summaries: r.summaries, showMissing: r.showMissing, savedAt: r.savedAt,
     query: r.query, seen: r.seen, setOwned: r.setOwned,
   });
-  lsSet('seen', r.seen);
   ($('#search') as HTMLInputElement).value = r.query;
   ($('#seenFilter') as HTMLSelectElement).value = r.seen;
   refresh(false);
@@ -385,6 +384,8 @@ function applySetFilter(): void {
 
 function selectSet(code: string | null): void {
   S.setFilter = code;
+  if (code) lsSet('set', code);
+  else lsDel('set');
   refresh(false);
 }
 
@@ -916,7 +917,6 @@ function wire(): void {
   seenSel.value = S.seen;
   seenSel.addEventListener('change', () => {
     S.seen = seenSel.value as typeof S.seen;
-    lsSet('seen', S.seen);
     S.shown = PAGE;
     renderResults();
   });
@@ -933,8 +933,7 @@ function wire(): void {
     S.query = '';
     S.seen = 'all';
     S.setOwned = false;
-    lsSet('seen', 'all');
-    ($('#search') as HTMLInputElement).value = '';
+      ($('#search') as HTMLInputElement).value = '';
     seenSel.value = 'all';
     ($('#setOwned') as HTMLInputElement).checked = false;
     S.shown = PAGE;
@@ -954,6 +953,7 @@ function wire(): void {
   });
   $('#setHidden').addEventListener('change', (e) => {
     S.setHidden = (e.target as HTMLInputElement).checked;
+    lsSet('setHidden', S.setHidden ? '1' : '');
     refresh(false);
   });
   $('#setOwned').addEventListener('change', (e) => {
@@ -1071,8 +1071,7 @@ function wire(): void {
   });
 
   // logo e nome: tornano alla pagina principale ricaricandola (la collezione si ripristina da IndexedDB);
-  // i filtri dell'elenco ripartono azzerati: ricerca e "Solo quelle che possiedi" non sono salvati, "Ultima apparizione" sì
-  $('#home').addEventListener('click', () => lsSet('seen', 'all'));
+  // i filtri che nascondono carte non sono salvati, quindi ripartono azzerati
   $('#theme').addEventListener('click', () => {
     const dark = document.documentElement.dataset.theme
       ? document.documentElement.dataset.theme === 'dark'
@@ -1113,6 +1112,7 @@ async function main(): Promise<void> {
     groups: loadSetGroups, showHidden: () => S.setHidden, selected: selectedGroup, select: selectSet,
     enableHidden: () => {
       S.setHidden = true;
+      lsSet('setHidden', '1');
       ($('#setHidden') as HTMLInputElement).checked = true;
       if (S.setFilter) refresh(false);
     },
@@ -1134,6 +1134,11 @@ async function main(): Promise<void> {
   }
   renderDataline();
   await restore();
+  lsDel('seen'); // salvata dalle versioni precedenti: non più usata
+  // espansione scelta nella visita precedente (preferenza): si ripristina dopo aver letto data/sets.json
+  const savedSet = lsGet('set');
+  S.setHidden = lsGet('setHidden') === '1';
+  if (savedSet && (await loadSetGroups())?.has(savedSet)) S.setFilter = savedSet;
   refresh(false);
   if (location.hash === '#informazioni') renderAbout($('#viewAbout'), S.d);
   void renderNews();

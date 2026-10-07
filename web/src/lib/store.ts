@@ -58,6 +58,14 @@ export function lsSet(key: string, value: string): void {
   }
 }
 
+export function lsDel(key: string): void {
+  try {
+    localStorage.removeItem(LS_PREFIX + key);
+  } catch {
+    /* ignora */
+  }
+}
+
 /** sessionStorage: dura quanto la scheda del browser (per esempio le carte già rispolverate). */
 export function ssGet(key: string): string | null {
   try {

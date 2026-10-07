@@ -38,7 +38,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] 2026-10-07: "Rimuovi collezione" con Annulla (vedi "Rimuovi collezione")
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo "Rimuovi collezione", 2026-10-07): 96 pytest, 58 Vitest, 102 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo il punto 0 della funzione 4, 2026-10-07): 96 pytest, 58 Vitest, 105 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -457,7 +457,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Riepilogo dell'importazione**: righe lette, carte della lista, carte mai giocate in Pauper (Scryfall ID o nome in `allnames.json`), righe non riconosciute (elencate), righe senza set e numero (immagine di riferimento, segnalata anche nella scheda).
 - **"Conta le copie"**: opzione **tolta** su richiesta dell'utente (dopo la funzione 2). Una carta è posseduta se ne hai almeno una copia; export "1 Nome" e List riallineata con quantità 1. Le copie tipiche (mediana) restano solo come informazione, nella scheda e nel controllo rapido.
 - **Ventaglio**: un artwork per `illustration_id`, preferendo la printing posseduta, poi la più recente in inglese. Al massimo 7, più "Mostra tutte" che apre una griglia in un `<dialog>`. Le carte sono **distanziate e ruotate di pochi gradi, senza sovrapporsi**, per non coprire artista e copyright (regole di Scryfall). La carta attiva è mostrata intera e più grande.
-- **Persistenza**: IndexedDB (database `pauper-index`) per la collezione; localStorage solo per tema, ordinamento e filtro, con prefisso `pauper-index:`. "Cancella i miei dati" elimina il database e **solo** le chiavi `pauper-index:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
+- **Persistenza**: IndexedDB (database `pauper-index`) per la collezione e le opzioni (periodo, minimo mazzi, solo legali, side, proxy, "Mostra anche le mancanti"); localStorage, con prefisso `pauper-index:`, per tema, lingua, ordinamento ed **espansione selezionata** (`set`, `setHidden`, dal 2026-10-07). **I filtri che nascondono carte non si salvano mai** e ripartono azzerati a ogni visita: ricerca, "Ultima apparizione" (prima era salvata ed è stata la causa del caso "69 contro 13"; la chiave vecchia `seen` si cancella all'avvio) e "Solo quelle che possiedi". "Cancella i miei dati" elimina il database e **solo** le chiavi `pauper-index:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
 - **Tabella**: 10 righe alla volta (vedi "Carica altri"). Ordinamento per percentuale di mazzi, nome, ultima apparizione (recente o meno recente). Filtro "viste negli ultimi 6 mesi / non viste da oltre 6 mesi", rispetto alla data dei dati.
 - **Segnalare un errore**: link `mailto:massadalbe@hotmail.com` nella pagina Informazioni (`REPORT_EMAIL` in `web/src/ui/about.ts`).
 - **Icone**: generate da `logo/logo.svg` con `npm run icons` e committate (vedi "Logo"). Nessun simbolo di Wizards.
