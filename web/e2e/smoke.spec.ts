@@ -647,7 +647,7 @@ test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi spari
   await expect(page.locator('#navDust')).toHaveAccessibleName(tr('nav.dust'));
   // nella testata è un pulsante compatto (pieno di colore, con icona e ragnatela), "Informazioni" un link discreto
   await expect(page.locator('#navDust .nd-ico')).toHaveCount(1);
-  await expect(page.locator('#navDust .nd-web')).toHaveCount(1);
+  await expect(page.locator('#navDust .nd-web svg.cw')).toHaveCount(1);
   expect(await page.locator('#navDust').evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('gradient');
   expect(await page.locator('#navAbout').evaluate((el) => getComputedStyle(el).backgroundImage)).toBe('none');
   // etichetta breve solo sugli schermi stretti
@@ -710,13 +710,61 @@ test('"Carta dimenticata" con prefers-reduced-motion: la carta appare subito, se
   await setup(page);
   // la ragnatela del pulsante in testata resta ferma al passaggio del mouse
   await page.hover('#navDust');
-  expect(await page.locator('#navDust .nd-web').evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
+  expect(await page.locator('#navDust .cw-corner').evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
   await page.click('#navDust');
   // ragnatele del pulsante ferme anche al passaggio del mouse
   await page.hover('#dustBtn');
-  expect(await page.locator('#dustBtn .bweb svg').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
+  for (const el of await page.locator('#dustBtn .cw-corner, #dustResult .cw-corner').all()) {
+    expect(await el.evaluate((x) => getComputedStyle(x).animationName)).toBe('none');
+  }
   await page.click('#dustBtn');
   await expect(page.locator('#dustResult .dust-scene img')).toBeVisible();
   await expect(page.locator('#dustResult .dust-stage:not(.dust-empty) .dust-cover')).toHaveCount(0);
   await expect(page.locator('#dustBtn')).not.toHaveClass(/sweep/);
+  // carta in 3D disattivata: il puntatore e il dito non la muovono
+  const stage = page.locator('#dustResult .dust-stage:not(.dust-empty)');
+  await expect(stage).not.toHaveClass(/tilt/);
+  const b = (await stage.boundingBox())!;
+  await stage.dispatchEvent('pointerdown', { pointerType: 'touch', pointerId: 3, isPrimary: true, clientX: b.x + 5, clientY: b.y + 5, bubbles: true });
+  await stage.dispatchEvent('pointermove', { pointerType: 'touch', pointerId: 3, isPrimary: true, clientX: b.x + 5, clientY: b.y + 5, bubbles: true });
+  await page.waitForTimeout(300);
+  expect(await stage.evaluate((el) => getComputedStyle(el).transform)).toBe('none');
+});
+
+test('"Carta dimenticata": ragnatele generate e mosse appena; carta in 3D che torna piatta', async ({ page, isMobile }) => {
+  await setup(page);
+  await page.click('#navDust');
+  // ragnatele generate (diverse a ogni pesca), con un'oscillazione a riposo
+  await expect(page.locator('#dustResult .dust-empty svg.cw .cw-corner')).toHaveCount(3);
+  expect(await page.locator('#dustResult .cw-corner').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('cw-sway');
+  await expect(page.locator('#dustBtn .bweb svg.cw')).toHaveCount(3);
+  await page.click('#dustBtn');
+  const stage = page.locator('#dustResult .dust-stage.tilt');
+  await expect(stage).toHaveCount(1, { timeout: 6000 }); // si attiva alla fine della spazzata
+  await expect(page.locator('#dustResult .dust-cover')).toHaveCount(0);
+  const transform = () => stage.evaluate((el) => getComputedStyle(el).transform);
+  expect(await transform()).toBe('none'); // a riposo è piatta
+  // l'immagine non ha mai filtri né livelli sopra: la profondità viene solo dall'ombra
+  expect(await stage.locator('img').evaluate((el) => getComputedStyle(el).filter)).toBe('none');
+  await expect(stage.locator(':scope > :not(img)')).toHaveCount(0);
+  const b = (await stage.boundingBox())!;
+  if (!isMobile) {
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.move(b.x + b.width * 0.9, b.y + b.height * 0.1, { steps: 4 });
+    await expect.poll(transform).not.toBe('none');
+    // inclinazione massima di circa 10 gradi su ciascun asse
+    const angles = (await stage.evaluate((el) => el.style.transform)).match(/-?\d+(\.\d+)?(?=deg)/g)!.map(Number);
+    expect(angles).toHaveLength(2);
+    for (const a of angles) expect(Math.abs(a)).toBeLessThanOrEqual(10);
+    expect(Math.max(...angles.map(Math.abs))).toBeGreaterThan(3);
+    await page.mouse.move(2, 2); // il cursore esce: torna piatta
+    await expect.poll(transform, { timeout: 3000 }).toBe('none');
+  }
+  // al tocco: segue il dito finché è appoggiato e torna piatta al rilascio
+  const touch = { pointerType: 'touch', pointerId: 9, isPrimary: true, clientX: b.x + 10, clientY: b.y + b.height - 10, bubbles: true };
+  await stage.dispatchEvent('pointerdown', touch);
+  await stage.dispatchEvent('pointermove', touch);
+  await expect.poll(transform).not.toBe('none');
+  await stage.dispatchEvent('pointerup', touch);
+  await expect.poll(transform, { timeout: 3000 }).toBe('none');
 });

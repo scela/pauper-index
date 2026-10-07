@@ -6,6 +6,8 @@ import { t } from '../i18n';
 import type { Opts } from '../lib/compare';
 import { imageUrl, type Data } from '../lib/data';
 import { h, svg } from '../lib/dom';
+import { cobwebs, puff, type Corner } from './cobweb';
+import { enableTilt } from './tilt';
 import { drawCard, dustPool, historyWindow, peakYear } from '../lib/dust';
 import { fmtDate, fmtInt, fmtPct, fmtPrint, lastSeen } from '../lib/format';
 import type { CollectionIndex, Owned } from '../lib/quick';
@@ -18,8 +20,8 @@ export interface DustCtx {
   openArtworks(anchor: HTMLElement, idx: number, owned: Owned | null): void;
 }
 
-const SWEEP_MS = 1700; // durata massima dell'animazione (CSS) più un margine
-const BTN_SWEEP_MS = 320; // le ragnatele del pulsante vengono spazzate via prima che compaia la carta
+const SWEEP_MS = 2100; // durata massima dell'animazione (CSS) più un margine
+const BTN_SWEEP_MS = 460; // le ragnatele del pulsante vengono spazzate via prima che compaia la carta
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
@@ -84,6 +86,7 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
       draw();
       // le ragnatele si riformano dopo la spazzata della carta
       regrowTimer = window.setTimeout(() => {
+        growButtonWebs();
         btn.classList.remove('sweep');
         btn.classList.add('regrow');
       }, SWEEP_MS);
@@ -145,16 +148,30 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
       dataset: ref && ref[0] !== id ? { fallback: imageUrl(ref[0], 'normal') } : undefined,
     });
     const stage = h('button', { class: 'dust-stage', type: 'button', 'aria-label': t('quick.imageAlt', { name: c.n }) }, img);
-    stage.addEventListener('click', () => ctx.openArtworks(stage, current, owned));
+    stage.addEventListener('click', () => {
+      // un tocco trascinato serve a inclinare la carta, non apre la scheda
+      if (stage.dataset.dragged) return void delete stage.dataset.dragged;
+      ctx.openArtworks(stage, current, owned);
+    });
     root.replaceChildren(h('div', { class: 'dust-scene' + (owned && owned.total > 0 ? ' is-owned' : '') },
       stage, h('div', { class: 'qinfo dust-info' }, ...info)));
     if (animate) {
       root.scrollIntoView({ block: 'nearest' });
-      if (!reducedMotion()) sweep(stage, img);
+      // la carta in 3D si attiva alla fine della spazzata
+      if (!reducedMotion()) sweep(stage, img, () => enableTilt(stage));
+    } else if (!reducedMotion()) {
+      enableTilt(stage);
     }
   };
 
-  btn.prepend(buttonWeb('tl'), buttonWeb('tr'), buttonWeb('br'));
+  // ragnatele del pulsante (una per angolo, nuove a ogni ricrescita) e della voce in testata
+  const growButtonWebs = () => {
+    btn.querySelectorAll('.bweb').forEach((el) => el.remove());
+    btn.prepend(...(['tl', 'tr', 'br'] as Corner[]).map((k, i) =>
+      h('span', { class: `bweb bweb-${k}`, 'aria-hidden': 'true' }, cobwebs(44, 44, [[k, 0.95, i * 0.06]], 0.6), puff(k, i * 0.06))));
+  };
+  growButtonWebs();
+  document.querySelector('#navDust .nd-web')?.replaceChildren(cobwebs(26, 26, [['tr', 0.95]], 0.3));
   btn.addEventListener('click', press);
   allBox.addEventListener('change', () => {
     fromAll = allBox.checked;
@@ -165,40 +182,8 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
 
 /* ---------- animazione ---------- */
 
-/**
- * Piccola ragnatela per un angolo del pulsante (disegnata per l'angolo in alto a sinistra; le altre sono
- * specchiate via CSS): fili radiali dall'angolo, giri che cedono verso il centro, un filo penzolante.
- */
-function buttonWeb(corner: 'tl' | 'tr' | 'br'): HTMLElement {
-  const n = 5;
-  const angles = Array.from({ length: n }, (_, k) => ((k + rand(-0.15, 0.15)) * (90 / (n - 1))) * (Math.PI / 180));
-  const lens = angles.map((_, k) => (k === 0 || k === n - 1 ? 40 : rand(28, 38)));
-  const at = (k: number, r: number): [number, number] => [1 + r * Math.cos(angles[k]), 1 + r * Math.sin(angles[k])];
-  let radial = '';
-  angles.forEach((_, k) => {
-    const [x, y] = at(k, lens[k]);
-    radial += `M1 1L${f1(x)} ${f1(y)}`;
-  });
-  let rings = '';
-  for (const r of [7, 13, 19.5, 26]) {
-    for (let k = 0; k < n - 1; k++) {
-      if (r > lens[k] * 0.95 || r > lens[k + 1] * 0.95) continue;
-      const [x1, y1] = at(k, r * rand(0.95, 1.05));
-      const [x2, y2] = at(k + 1, r * rand(0.95, 1.05));
-      const mid = (angles[k] + angles[k + 1]) / 2;
-      const sag = r * rand(0.8, 0.88);
-      rings += `M${f1(x1)} ${f1(y1)}Q${f1(1 + sag * Math.cos(mid))} ${f1(1 + sag * Math.sin(mid))} ${f1(x2)} ${f1(y2)}`;
-    }
-  }
-  const [dx, dy] = at(2, 17);
-  const dangle = `M${f1(dx)} ${f1(dy)}c1 3 -1 6 .5 9`;
-  return h('span', { class: `bweb bweb-${corner}`, 'aria-hidden': 'true' },
-    svg('svg', { viewBox: '0 0 40 40', focusable: 'false' },
-      svg('path', { d: radial + rings + dangle, class: 'bweb-line' })));
-}
-
 /** Copertura di polvere e ragnatele sopra la carta; parte quando l'immagine è pronta e poi si rimuove. */
-function sweep(stage: HTMLElement, img: HTMLImageElement): void {
+function sweep(stage: HTMLElement, img: HTMLImageElement, done: () => void): void {
   const cover = dustCover();
   stage.appendChild(cover);
   let started = false;
@@ -206,10 +191,16 @@ function sweep(stage: HTMLElement, img: HTMLImageElement): void {
     if (started || !cover.isConnected) return;
     started = true;
     cover.classList.add('go');
-    // alla fine di tutte le animazioni la copertura si rimuove: la carta resta intera, senza nulla sopra
-    const anims = typeof cover.getAnimations === 'function' ? cover.getAnimations({ subtree: true }) : [];
-    if (anims.length) void Promise.all(anims.map((a) => a.finished)).then(() => cover.remove(), () => cover.remove());
-    else window.setTimeout(() => cover.remove(), SWEEP_MS);
+    // alla fine di tutte le animazioni la copertura si rimuove: la carta resta intera, senza nulla sopra.
+    // Si aspettano solo le animazioni finite (l'oscillazione a riposo è infinita e viene sostituita dallo strappo).
+    const anims = (typeof cover.getAnimations === 'function' ? cover.getAnimations({ subtree: true }) : [])
+      .filter((x) => x.effect?.getTiming().iterations !== Infinity);
+    const end = () => {
+      cover.remove();
+      done();
+    };
+    if (anims.length) void Promise.all(anims.map((a) => a.finished)).then(end, end);
+    else window.setTimeout(end, SWEEP_MS);
   };
   if (img.complete) start();
   else {
@@ -269,86 +260,9 @@ function dustCover(still = false): HTMLElement {
   }
   return h('div', { class: 'dust-cover' + (still ? ' still' : ''), 'aria-hidden': 'true' },
     h('div', { class: 'dust-film' }, tex),
-    cobweb('web-tl', 0.62),
-    cobweb('web-tr', 0.4),
-    cobweb('web-bl', 0.34),
+    // ragnatele: si strappano seguendo la spazzata (in alto a sinistra, poi in basso a sinistra, poi a destra)
+    cobwebs(280, 390, [['tl', 0.62, 0.25], ['bl', 0.36, 0.45], ['tr', 0.42, 0.75]], 1),
+    puff('tl', 0.25), puff('bl', 0.45), puff('tr', 0.75),
     specks,
     h('div', { class: 'dust-puff' }));
-}
-
-/**
- * Ragnatela d'angolo irregolare (angolo in alto a sinistra; le altre sono specchiate via CSS):
- * fili radiali a passo e lunghezza variabili, giri della spirale che si incurvano verso il centro,
- * alcuni tratti spezzati, fili penzolanti e un velo di polvere rimasta impigliata.
- */
-function cobweb(cls: string, size: number): SVGElement {
-  const id = ++uid;
-  const hub: [number, number] = [rand(4, 9), rand(4, 9)];
-  // direzioni dei fili, dal bordo alto (≈0°) al bordo sinistro (≈90°)
-  const n = Math.round(rand(8, 11));
-  const angles: number[] = [];
-  for (let k = 0; k < n; k++) angles.push((-6 + (k + rand(-0.3, 0.3)) * (102 / (n - 1))) * (Math.PI / 180));
-  angles.sort((a, b) => a - b);
-  const lens = angles.map((a, k) => (k === 0 || k === n - 1 ? 100 : rand(58, 98)) * (Math.abs(Math.cos(a * 2)) * 0.15 + 0.85));
-  const at = (k: number, r: number): [number, number] => [hub[0] + r * Math.cos(angles[k]), hub[1] + r * Math.sin(angles[k])];
-
-  let radial = '';
-  angles.forEach((_, k) => {
-    const [x, y] = at(k, lens[k]);
-    const [bx, by] = at(k, lens[k] * 0.5);
-    // fili quasi dritti, appena allentati
-    radial += `M${f1(hub[0])} ${f1(hub[1])}Q${f1(bx + rand(-1.2, 1.2))} ${f1(by + rand(-1.2, 1.2))} ${f1(x)} ${f1(y)}`;
-  });
-
-  let spiral = '';
-  let faint = '';
-  let r = rand(4, 6);
-  const knots: [number, number][] = [];
-  while (r < 82) {
-    for (let k = 0; k < n - 1; k++) {
-      if (r > lens[k] * 0.96 || r > lens[k + 1] * 0.96 || Math.random() < 0.1) continue; // tratti spezzati
-      const r1 = r * rand(0.94, 1.06);
-      const r2 = r * rand(0.94, 1.06);
-      const [x1, y1] = at(k, r1);
-      const [x2, y2] = at(k + 1, r2);
-      const mid = (angles[k] + angles[k + 1]) / 2;
-      const sag = ((r1 + r2) / 2) * rand(0.8, 0.9); // il filo cede verso il centro
-      const cx = hub[0] + sag * Math.cos(mid);
-      const cy = hub[1] + sag * Math.sin(mid) + rand(0, 1.4); // e un po' verso il basso
-      const seg = `M${f1(x1)} ${f1(y1)}Q${f1(cx)} ${f1(cy)} ${f1(x2)} ${f1(y2)}`;
-      if (Math.random() < 0.3) faint += seg;
-      else spiral += seg;
-      if (Math.random() < 0.08) knots.push([x1, y1]);
-    }
-    r += rand(4.5, 9) + r * 0.06;
-  }
-  // fili penzolanti
-  let loose = '';
-  for (let i = 0; i < 3; i++) {
-    const k = Math.floor(rand(1, n - 1));
-    const [x, y] = at(k, lens[k] * rand(0.35, 0.8));
-    const len = rand(8, 18);
-    loose += `M${f1(x)} ${f1(y)}c${f1(rand(-2, 2))} ${f1(len * 0.4)} ${f1(rand(-4, 4))} ${f1(len * 0.7)} ${f1(rand(-3, 3))} ${f1(len)}`;
-  }
-  // velo di polvere impigliata vicino al centro
-  let haze = `M${f1(hub[0])} ${f1(hub[1])}`;
-  angles.forEach((_, k) => {
-    const [x, y] = at(k, lens[k] * 0.55);
-    haze += `L${f1(x)} ${f1(y)}`;
-  });
-  haze += 'Z';
-
-  const el = svg('svg', { class: `web ${cls}`, viewBox: '0 0 100 100', 'aria-hidden': 'true' },
-    svg('defs', {},
-      svg('radialGradient', { id: `wh${id}`, cx: f1(hub[0]), cy: f1(hub[1]), r: '60', gradientUnits: 'userSpaceOnUse' },
-        svg('stop', { offset: '0', 'stop-color': '#f2efe8', 'stop-opacity': '0.55' }),
-        svg('stop', { offset: '1', 'stop-color': '#f2efe8', 'stop-opacity': '0' }))),
-    svg('path', { d: haze, fill: `url(#wh${id})`, class: 'web-haze' }),
-    svg('path', { d: radial + spiral, class: 'web-shadow' }),
-    svg('path', { d: faint, class: 'web-line faint' }),
-    svg('path', { d: spiral + loose, class: 'web-line' }),
-    svg('path', { d: radial, class: 'web-line strong' }),
-    ...knots.map(([x, y]) => svg('circle', { cx: f1(x), cy: f1(y), r: rand(0.5, 1).toFixed(2), class: 'web-knot' })));
-  el.style.setProperty('--size', `${Math.round(size * 100)}%`);
-  return el;
 }

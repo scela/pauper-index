@@ -9,7 +9,7 @@ import { chromium, devices } from '@playwright/test';
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(here, '../../.cache/screenshots');
 const URL = process.env.SITE_URL || 'http://localhost:4173/';
-const FRAMES = [0, 400, 700, 1000, 1300]; // ms dall'inizio della spazzata; più il fotogramma finale a copertura rimossa
+const FRAMES = [0, 350, 650, 950, 1300]; // ms dall'inizio della spazzata; più il fotogramma finale a copertura rimossa
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();

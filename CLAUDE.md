@@ -33,10 +33,10 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] 2026-10-07: riepiloghi coerenti con l'elenco (vedi "Riepiloghi ed elenco") e pulsante "Rispolvera una carta" in rilievo, con le ragnatele
   - [x] 2026-10-07: "Carta dimenticata" in testata come pulsante compatto (vedi "Testata")
   - [x] 2026-10-07: nome "Pauper Index" in New Rocker, scelto dall'utente (vedi "Testata")
-  - [ ] Ragnatele realistiche (scena, pulsante grande, testata) e carta in 3D: 3 stili proposti in `.cache/screenshots/ragnatele-confronto.png` (A polverosa a strati, B filo sottile, C groviglio; prototipo in `.cache/cobweb/`), **in attesa della scelta dell'utente**; la carta in 3D si fa dopo
+  - [x] 2026-10-07: ragnatele realistiche (combinazione dei 3 stili proposti, scelta dall'utente) e carta in 3D (vedi "Ragnatele" e "Carta in 3D")
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo il link della testata alla pagina principale, 2026-10-07): 96 pytest, 58 Vitest, 90 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo ragnatele e carta in 3D, 2026-10-07): 96 pytest, 58 Vitest, 94 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -94,7 +94,7 @@ web/                    frontend (Vite + TypeScript)
 
 **File principali**:
 - Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `seticons.py` (simboli delle espansioni), `review.py` (revisioni, snapshot, allarme), `scryfall.py` (client con limiti di frequenza), `config.py`.
-- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `view` (filtri dell'elenco e nota del riepilogo), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata"), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
+- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `view` (filtri dell'elenco e nota del riepilogo), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
 - Test: `pipeline/tests/`, `web/tests/` (Vitest), `web/e2e/smoke.spec.ts` (Playwright).
 - Automazione: `.github/workflows/aggiorna.yml`.
 - Documentazione: questo file, `README.md` (avvio manuale, file manuali, comandi locali), `docs/IDEE.md`.
@@ -127,6 +127,7 @@ npm run screenshots                  # con preview attivo: schermate in .cache/s
 npm run dust-frames                  # con preview attivo: fotogrammi dell'animazione "Rispolvera" in .cache/screenshots/
 node scripts/feature-shots.mjs <etichetta>   # con preview attivo: espansioni e "Carta dimenticata", desktop/mobile/scuro
 node scripts/dust-button-shots.mjs <etichetta>   # con preview attivo: pulsante "Rispolvera", desktop/mobile, chiaro/scuro
+node scripts/tilt-frames.mjs                     # con preview attivo: carta in 3D inclinata in direzioni diverse (mouse e dito)
 node scripts/header-shots.mjs <etichetta>        # con preview attivo: testata, desktop/mobile/mobile piccolo, chiaro/scuro, IT/EN, con focus
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
@@ -529,7 +530,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Pulsante** (rifatto il 2026-10-07, perché la scritta non sembrava da premere):
   - pieno di colore (sfumatura dell'accento), in rilievo (bordo inferiore `--btn-ledge` che si abbassa alla pressione), alto 68 px (72 px e largo quanto lo schermo su mobile), testo 1,25 rem;
   - icona originale di un piumino (manico, ghiera, tre piume), che oscilla al passaggio del mouse;
-  - tre **ragnatele originali** agli angoli (`buttonWeb` in `ui/dust.ts`, SVG generato a caso, fili `--btn-web`: bianchi in tema chiaro, scuri in tema scuro). Al passaggio del mouse oscillano; alla pressione vengono spazzate via (classe `sweep`, 320 ms) **prima** che parta la pesca e l'animazione della carta, e si riformano dopo (classe `regrow`);
+  - tre **ragnatele** agli angoli (`.bweb`, una per angolo, versione ridotta di `cobwebs`). A riposo oscillano appena; alla pressione si strappano (classe `sweep`, 460 ms) **prima** che parta la pesca e l'animazione della carta, e dopo la spazzata se ne generano di nuove (classe `regrow`);
   - focus da tastiera: contorno di 3 px nel colore del testo, staccato di 5 px. Contrasto del testo: 6,4:1 in chiaro, 7,8:1 in scuro;
   - con `prefers-reduced-motion` niente movimento: le ragnatele restano ferme e la pesca parte subito.
 - Prima della pesca la scena mostra una **cornice vuota** (`button.dust-empty`, nessuna immagine né retro di carta) con polvere e ragnatele ferme (`dustCover(true)`, classe `still`, visibile anche con `prefers-reduced-motion`) e la scritta "Tocca per rispolverare": anche la cornice si tocca per pescare.
@@ -537,13 +538,13 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Carte ammesse** (`dustPool`): legali oggi, non terre base, almeno `DUST_MIN_DECKS = 20` mazzi (main+side) nello storico, nessuna apparizione negli ultimi `DUST_QUIET_DAYS = 365` giorni contati dalla data dei dati. Al 2026-10-06: **203 carte**.
 - **Pesca**: con la collezione tra le carte possedute (interruttore "Pesca tra tutte le carte"); senza collezione tra tutte. Nessuna ripetizione nella sessione (oracle_id in sessionStorage `pauper-index:dusted`, cancellato anche da "Cancella i miei dati"); quando sono finite si ricomincia, con un avviso. Se nessuna carta posseduta è dimenticata, la scena lo dice (prima, al primo clic non compariva nulla: corretto).
 - **Dettagli**: immagine (la printing posseduta, altrimenti quella di riferimento; un clic apre gli artwork), mazzi nello storico tra prima e ultima apparizione, **anno di massima diffusione** in percentuale dei mazzi di quell'anno (`y` / `yt`), ultima apparizione più recente tra MTGO e cartaceo con il link al torneo, possesso. Tolti i pulsanti "Chiudi" e "Rispolverane un'altra" dentro il risultato, perché c'è il pulsante grande.
-- **Animazione** (circa 1,5 s, invariata): copertura `.dust-cover` con velo di polvere (rumore SVG), granelli, fiocchi e tre ragnatele generate a caso, spazzati via con una maschera diagonale. Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall); a fine animazione la copertura viene rimossa. Parte quando l'immagine è caricata. Con `prefers-reduced-motion` nessuna copertura sulla carta. CSP invariata: i valori casuali passano da `style.setProperty`.
+- **Animazione** (circa 2 s): copertura `.dust-cover` con velo di polvere (rumore SVG), granelli e fiocchi, spazzati via con una maschera diagonale, e le ragnatele (vedi "Ragnatele") che si strappano seguendo la spazzata: in alto a sinistra, poi in basso a sinistra, poi a destra. Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall); a fine animazione la copertura viene rimossa e si attiva la carta in 3D. Parte quando l'immagine è caricata. Con `prefers-reduced-motion` nessuna copertura sulla carta e niente 3D. CSP invariata: i valori casuali passano da `style.setProperty`.
 - Fotogrammi di controllo: `npm run dust-frames` (desktop e mobile, 5 istanti più la fine, dalla pagina `#carta-dimenticata`).
 
 ## Testata (2026-10-07)
 
 - **"Carta dimenticata"** (`#navDust`, classe `navdust`) è un pulsante compatto nello stile del pulsante grande della pagina:
-  - pieno di colore, in rilievo (`--btn-ledge`), con l'icona del piumino e una piccola ragnatela fissa nell'angolo in alto a destra (`.nd-web`), che oscilla al passaggio del mouse;
+  - pieno di colore, in rilievo (`--btn-ledge`), con l'icona del piumino e una piccola ragnatela nell'angolo in alto a destra (`.nd-web`, versione semplificata di `cobwebs`, generata all'avvio), che oscilla appena;
   - sulla propria pagina appare premuto (`aria-current="page"`);
   - focus: contorno di 3 px nel colore del testo;
   - con `prefers-reduced-motion` niente movimento.
@@ -556,6 +557,32 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - **File**: `web/public/fonts/pauper-index-title.woff2`, 7,6 KB, con i soli glifi di "Pauper Index" (11, più `.notdef`). Il grosso del peso è il testo della licenza, lasciato dentro il font. Servito dal sito con `font-display: swap` e `<link rel="preload">`; CSP invariata (`font-src 'self'`).
   - **Rigenerare** (solo se cambia il testo del titolo): `web/scripts/title-font.py` con fonttools in un ambiente virtuale temporaneo (fonttools non è una dipendenza del progetto); sorgente `NewRocker-Regular.ttf` dal repository google/fonts. Il testo da coprire è la costante `TEXT`: un carattere nuovo nel titolo non sarebbe coperto.
   - **og-image**: `npm run icons` carica lo stesso file con `FontFace` per disegnare "Pauper Index"; "pauperindex.com" resta nel font di sistema.
+
+## Ragnatele (2026-10-07)
+
+- **Stile**: combinazione dei tre proposti (A polverosa a strati, B filo sottile, C groviglio), scelta dall'utente. Il confronto è in `.cache/screenshots/ragnatele-confronto.png`; il prototipo in `.cache/cobweb/`.
+- **Generatore** `ui/cobweb.ts`, `cobwebs(w, h, angoli, dettaglio)`. Crea un SVG con elementi DOM (mai markup) ed è casuale a ogni uso. Per ogni angolo:
+  - velo di polvere a ventaglio (rumore SVG con una maschera sfumata);
+  - groviglio di fili tesi a caso vicino all'angolo;
+  - tela a raggi vecchia e rotta: spaziature irregolari, spirale che cede verso il basso dello schermo, tratti spezzati che penzolano, ancoraggi ai bordi, grumi di polvere sfocati;
+  - fili lunghi che cedono, con riflessi di luce (tratteggio bianco).
+- **Fili**: tra mezzo pixel e un pixel, in 3 livelli di opacità (`--silk`), con un'ombra sottile (`--silk-shadow`) che li rende visibili anche in tema chiaro.
+- **Dettaglio**: 1 nella scena (280×390, tre angoli); 0,6 nel pulsante grande (riquadri di 44 px per angolo, senza velo); 0,3 nella testata (un angolo, 26 px).
+- **Animazioni** (solo `transform` e `opacity`):
+  - oscillazione a riposo appena percettibile (`cw-sway`, 4,5–7 s, fase casuale);
+  - alla spazzata (`.go` o `.sweep`): l'angolo si tende (`cw-tense`), i fili, divisi in 4 frammenti per settore, si strappano e volano via dissolvendosi (`cw-tear`), il velo svanisce e si alza una nuvoletta di polvere (`cw-puff`).
+- Con `prefers-reduced-motion` nulla si muove. La copertura della carta aspetta solo le animazioni finite: l'oscillazione è infinita e viene sostituita dallo strappo.
+
+## Carta in 3D (2026-10-07)
+
+- `ui/tilt.ts`, `enableTilt(stage)`: si attiva alla fine della spazzata (o subito se la carta è mostrata senza animazione), mai con `prefers-reduced-motion`.
+- **Comportamento**:
+  - con il mouse la carta segue il cursore: il punto sotto il puntatore viene verso chi guarda, al massimo 10° su X e su Y, con un leggero sollevamento (scala 1,035, ombra più profonda);
+  - quando il cursore esce torna dolcemente piatta e a riposo resta piatta (nessuna `transform` in linea);
+  - al tocco segue il dito finché è appoggiato e torna piatta al rilascio. `touch-action: none` vale solo sulla carta, quindi fuori dalla carta la pagina scorre normalmente; un tocco trascinato oltre 8 px non apre la scheda. Niente giroscopio.
+- **Regole di Scryfall**: nessun riflesso né livello sopra l'immagine; la profondità viene solo dall'ombra (`box-shadow`), che si sposta al contrario del lato sollevato.
+- **Prestazioni**: solo `transform` e `box-shadow` aggiornati con `requestAnimationFrame` (avvicinamento morbido); `getBoundingClientRect` solo all'inizio dell'interazione.
+- Fotogrammi: `node scripts/tilt-frames.mjs` → `.cache/screenshots/carta3d-*`.
 
 ## Riepiloghi ed elenco (2026-10-07)
 
