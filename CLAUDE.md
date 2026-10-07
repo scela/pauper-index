@@ -33,6 +33,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] 2026-10-07: riepiloghi coerenti con l'elenco (vedi "Riepiloghi ed elenco") e pulsante "Rispolvera una carta" in rilievo, con le ragnatele
   - [x] 2026-10-07: "Carta dimenticata" in testata come pulsante compatto (vedi "Testata")
   - [x] 2026-10-07: nome "Pauper Index" in New Rocker, scelto dall'utente (vedi "Testata")
+  - [ ] Ragnatele realistiche (scena, pulsante grande, testata) e carta in 3D: 3 stili proposti in `.cache/screenshots/ragnatele-confronto.png` (A polverosa a strati, B filo sottile, C groviglio; prototipo in `.cache/cobweb/`), **in attesa della scelta dell'utente**; la carta in 3D si fa dopo
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
 - **Test** (tutti verdi dopo il link della testata alla pagina principale, 2026-10-07): 96 pytest, 58 Vitest, 90 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
@@ -469,6 +470,8 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   6. keepalive.
 - `deploy`: dopo `test` o `update`; build di `web/` da `main` e pubblicazione su GitHub Pages (HTTPS obbligatorio).
 - `notify`: se un job fallisce apre una Issue assegnata al proprietario, che riceve l'email. In più GitHub manda la sua email di "workflow failed" a chi ha creato il workflow programmato.
+
+**Runner**: `ubuntu-26.04` esplicito su tutti i job (dal 2026-10-07). `ubuntu-latest` passa a Ubuntu 26 tra il 19 ottobre e il 19 novembre 2026, a scaglioni; l'etichetta esplicita evita esecuzioni miste. Prima del cambio i job `test` e `update` sono stati provati su `ubuntu-26.04` con un workflow temporaneo su un ramo (Ubuntu 26.04.1 LTS: 96 pytest, Vitest, build, 90 Playwright, build completa dei dati; ramo poi cancellato).
 
 **Regole**:
 - Actions fissate per SHA, aggiornate da Dependabot (`.github/dependabot.yml`: Actions, npm, pip).

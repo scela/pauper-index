@@ -32,7 +32,7 @@ jobs:
   test:
     name: Test
     if: github.event_name == 'push' || github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -65,7 +65,7 @@ jobs:
   update:
     name: Aggiorna i dati
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
       contents: write   # commit dei dati
@@ -143,7 +143,7 @@ jobs:
     name: Pubblica su GitHub Pages
     needs: [test, update]
     if: ${{ !cancelled() && github.event_name != 'pull_request' && (needs.test.result == 'success' || needs.update.result == 'success') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -177,7 +177,7 @@ jobs:
     name: Avviso di errore
     needs: [test, update, deploy]
     if: ${{ failure() && github.event_name != 'pull_request' }}   # sulle PR l'esito è già nei controlli
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       issues: write
     env:
