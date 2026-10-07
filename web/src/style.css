@@ -123,7 +123,7 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
 .bweb-tl{top:0;left:0}
 .bweb-tr{top:0;right:0}
 .bweb-br{bottom:0;right:0;width:36px;height:36px}
-.dustbtn.regrow .bweb{animation:cw-grow .9s ease-out}
+.dustbtn.regrow .bweb{animation:cw-grow .8s ease-out}
 @keyframes cw-grow{from{opacity:0}to{opacity:1}}
 .dust-ico{position:relative;width:34px;height:34px;flex:none;overflow:visible}
 .dust-ico .duster{transform-origin:3px 21px}
@@ -148,63 +148,76 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
   background:color-mix(in srgb,var(--surface) 88%,transparent);color:var(--ink);font-size:.9375rem;font-weight:600;box-shadow:0 2px 8px -3px rgba(0,0,0,.3)}
 #dustResult{width:100%;margin-top:26px}
 /* scena: la carta al centro, i dettagli accanto (sotto su mobile) */
+/* scena: la carta al centro, i dettagli accanto (sotto su mobile). Dimensioni fisse: la pagina non salta */
 .dust-scene{display:flex;justify-content:center;align-items:center;gap:32px;max-width:880px;margin:0 auto;padding:28px 24px;text-align:left;
   border:1px solid var(--line);border-radius:16px;background:radial-gradient(ellipse at 50% 45%,var(--surface) 30%,var(--bg) 100%)}
 .dust-scene.is-owned{border-color:var(--accent)}
-.dust-scene.is-empty{flex-direction:column;gap:16px;text-align:center}
-.dust-info{max-width:380px}
+.dust-info{flex:0 1 380px;max-width:380px;min-height:12em;display:flex;flex-direction:column;justify-content:center}
 .dust-info .qtitle{font-size:1.375rem;margin-bottom:6px}
-.dust-stage{all:unset;position:relative;flex:none;display:block;width:280px;aspect-ratio:488/680;border-radius:12px;overflow:hidden;cursor:pointer;background:var(--line);
-  box-shadow:0 18px 40px -18px rgba(16,24,40,.55)}
-.dust-empty{cursor:pointer;border:2px dashed var(--line-strong);background:color-mix(in srgb,var(--line) 55%,var(--surface));box-shadow:none}
+.dust-info.swap-out{animation:info-out .12s ease-in forwards}
+.dust-info.swap-in{animation:info-in .25s ease-out .14s both}
+@keyframes info-out{to{opacity:0}}
+@keyframes info-in{from{opacity:0;transform:translateY(4px)}}
+.dust-stage{all:unset;position:relative;flex:none;display:block;box-sizing:border-box;width:280px;aspect-ratio:488/680;border-radius:12px;overflow:hidden;cursor:pointer;
+  background:var(--line);box-shadow:0 18px 40px -18px rgba(16,24,40,.55)}
+.dust-empty{border:2px dashed var(--line-strong);background:color-mix(in srgb,var(--line) 55%,var(--surface));box-shadow:none}
 .dust-empty:hover{border-color:var(--accent)}
 .dust-empty:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
 .dust-stage:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* carta in 3D (ui/tilt.ts): transform e ombra impostati da JS; sul dito la pagina non scorre solo sopra la carta */
-.dust-stage.tilt{touch-action:none;will-change:transform}
-.dust-stage img{display:block;width:100%;height:100%;border-radius:12px}
+.dust-stage.tilt{touch-action:none}
+/* due livelli d'immagine: quella visibile e quella in arrivo, in dissolvenza (mai sparire di colpo) */
+.dust-stage .card{position:absolute;inset:0;display:block;width:100%;height:100%;border-radius:12px;opacity:0;visibility:hidden}
+.dust-stage .card.card-cur,.dust-stage .card.card-in,.dust-stage .card.card-out{visibility:visible}
+.dust-stage .card.card-cur{opacity:1}
+.card-in{animation:card-in .26s ease-out .06s both}
+.card-out{opacity:1;animation:card-out .26s ease-in .06s forwards}
+@keyframes card-in{from{opacity:0}to{opacity:1}}
+@keyframes card-out{from{opacity:1}to{opacity:0}}
+.dust-tap.gone{animation:info-out .15s ease-in forwards}
+/* copertura: si anima solo con transform e opacity (il velo di rumore SVG resta fermo dentro il suo livello) */
 .dust-cover{position:absolute;inset:0;pointer-events:none;border-radius:12px;overflow:hidden}
-.dust-film{position:absolute;inset:0;
-  -webkit-mask-image:linear-gradient(105deg,transparent 44%,#000 56%);mask-image:linear-gradient(105deg,transparent 44%,#000 56%);
-  -webkit-mask-size:220% 100%;mask-size:220% 100%;-webkit-mask-position:100% 0;mask-position:100% 0;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.dust-cover.in{animation:cover-in .16s ease-out both}
+@keyframes cover-in{from{opacity:0}}
+.dust-film{position:absolute;inset:0;-webkit-mask-image:linear-gradient(100deg,transparent 0,#000 14%);mask-image:linear-gradient(100deg,transparent 0,#000 14%)}
 .dust-tex{position:absolute;inset:0;width:100%;height:100%}
-.dust-specks{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.dust-specks .sp{fill:rgba(214,208,196,.8);transform-box:fill-box;transform-origin:center}
-.dust-specks .sp.dark{fill:rgba(70,64,54,.55)}
-.dust-specks .sp.flake{fill:rgba(244,240,232,.7)}
-/* nuvoletta di polvere che accompagna il bordo della spazzata */
-.dust-puff{position:absolute;top:-20%;left:-50%;width:55%;height:140%;opacity:0;
-  background:radial-gradient(closest-side,rgba(232,226,214,.55),rgba(232,226,214,.22) 55%,transparent);
-  filter:blur(6px);transform:rotate(25deg)}
-.dust-cover.go .dust-film{animation:dust-wipe 1.05s cubic-bezier(.5,.05,.35,1) .25s forwards}
-.dust-cover.go .sp{animation:dust-fly var(--t) cubic-bezier(.3,.1,.6,1) var(--d) forwards}
-.dust-cover.go .dust-puff{animation:dust-puff 1.15s cubic-bezier(.5,.05,.35,1) .2s forwards}
-@keyframes dust-wipe{to{-webkit-mask-position:0 0;mask-position:0 0}}
-@keyframes dust-fly{
-  30%{opacity:1}
-  to{transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(.5);opacity:0}}
-@keyframes dust-puff{0%{opacity:0;left:-50%}20%{opacity:.9}75%{opacity:.6}100%{opacity:0;left:115%}}
+.dust-specks{position:absolute;inset:0}
+.dust-specks i{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(214,208,196,.85)}
+.dust-specks i.dark{background:rgba(70,64,54,.55);width:2px;height:2px}
+.dust-specks i.flake{width:6px;height:3px;background:rgba(244,240,232,.75)}
+/* nuvoletta di polvere che accompagna il bordo della spazzata (sfumatura, niente blur) */
+.dust-puff{position:absolute;top:-20%;left:0;width:55%;height:140%;opacity:0;transform:translateX(-90%) rotate(25deg);
+  background:radial-gradient(closest-side,rgba(232,226,214,.55),rgba(232,226,214,.22) 55%,transparent)}
+.dust-cover.go .dust-film{animation:film-off .5s cubic-bezier(.5,.05,.3,1) .16s forwards}
+@keyframes film-off{to{transform:translateX(108%);opacity:0}}
+.dust-cover.go .dust-specks i{animation:dust-fly .36s cubic-bezier(.3,.1,.6,1) var(--d) forwards}
+.dust-cover.go .dust-puff{animation:dust-puff .55s cubic-bezier(.5,.05,.35,1) .14s forwards}
+@keyframes dust-fly{30%{opacity:1}to{transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(.5);opacity:0}}
+@keyframes dust-puff{20%{opacity:.9}75%{opacity:.6}to{opacity:0;transform:translateX(200%) rotate(25deg)}}
 /* ragnatele (ui/cobweb.ts): fili sottilissimi semitrasparenti con un'ombra che li stacca anche dal tema chiaro.
-   A riposo oscillano appena (un filo d'aria); alla spazzata si tendono, si strappano a pezzi che volano via
-   dissolvendosi e si alza una nuvoletta di polvere. Solo transform e opacity: leggere anche su un telefono. */
-.cw{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
-.dust-cover .cw{position:absolute;inset:0}
+   Ogni angolo è un riquadro HTML e ogni frammento un SVG a sé: oscillazione e strappo animano solo transform e
+   opacity di questi livelli (compositore), mai il contenuto degli SVG. */
+.cw{position:absolute;inset:0;pointer-events:none}
+.cw-corner{position:absolute;animation:cw-sway var(--sway,5s) ease-in-out var(--phase,0s) infinite alternate}
+.cw-tl{top:0;left:0;transform-origin:0 0}
+.cw-tr{top:0;right:0;transform-origin:100% 0}
+.cw-bl{bottom:0;left:0;transform-origin:0 100%}
+.cw-br{bottom:0;right:0;transform-origin:100% 100%}
+.cw-corner svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .cw path{fill:none;stroke-linecap:round}
 .cw .cw-shadow{stroke:var(--silk-shadow)}
 .cw .cw-faint{stroke:var(--silk);stroke-opacity:.32}
 .cw .cw-thin{stroke:var(--silk);stroke-opacity:.55}
 .cw .cw-mid{stroke:var(--silk);stroke-opacity:.78}
 .cw .cw-glint{stroke:#fff;stroke-opacity:.85}
-.cw .cw-haze{opacity:.4}
-.cw-corner{transform-box:view-box;transform-origin:var(--ox) var(--oy);animation:cw-sway var(--sway,5s) ease-in-out var(--phase,0s) infinite alternate}
+.cw-haze{opacity:.4}
 @keyframes cw-sway{from{transform:rotate(-.6deg) skewX(.5deg)}to{transform:rotate(.7deg) skewX(-.6deg) scale(1.006)}}
-.cw-shard{transform-box:fill-box;transform-origin:50% 0}
-.go .cw-corner,.sweep .cw-corner{animation:cw-tense .22s ease-out var(--t0) forwards}
+.go .cw-corner,.sweep .cw-corner{animation:cw-tense .12s ease-out var(--t0) forwards}
 @keyframes cw-tense{to{transform:scale(1.05,.96) skewX(-5deg)}}
-.go .cw-shard,.sweep .cw-shard{animation:cw-tear .55s cubic-bezier(.45,0,.8,.45) calc(var(--t0) + .18s + var(--d)) forwards}
+.go .cw-shard,.sweep .cw-shard{animation:cw-tear .36s cubic-bezier(.45,0,.8,.45) calc(var(--t0) + .1s + var(--d)) forwards}
 @keyframes cw-tear{15%{transform:scale(1.03,.97);opacity:1}
   to{transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(.6);opacity:0}}
-.go .cw-haze,.sweep .cw-haze{animation:cw-fade .45s ease-out calc(var(--t0) + .15s) forwards}
+.go .cw-haze,.sweep .cw-haze{animation:cw-fade .3s ease-out calc(var(--t0) + .05s) forwards}
 @keyframes cw-fade{to{opacity:0}}
 .cw-puff{position:absolute;width:46%;aspect-ratio:1;opacity:0;pointer-events:none;border-radius:50%;
   background:radial-gradient(closest-side,rgba(226,220,206,.75),rgba(226,220,206,.3) 55%,transparent)}
@@ -213,11 +226,12 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
 .cw-puff-bl{bottom:-12%;left:-12%}
 .cw-puff-br{bottom:-12%;right:-12%}
 .bweb .cw-puff{width:120%}
-.go .cw-puff,.sweep .cw-puff{animation:cw-puff .7s ease-out calc(var(--t0) + .2s) forwards}
+.go .cw-puff,.sweep .cw-puff{animation:cw-puff .45s ease-out calc(var(--t0) + .06s) forwards}
 @keyframes cw-puff{0%{opacity:0;transform:scale(.3)}30%{opacity:.85}100%{opacity:0;transform:scale(1.7) translate(12%,-8%)}}
-@media (prefers-reduced-motion: reduce){.cw-corner,.cw-shard,.cw-haze,.cw-puff,.dustbtn.regrow .bweb{animation:none !important}}
-/* con prefers-reduced-motion niente copertura sulla carta; la cornice vuota (ferma) resta */
-@media (prefers-reduced-motion: reduce){.dust-cover:not(.still){display:none}}
+@media (prefers-reduced-motion: reduce){
+  .cw-corner,.cw-shard,.cw-haze,.cw-puff,.dustbtn.regrow .bweb,.dust-info.swap-in,.dust-info.swap-out,.card-in,.card-out{animation:none !important}
+  .dust-cover:not(.still){display:none}
+}
 .qbox{position:relative}
 #quickInput{font:inherit;font-size:16px;width:100%;min-height:46px;padding:8px 14px;border:1.5px solid var(--line-strong);border-radius:var(--r-m);background:var(--surface);color:var(--ink)}
 #quickInput:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
@@ -444,7 +458,7 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .chips{flex-wrap:nowrap;overflow-x:auto;width:100%;padding:2px 0;scrollbar-width:none}
   .qimg img{width:96px}
   .dust-scene{flex-direction:column;gap:18px;padding:20px 14px}
-  .dust-info{align-self:stretch;max-width:none}
+  .dust-info{align-self:stretch;max-width:none;flex:none;min-height:11.5em;justify-content:flex-start}
   .dust-stage{width:min(260px,72vw)}
   .dustbtn{width:100%;min-height:72px}
   .steps{grid-template-columns:1fr;gap:8px}

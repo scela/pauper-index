@@ -177,34 +177,27 @@ function haze(silk: Silk, fr: Frame, size: number): void {
 }
 
 /**
- * Ragnatele negli angoli di un riquadro w × h (unità circa uguali ai pixel CSS).
- * corners: [angolo, lato della ragnatela rispetto al lato minore]. Le ragnatele si strappano con l'ordine di
- * `order` (secondi di ritardo, per seguire la spazzata).
+ * Ragnatele negli angoli di un riquadro W × H (unità circa uguali ai pixel CSS).
+ * corners: [angolo, lato della ragnatela rispetto al lato minore, ritardo dello strappo in secondi].
+ *
+ * Struttura pensata per animare solo il compositore: ogni angolo è un riquadro HTML grande quanto la sua ragnatela
+ * (oscilla e si tende come un tutto); dentro, il velo di polvere e ogni frammento sono SVG separati e fermi al loro
+ * interno, che si muovono solo con transform e opacity. Filtri e sfocature restano su elementi che non cambiano.
  */
-export function cobwebs(w: number, h: number, corners: [Corner, number, number?][], detail: Detail): SVGSVGElement {
-  const id = `cw${++uid}`;
-  const m = Math.min(w, h);
+export function cobwebs(W: number, H: number, corners: [Corner, number, number?][], detail: Detail): HTMLElement {
+  const m = Math.min(W, H);
   const sw = detail === 1 ? 1 : detail === 0.6 ? 1.1 : 1.25; // spessore base: i fili restano tra mezzo pixel e un pixel
-  const filters = svg('defs', {},
-    svg('filter', { id: `${id}b`, x: '-50%', y: '-50%', width: '200%', height: '200%' },
-      svg('feGaussianBlur', { stdDeviation: f(sw * 0.6) })),
-    svg('radialGradient', { id: `${id}g` },
-      svg('stop', { offset: '0', 'stop-color': '#dcd6c9', 'stop-opacity': '0.95' }),
-      svg('stop', { offset: '0.6', 'stop-color': '#b9b2a4', 'stop-opacity': '0.6' }),
-      svg('stop', { offset: '1', 'stop-color': '#b9b2a4', 'stop-opacity': '0' })));
-  if (detail === 1) {
-    filters.append(
-      svg('filter', { id: `${id}n`, x: '0', y: '0', width: '1', height: '1' },
-        svg('feTurbulence', { type: 'fractalNoise', baseFrequency: '0.09', numOctaves: '3', seed: String(Math.floor(rand(1, 999))) }),
-        svg('feColorMatrix', { type: 'matrix', values: '0 0 0 0 0.78  0 0 0 0 0.76  0 0 0 0 0.72  1.6 0 0 0 -0.55' })),
-      svg('filter', { id: `${id}s`, x: '-20%', y: '-20%', width: '140%', height: '140%' },
-        svg('feGaussianBlur', { stdDeviation: f(m / 25) })));
-  }
-  const root = svg('svg', { class: 'cw', viewBox: `0 0 ${w} ${h}`, preserveAspectRatio: 'none', 'aria-hidden': 'true', focusable: 'false' }, filters) as SVGSVGElement;
+  const root = h('div', { class: 'cw', 'aria-hidden': 'true' });
+  const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(2)}%`;
 
   for (const [k, frac, order = 0] of corners) {
     const size = m * frac;
-    const fr = frame(k.includes('r') ? w : 0, k.includes('b') ? h : 0, k.includes('r') ? -1 : 1, k.includes('b') ? -1 : 1);
+    // riquadro dell'angolo: poco più grande della ragnatela (fili penzolanti e ancoraggi), mai oltre il contenitore
+    const bw = Math.min(W, size * 1.45);
+    const bh = Math.min(H, size * 1.55);
+    const right = k.includes('r');
+    const bottom = k.includes('b');
+    const fr = frame(right ? bw : 0, bottom ? bh : 0, right ? -1 : 1, bottom ? -1 : 1);
     const silk = new Silk(fr.c, fr.sx, fr.sy);
     if (detail === 1) {
       haze(silk, fr, size);
@@ -219,37 +212,54 @@ export function cobwebs(w: number, h: number, corners: [Corner, number, number?]
       orb(silk, fr, size, { spokes: [4, 5], reach: 0.9, broken: 0.15, faint: 0.2, sag: 0.15, glints: 0.3, clumps: 0.04, anchors: 1 });
     }
 
-    const g = svg('g', { class: `cw-corner cw-${k}` });
-    // oscillazione attorno all'angolo, con fase e durata diverse per ogni angolo
-    g.style.setProperty('--ox', `${fr.c[0]}px`);
-    g.style.setProperty('--oy', `${fr.c[1]}px`);
-    g.style.setProperty('--sway', `${rand(4.5, 7).toFixed(2)}s`);
-    g.style.setProperty('--phase', `${(-rand(0, 6)).toFixed(2)}s`);
-    g.style.setProperty('--t0', `${order}s`);
+    const box = h('div', { class: `cw-corner cw-${k}` });
+    box.style.setProperty('width', pct(bw, W));
+    box.style.setProperty('height', pct(bh, H));
+    box.style.setProperty('--sway', `${rand(4.5, 7).toFixed(2)}s`);
+    box.style.setProperty('--phase', `${(-rand(0, 6)).toFixed(2)}s`);
+    box.style.setProperty('--t0', `${order}s`);
+    const layer = (cls: string, ...children: SVGElement[]) =>
+      svg('svg', { class: cls, viewBox: `0 0 ${f(bw)} ${f(bh)}`, preserveAspectRatio: 'none', focusable: 'false' }, ...children);
+
     if (silk.haze.length) {
-      const mask = svg('mask', { id: `${id}m${k}`, maskUnits: 'userSpaceOnUse', x: '0', y: '0', width: String(w), height: String(h) },
-        svg('path', { d: silk.haze.join(''), fill: '#fff', filter: `url(#${id}s)` }));
-      filters.append(mask);
-      g.append(svg('rect', { class: 'cw-haze', width: String(w), height: String(h), filter: `url(#${id}n)`, mask: `url(#${id}m${k})` }));
+      const id = `cw${++uid}`;
+      box.append(layer('cw-haze',
+        svg('defs', {},
+          svg('filter', { id: `${id}n`, x: '0', y: '0', width: '1', height: '1' },
+            svg('feTurbulence', { type: 'fractalNoise', baseFrequency: '0.09', numOctaves: '3', seed: String(Math.floor(rand(1, 999))) }),
+            svg('feColorMatrix', { type: 'matrix', values: '0 0 0 0 0.78  0 0 0 0 0.76  0 0 0 0 0.72  1.6 0 0 0 -0.55' })),
+          svg('filter', { id: `${id}s`, x: '-20%', y: '-20%', width: '140%', height: '140%' }, svg('feGaussianBlur', { stdDeviation: f(m / 25) })),
+          svg('mask', { id: `${id}m`, maskUnits: 'userSpaceOnUse', x: '0', y: '0', width: f(bw), height: f(bh) },
+            svg('path', { d: silk.haze.join(''), fill: '#fff', filter: `url(#${id}s)` }))),
+        svg('rect', { width: f(bw), height: f(bh), filter: `url(#${id}n)`, mask: `url(#${id}m)` })));
     }
-    silk.shards.forEach((s, i) => {
-      if (!s.all) return;
-      const shard = svg('g', { class: 'cw-shard' },
-        svg('path', { class: 'cw-shadow', d: s.all, 'stroke-width': f(sw * 1.6), transform: `translate(${f(sw * 0.35)} ${f(sw * 0.5)})` }),
-        svg('path', { class: 'cw-faint', d: s.faint, 'stroke-width': f(sw * 0.45) }),
-        svg('path', { class: 'cw-thin', d: s.thin, 'stroke-width': f(sw * 0.6) }),
-        svg('path', { class: 'cw-mid', d: s.mid, 'stroke-width': f(sw * 0.8) }),
-        svg('path', { class: 'cw-glint', d: s.glint, 'stroke-width': f(sw * 0.7), 'stroke-dasharray': `${f(sw * 1.6)} ${f(sw * 18)}` }),
-        ...s.clumps.map(([x, y, r]) => svg('ellipse', { cx: f(x), cy: f(y), rx: f(r * 1.3), ry: f(r), fill: `url(#${id}g)`, filter: `url(#${id}b)` })));
-      // strappo: ogni frammento vola via nella direzione della spazzata (verso destra), cadendo un po'
-      const away = i / (SHARDS - 1);
-      shard.style.setProperty('--dx', `${f(-fr.sx * m * rand(0.04, 0.12) + m * rand(0.15, 0.35))}px`);
-      shard.style.setProperty('--dy', `${f(m * rand(0.05, 0.25) * (0.5 + away))}px`);
-      shard.style.setProperty('--rot', `${rand(-35, 35).toFixed(0)}deg`);
-      shard.style.setProperty('--d', `${rand(0, 0.12).toFixed(2)}s`);
-      g.append(shard);
+    silk.shards.forEach((sh, i) => {
+      if (!sh.all) return;
+      const id = `cw${++uid}`;
+      const defs = sh.clumps.length ? [svg('defs', {},
+        svg('filter', { id: `${id}b`, x: '-50%', y: '-50%', width: '200%', height: '200%' }, svg('feGaussianBlur', { stdDeviation: f(sw * 0.6) })),
+        svg('radialGradient', { id: `${id}g` },
+          svg('stop', { offset: '0', 'stop-color': '#dcd6c9', 'stop-opacity': '0.95' }),
+          svg('stop', { offset: '0.6', 'stop-color': '#b9b2a4', 'stop-opacity': '0.6' }),
+          svg('stop', { offset: '1', 'stop-color': '#b9b2a4', 'stop-opacity': '0' })))] : [];
+      const shard = layer('cw-shard', ...defs,
+        svg('path', { class: 'cw-shadow', d: sh.all, 'stroke-width': f(sw * 1.6), transform: `translate(${f(sw * 0.35)} ${f(sw * 0.5)})` }),
+        svg('path', { class: 'cw-faint', d: sh.faint, 'stroke-width': f(sw * 0.45) }),
+        svg('path', { class: 'cw-thin', d: sh.thin, 'stroke-width': f(sw * 0.6) }),
+        svg('path', { class: 'cw-mid', d: sh.mid, 'stroke-width': f(sw * 0.8) }),
+        svg('path', { class: 'cw-glint', d: sh.glint, 'stroke-width': f(sw * 0.7), 'stroke-dasharray': `${f(sw * 1.6)} ${f(sw * 18)}` }),
+        ...sh.clumps.map(([x, y, r]) => svg('ellipse', { cx: f(x), cy: f(y), rx: f(r * 1.3), ry: f(r), fill: `url(#${id}g)`, filter: `url(#${id}b)` })));
+      // strappo: ogni frammento ruota attorno al suo settore e vola via nella direzione della spazzata (verso destra)
+      const mid = ((i + 0.5) / SHARDS) * (Math.PI / 2);
+      const o = fr.at(mid, size * 0.45);
+      shard.style.setProperty('transform-origin', `${pct(o[0], bw)} ${pct(o[1], bh)}`);
+      shard.style.setProperty('--dx', `${f(-fr.sx * m * rand(0.03, 0.1) + m * rand(0.12, 0.3))}px`);
+      shard.style.setProperty('--dy', `${f(m * rand(0.05, 0.22) * (0.5 + i / (SHARDS - 1)))}px`);
+      shard.style.setProperty('--rot', `${rand(-30, 30).toFixed(0)}deg`);
+      shard.style.setProperty('--d', `${rand(0, 0.06).toFixed(2)}s`);
+      box.append(shard);
     });
-    root.append(g);
+    root.append(box);
   }
   return root;
 }

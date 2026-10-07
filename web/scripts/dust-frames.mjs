@@ -9,7 +9,7 @@ import { chromium, devices } from '@playwright/test';
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(here, '../../.cache/screenshots');
 const URL = process.env.SITE_URL || 'http://localhost:4173/';
-const FRAMES = [0, 350, 650, 950, 1300]; // ms dall'inizio della spazzata; più il fotogramma finale a copertura rimossa
+const FRAMES = [0, 150, 300, 500, 700]; // ms dall'inizio della spazzata; più il fotogramma finale a copertura rimossa
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();
@@ -20,7 +20,7 @@ for (const [name, opts] of [
   const ctx = await browser.newContext(opts);
   const page = await ctx.newPage();
   await page.goto(URL + '#carta-dimenticata');
-  await page.waitForSelector('#dustResult .dust-scene.is-empty');
+  await page.waitForSelector('#dustResult .dust-stage.dust-empty');
   await page.click('#dustBtn');
   // immagine caricata e spazzata partita: si fermano le animazioni e si scorre il tempo a mano
   await page.waitForSelector('.dust-cover.go', { timeout: 10000 });

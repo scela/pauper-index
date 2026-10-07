@@ -8,14 +8,21 @@
 
 const MAX = 10; // gradi
 const EASE = 0.16; // quanto si avvicina al valore voluto a ogni fotogramma
+const EASE_FLAT = 0.35; // prima di una nuova pesca: torna piatta in circa 150 ms, sempre dolcemente
 const DRAG_PX = 8; // oltre questo spostamento del dito il tocco non apre la scheda
 
 const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function enableTilt(stage: HTMLElement): void {
-  if (stage.dataset.tilt) return;
-  stage.dataset.tilt = '1';
+export interface Tilt {
+  /** Torna piatta dolcemente e ignora il puntatore (durante l'animazione di una nuova pesca). */
+  pause(): void;
+  resume(): void;
+}
+
+export function enableTilt(stage: HTMLElement): Tilt {
   stage.classList.add('tilt');
+  let paused = false;
+  let ease = EASE;
   let rect: DOMRect | null = null;
   let target = { rx: 0, ry: 0, lift: 0 };
   const cur = { rx: 0, ry: 0, lift: 0 };
@@ -40,9 +47,9 @@ export function enableTilt(stage: HTMLElement): void {
   };
 
   const tick = () => {
-    cur.rx += (target.rx - cur.rx) * EASE;
-    cur.ry += (target.ry - cur.ry) * EASE;
-    cur.lift += (target.lift - cur.lift) * EASE;
+    cur.rx += (target.rx - cur.rx) * ease;
+    cur.ry += (target.ry - cur.ry) * ease;
+    cur.lift += (target.lift - cur.lift) * ease;
     const done = Math.abs(target.rx - cur.rx) < 0.01 && Math.abs(target.ry - cur.ry) < 0.01 && Math.abs(target.lift - cur.lift) < 0.002;
     if (done) Object.assign(cur, target);
     apply();
@@ -53,7 +60,8 @@ export function enableTilt(stage: HTMLElement): void {
   };
 
   const aim = (x: number, y: number) => {
-    if (!rect || reduced()) return;
+    if (!rect || paused || reduced()) return;
+    ease = EASE;
     const px = Math.min(1, Math.max(0, (x - rect.left) / rect.width));
     const py = Math.min(1, Math.max(0, (y - rect.top) / rect.height));
     // il punto sotto il puntatore viene verso chi guarda
@@ -83,7 +91,7 @@ export function enableTilt(stage: HTMLElement): void {
   });
   // al tocco: la carta segue il dito finché è appoggiato (touch-action: none solo sulla carta, la pagina scorre normalmente)
   stage.addEventListener('pointerdown', (e) => {
-    if (e.pointerType !== 'touch' || reduced()) return;
+    if (e.pointerType !== 'touch' || paused || reduced()) return;
     touchId = e.pointerId;
     start = [e.clientX, e.clientY];
     delete stage.dataset.dragged;
@@ -96,4 +104,15 @@ export function enableTilt(stage: HTMLElement): void {
       if (e.pointerType === 'touch' && e.pointerId === touchId) flat();
     });
   }
+  return {
+    pause() {
+      paused = true;
+      ease = EASE_FLAT;
+      flat();
+    },
+    resume() {
+      paused = false;
+      ease = EASE;
+    },
+  };
 }

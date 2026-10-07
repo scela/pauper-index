@@ -237,6 +237,7 @@ export const it = {
   'dust.lead': 'Riscopri una carta che si giocava in Pauper ma che non compare in nessun mazzo da oltre un anno.',
   'dust.tapFrame': 'Rispolvera una carta: tocca la cornice impolverata',
   'dust.tap': 'Tocca per rispolverare',
+  'dust.emptyInfo': 'Qui compariranno la carta, quanto si giocava e quando è stata vista l’ultima volta.',
   'dust.played': { one: 'Giocata in {n} mazzo tra il {from} e il {to}', other: 'Giocata in {n} mazzi tra il {from} e il {to}' },
   'dust.peak': 'Anno di massima diffusione: {year} ({pct} dei mazzi)',
   'dust.last': 'Ultima apparizione: {date} · ',

@@ -235,6 +235,7 @@ export const en: Record<Key, Msg> = {
   'dust.lead': 'Rediscover a card that used to be played in Pauper but has not appeared in any deck for over a year.',
   'dust.tapFrame': 'Dust off a card: tap the dusty frame',
   'dust.tap': 'Tap to dust off',
+  'dust.emptyInfo': 'The card will appear here, with how much it was played and when it was last seen.',
   'dust.played': { one: 'Played in {n} deck between {from} and {to}', other: 'Played in {n} decks between {from} and {to}' },
   'dust.peak': 'Peak year: {year} ({pct} of decks)',
   'dust.last': 'Last seen: {date} · ',

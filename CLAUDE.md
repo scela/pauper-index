@@ -34,9 +34,10 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] 2026-10-07: "Carta dimenticata" in testata come pulsante compatto (vedi "Testata")
   - [x] 2026-10-07: nome "Pauper Index" in New Rocker, scelto dall'utente (vedi "Testata")
   - [x] 2026-10-07: ragnatele realistiche (combinazione dei 3 stili proposti, scelta dall'utente) e carta in 3D (vedi "Ragnatele" e "Carta in 3D")
+  - [x] 2026-10-07: "Carta dimenticata" fluida e più breve, circa 0,9 s (vedi "Carta dimenticata: fluidità")
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo ragnatele e carta in 3D, 2026-10-07): 96 pytest, 58 Vitest, 94 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo la nuova animazione di Carta dimenticata, 2026-10-07): 96 pytest, 58 Vitest, 97 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -127,6 +128,7 @@ npm run screenshots                  # con preview attivo: schermate in .cache/s
 npm run dust-frames                  # con preview attivo: fotogrammi dell'animazione "Rispolvera" in .cache/screenshots/
 node scripts/feature-shots.mjs <etichetta>   # con preview attivo: espansioni e "Carta dimenticata", desktop/mobile/scuro
 node scripts/dust-button-shots.mjs <etichetta>   # con preview attivo: pulsante "Rispolvera", desktop/mobile, chiaro/scuro
+node scripts/dust-perf.mjs <etichetta> [rallentamento]   # con preview attivo: video di 3 pesche e misure (fotogrammi persi, layout shift)
 node scripts/tilt-frames.mjs                     # con preview attivo: carta in 3D inclinata in direzioni diverse (mouse e dito)
 node scripts/header-shots.mjs <etichetta>        # con preview attivo: testata, desktop/mobile/mobile piccolo, chiaro/scuro, IT/EN, con focus
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
@@ -530,7 +532,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Pulsante** (rifatto il 2026-10-07, perché la scritta non sembrava da premere):
   - pieno di colore (sfumatura dell'accento), in rilievo (bordo inferiore `--btn-ledge` che si abbassa alla pressione), alto 68 px (72 px e largo quanto lo schermo su mobile), testo 1,25 rem;
   - icona originale di un piumino (manico, ghiera, tre piume), che oscilla al passaggio del mouse;
-  - tre **ragnatele** agli angoli (`.bweb`, una per angolo, versione ridotta di `cobwebs`). A riposo oscillano appena; alla pressione si strappano (classe `sweep`, 460 ms) **prima** che parta la pesca e l'animazione della carta, e dopo la spazzata se ne generano di nuove (classe `regrow`);
+  - tre **ragnatele** agli angoli (`.bweb`, una per angolo, versione ridotta di `cobwebs`). A riposo oscillano appena; alla pressione si strappano (classe `sweep`) insieme all'inizio della sequenza, senza farla aspettare, e 0,7 s dopo che la carta è visibile se ne generano di nuove, in dissolvenza (classe `regrow`);
   - focus da tastiera: contorno di 3 px nel colore del testo, staccato di 5 px. Contrasto del testo: 6,4:1 in chiaro, 7,8:1 in scuro;
   - con `prefers-reduced-motion` niente movimento: le ragnatele restano ferme e la pesca parte subito.
 - Prima della pesca la scena mostra una **cornice vuota** (`button.dust-empty`, nessuna immagine né retro di carta) con polvere e ragnatele ferme (`dustCover(true)`, classe `still`, visibile anche con `prefers-reduced-motion`) e la scritta "Tocca per rispolverare": anche la cornice si tocca per pescare.
@@ -538,7 +540,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Carte ammesse** (`dustPool`): legali oggi, non terre base, almeno `DUST_MIN_DECKS = 20` mazzi (main+side) nello storico, nessuna apparizione negli ultimi `DUST_QUIET_DAYS = 365` giorni contati dalla data dei dati. Al 2026-10-06: **203 carte**.
 - **Pesca**: con la collezione tra le carte possedute (interruttore "Pesca tra tutte le carte"); senza collezione tra tutte. Nessuna ripetizione nella sessione (oracle_id in sessionStorage `pauper-index:dusted`, cancellato anche da "Cancella i miei dati"); quando sono finite si ricomincia, con un avviso. Se nessuna carta posseduta è dimenticata, la scena lo dice (prima, al primo clic non compariva nulla: corretto).
 - **Dettagli**: immagine (la printing posseduta, altrimenti quella di riferimento; un clic apre gli artwork), mazzi nello storico tra prima e ultima apparizione, **anno di massima diffusione** in percentuale dei mazzi di quell'anno (`y` / `yt`), ultima apparizione più recente tra MTGO e cartaceo con il link al torneo, possesso. Tolti i pulsanti "Chiudi" e "Rispolverane un'altra" dentro il risultato, perché c'è il pulsante grande.
-- **Animazione** (circa 2 s): copertura `.dust-cover` con velo di polvere (rumore SVG), granelli e fiocchi, spazzati via con una maschera diagonale, e le ragnatele (vedi "Ragnatele") che si strappano seguendo la spazzata: in alto a sinistra, poi in basso a sinistra, poi a destra. Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall); a fine animazione la copertura viene rimossa e si attiva la carta in 3D. Parte quando l'immagine è caricata. Con `prefers-reduced-motion` nessuna copertura sulla carta e niente 3D. CSP invariata: i valori casuali passano da `style.setProperty`.
+- **Animazione** (circa 0,9 s, vedi "Carta dimenticata: fluidità"): la polvere copre la carta vecchia, le due carte si scambiano in dissolvenza, il velo scivola via, i granelli volano e le ragnatele si strappano (in alto a sinistra, poi in basso a sinistra, poi a destra). Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall); a fine animazione la copertura viene rimossa. Con `prefers-reduced-motion` nessuna copertura e niente 3D: la carta cambia subito.
 - Fotogrammi di controllo: `npm run dust-frames` (desktop e mobile, 5 istanti più la fine, dalla pagina `#carta-dimenticata`).
 
 ## Testata (2026-10-07)
@@ -561,7 +563,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 ## Ragnatele (2026-10-07)
 
 - **Stile**: combinazione dei tre proposti (A polverosa a strati, B filo sottile, C groviglio), scelta dall'utente. Il confronto è in `.cache/screenshots/ragnatele-confronto.png`; il prototipo in `.cache/cobweb/`.
-- **Generatore** `ui/cobweb.ts`, `cobwebs(w, h, angoli, dettaglio)`. Crea un SVG con elementi DOM (mai markup) ed è casuale a ogni uso. Per ogni angolo:
+- **Generatore** `ui/cobweb.ts`, `cobwebs(W, H, angoli, dettaglio)`. Crea elementi DOM (mai markup) ed è casuale a ogni uso. Ogni angolo è un riquadro HTML grande quanto la sua ragnatela (`.cw-corner`), e dentro il velo e i 4 frammenti sono SVG separati: si animano solo `transform` e `opacity` di questi livelli, mai il contenuto degli SVG. Per ogni angolo:
   - velo di polvere a ventaglio (rumore SVG con una maschera sfumata);
   - groviglio di fili tesi a caso vicino all'angolo;
   - tela a raggi vecchia e rotta: spaziature irregolari, spirale che cede verso il basso dello schermo, tratti spezzati che penzolano, ancoraggi ai bordi, grumi di polvere sfocati;
@@ -583,6 +585,25 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Regole di Scryfall**: nessun riflesso né livello sopra l'immagine; la profondità viene solo dall'ombra (`box-shadow`), che si sposta al contrario del lato sollevato.
 - **Prestazioni**: solo `transform` e `box-shadow` aggiornati con `requestAnimationFrame` (avvicinamento morbido); `getBoundingClientRect` solo all'inizio dell'interazione.
 - Fotogrammi: `node scripts/tilt-frames.mjs` → `.cache/screenshots/carta3d-*`.
+
+## Carta dimenticata: fluidità (2026-10-07)
+
+- **Diagnosi** (`node scripts/dust-perf.mjs`; video e misure in `.cache/screenshots/rispolvera-video-*` e `rispolvera-misure-*.json`), cause dello scatto e della lentezza:
+  - la scena veniva ricreata a ogni pesca: la carta vecchia spariva di colpo e la nuova compariva solo dopo il download dell'immagine (circa 200 ms di cornice vuota, con titolo e dettagli già cambiati);
+  - alla prima pesca la cornice passava da centrata (cornice vuota in colonna) ad affiancata ai dettagli: layout shift 0,149 su mobile e 0,022 su desktop a ogni pesca;
+  - la sequenza era in serie: 460 ms di ragnatele del pulsante, poi l'attesa dell'immagine, poi 2 s di spazzata (circa 2,4 s in tutto);
+  - animazioni che ridisegnavano a ogni fotogramma: `mask-position` del velo, `left` della nuvola sfocata (`filter: blur`), 80 granelli e i frammenti delle ragnatele animati **dentro** SVG con filtri di rumore. Con la CPU rallentata 6×: 137 layout, 206 rasterizzazioni (243 ms) e 360 paint (183 ms) in una pesca;
+  - l'inclinazione 3D si azzerava di colpo, perché la carta veniva ricreata.
+- **Correzioni** (`ui/dust.ts`):
+  - **scena fissa**, mai ricreata: cornice di dimensioni fisse, con lo stesso elemento per la cornice vuota e per la carta e il layout affiancato anche prima della pesca (con il testo `dust.emptyInfo`), dettagli con altezza minima;
+  - **due livelli d'immagine** (`img.card`: `card-cur` visibile, `card-in` / `card-out` in dissolvenza);
+  - **carta successiva scelta in anticipo** (`pickCard`, senza segnarla come vista; `commitCard` alla pressione), con l'immagine già scaricata e decodificata (`Image().decode()`) e la copertura già generata;
+  - **sequenza sovrapposta**, circa 0,9 s: la polvere copre la carta vecchia (0,16 s), le carte si scambiano sotto la polvere (0,06–0,32 s), i dettagli cambiano sotto la polvere (0,15 s), il velo scivola via (0,16–0,66 s), le ragnatele si tendono e si strappano (fino a circa 0,85 s), poi la copertura viene rimossa;
+  - **solo transform e opacity**: il velo si sposta con `translateX` (maschera sfumata fissa), granelli come elementi HTML, nuvola senza blur, ragnatele a livelli. Filtri di rumore e sfocature restano solo su elementi fermi;
+  - una **nuova pressione** durante l'animazione salta subito alla fine (`running.finish()`: le animazioni finite vengono completate e la copertura rimossa);
+  - **inclinazione 3D**: `tilt.pause()` la riporta piatta dolcemente (circa 150 ms) e la disattiva durante l'animazione; `resume()` alla fine;
+  - se l'immagine non è pronta (prima pesca senza precaricamento, rete lenta) la spazzata aspetta sotto la polvere, al massimo 2,5 s.
+- **Risultati** (CPU rallentata 4×, 3 pesche): prima 2,3–2,4 s per pesca e layout shift 0,149 su mobile; dopo 0,89–0,97 s, 0 fotogrammi persi e layout shift 0. Lavoro di disegno con CPU rallentata 6× (una pesca, mobile): layout 137 → 64, rasterizzazioni 243 → 55 ms, paint 183 → 44 ms. Il conteggio dei fotogrammi persi in headless è ottimistico, perché il rallentamento agisce solo sul thread principale: per questo c'è anche la traccia del disegno.
 
 ## Riepiloghi ed elenco (2026-10-07)
 

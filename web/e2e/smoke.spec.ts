@@ -647,7 +647,7 @@ test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi spari
   await expect(page.locator('#navDust')).toHaveAccessibleName(tr('nav.dust'));
   // nella testata è un pulsante compatto (pieno di colore, con icona e ragnatela), "Informazioni" un link discreto
   await expect(page.locator('#navDust .nd-ico')).toHaveCount(1);
-  await expect(page.locator('#navDust .nd-web svg.cw')).toHaveCount(1);
+  await expect(page.locator('#navDust .nd-web .cw')).toHaveCount(1);
   expect(await page.locator('#navDust').evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('gradient');
   expect(await page.locator('#navAbout').evaluate((el) => getComputedStyle(el).backgroundImage)).toBe('none');
   // etichetta breve solo sugli schermi stretti
@@ -678,7 +678,7 @@ test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi spari
   await expect(res).toContainText(head('dust.last'));
   await expect(page.locator('#dustBtn')).toHaveText(tr('dust.again'));
   // l'immagine non è mai filtrata; la copertura c'è durante l'animazione e poi viene rimossa
-  expect(await res.locator('img').evaluate((el) => getComputedStyle(el).filter)).toBe('none');
+  expect(await res.locator('img.card-cur').evaluate((el) => getComputedStyle(el).filter)).toBe('none');
   await expect(res.locator('.dust-cover')).toHaveCount(0, { timeout: 5000 });
   const names = new Set([await page.locator('#dustTitle').innerText()]);
   for (let i = 0; i < 4; i++) {
@@ -687,6 +687,7 @@ test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi spari
     // alla pressione le ragnatele del pulsante vengono spazzate via, poi compare la carta nuova
     await expect(page.locator('#dustTitle')).not.toHaveText(before);
     names.add(await page.locator('#dustTitle').innerText());
+    await expect(res.locator('.dust-cover')).toHaveCount(0); // fine della sequenza (una pressione durante salta alla fine)
   }
   expect(names.size).toBe(5);
   // con la collezione compare l'interruttore; se nessuna tua carta è dimenticata lo si dice (prima non compariva nulla)
@@ -697,10 +698,11 @@ test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi spari
   await page.click('#dustBtn');
   const scene = page.locator('#dustResult .dust-scene');
   await expect(scene).toBeVisible();
-  if (await scene.locator('img').count() === 0) {
+  await expect(scene.locator('.dust-cover:not(.still)')).toHaveCount(0);
+  if (await scene.locator('img.card-cur').count() === 0) {
     await expect(scene).toContainText(head('dust.noneOwned'));
     await page.locator('#dustAllWrap').click();
-    await expect(scene.locator('img')).toBeVisible();
+    await expect(scene.locator('img.card-cur')).toBeVisible();
   }
   expect(problems).toEqual([]);
 });
@@ -718,7 +720,7 @@ test('"Carta dimenticata" con prefers-reduced-motion: la carta appare subito, se
     expect(await el.evaluate((x) => getComputedStyle(x).animationName)).toBe('none');
   }
   await page.click('#dustBtn');
-  await expect(page.locator('#dustResult .dust-scene img')).toBeVisible();
+  await expect(page.locator('#dustResult .dust-scene img.card-cur')).toBeVisible();
   await expect(page.locator('#dustResult .dust-stage:not(.dust-empty) .dust-cover')).toHaveCount(0);
   await expect(page.locator('#dustBtn')).not.toHaveClass(/sweep/);
   // carta in 3D disattivata: il puntatore e il dito non la muovono
@@ -735,9 +737,9 @@ test('"Carta dimenticata": ragnatele generate e mosse appena; carta in 3D che to
   await setup(page);
   await page.click('#navDust');
   // ragnatele generate (diverse a ogni pesca), con un'oscillazione a riposo
-  await expect(page.locator('#dustResult .dust-empty svg.cw .cw-corner')).toHaveCount(3);
+  await expect(page.locator('#dustResult .dust-empty .cw .cw-corner')).toHaveCount(3);
   expect(await page.locator('#dustResult .cw-corner').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('cw-sway');
-  await expect(page.locator('#dustBtn .bweb svg.cw')).toHaveCount(3);
+  await expect(page.locator('#dustBtn .bweb .cw')).toHaveCount(3);
   await page.click('#dustBtn');
   const stage = page.locator('#dustResult .dust-stage.tilt');
   await expect(stage).toHaveCount(1, { timeout: 6000 }); // si attiva alla fine della spazzata
@@ -745,8 +747,8 @@ test('"Carta dimenticata": ragnatele generate e mosse appena; carta in 3D che to
   const transform = () => stage.evaluate((el) => getComputedStyle(el).transform);
   expect(await transform()).toBe('none'); // a riposo è piatta
   // l'immagine non ha mai filtri né livelli sopra: la profondità viene solo dall'ombra
-  expect(await stage.locator('img').evaluate((el) => getComputedStyle(el).filter)).toBe('none');
-  await expect(stage.locator(':scope > :not(img)')).toHaveCount(0);
+  for (const im of await stage.locator('img').all()) expect(await im.evaluate((el) => getComputedStyle(el).filter)).toBe('none');
+  await expect(stage.locator(':scope > :not(img):not([hidden])')).toHaveCount(0);
   const b = (await stage.boundingBox())!;
   if (!isMobile) {
     await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
@@ -767,4 +769,49 @@ test('"Carta dimenticata": ragnatele generate e mosse appena; carta in 3D che to
   await expect.poll(transform).not.toBe('none');
   await stage.dispatchEvent('pointerup', touch);
   await expect.poll(transform, { timeout: 3000 }).toBe('none');
+});
+
+test('"Carta dimenticata": passaggio fluido, circa 1 s, carta successiva precaricata, nuova pressione salta alla fine', async ({ page, isMobile }) => {
+  const normal: string[] = [];
+  page.on('request', (r) => { if (r.url().startsWith('https://cards.scryfall.io/normal/')) normal.push(r.url()); });
+  await setup(page);
+  await page.click('#navDust');
+  const stage = page.locator('#dustResult .dust-stage');
+  const size = async () => { const b = (await stage.boundingBox())!; return [Math.round(b.width), Math.round(b.height), Math.round(b.x)]; };
+  const empty = await size();
+  // durata: dalla pressione alla carta interamente visibile (nessuna copertura)
+  const t0 = Date.now();
+  await page.click('#dustBtn');
+  await expect(page.locator('#dustResult img.card-cur')).toHaveCount(1);
+  await expect(page.locator('#dustResult .dust-cover')).toHaveCount(0, { timeout: 4000 });
+  expect(Date.now() - t0).toBeLessThan(1600); // circa 0,9 s, più il margine del test
+  // dimensioni e posizione della cornice fisse: nessun salto tra cornice vuota e carta
+  expect(await size()).toEqual(empty);
+  // la carta successiva è già scaricata mentre si guarda quella attuale
+  const shown = await page.locator('#dustResult img.card-cur').getAttribute('src');
+  await expect.poll(() => normal.filter((u) => u.split('?')[0] !== shown).length).toBeGreaterThan(0);
+  const preloaded = normal.filter((u) => u !== shown);
+  const title = await page.locator('#dustTitle').innerText();
+  // inclinazione 3D: torna piatta dolcemente alla nuova pesca ed è disattivata durante l'animazione
+  if (!isMobile) {
+    const b = (await stage.boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.move(b.x + b.width * 0.9, b.y + b.height * 0.1, { steps: 4 });
+    await expect.poll(() => stage.evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
+  }
+  await page.locator('#dustBtn').focus();
+  await page.keyboard.press('Enter');
+  // la carta vecchia non sparisce di colpo: per un momento ci sono entrambe, in dissolvenza
+  await expect(page.locator('#dustResult img.card-out')).toHaveCount(1);
+  await expect(page.locator('#dustResult img.card-in')).toHaveCount(1);
+  // una nuova pressione durante l'animazione salta subito alla fine (nessun accumulo)
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#dustResult .dust-cover')).toHaveCount(0, { timeout: 300 });
+  await expect(page.locator('#dustResult img.card-in, #dustResult img.card-out')).toHaveCount(0);
+  await expect(page.locator('#dustResult img.card-cur')).toHaveCount(1);
+  await expect(page.locator('#dustTitle')).not.toHaveText(title);
+  // la carta mostrata è quella precaricata
+  expect(preloaded).toContain(await page.locator('#dustResult img.card-cur').getAttribute('src'));
+  await expect.poll(() => stage.evaluate((el) => getComputedStyle(el).transform), { timeout: 3000 }).toBe('none');
+  expect(await size()).toEqual(empty);
 });
