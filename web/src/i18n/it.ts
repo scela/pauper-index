@@ -29,6 +29,9 @@ export const it = {
   'load.submit': 'Carica',
   'load.collection': 'Collezione: ',
   'load.cards': { one: '{n} carta', other: '{n} carte' },
+  'load.remove': 'Rimuovi collezione',
+  'load.removed': 'Collezione rimossa',
+  'load.undo': 'Annulla',
   'load.replace': 'Sostituisci',
 
   'err.notText': '{file}: non è un file di testo o CSV.',

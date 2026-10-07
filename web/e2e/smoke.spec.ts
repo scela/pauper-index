@@ -459,6 +459,55 @@ test('logo e nome: link alla pagina principale da ogni sezione, collezione conse
   expect(await page.evaluate(() => (window as unknown as { marker?: number }).marker)).toBeUndefined();
 });
 
+test('"Rimuovi collezione": via subito, Annulla per 8 secondi, poi cancellata davvero; le preferenze restano', async ({ page, isMobile }) => {
+  test.setTimeout(45000);
+  await setup(page);
+  await uploadCollection(page);
+  // gruppi salvati nel browser (IndexedDB)
+  const saved = () => page.evaluate(() => new Promise<number>((res) => {
+    const r = indexedDB.open('pauper-index');
+    r.onsuccess = () => {
+      const g = r.result.transaction('kv').objectStore('kv').get('state');
+      g.onsuccess = () => { res(g.result?.groups?.length ?? 0); r.result.close(); };
+    };
+  }));
+  await expect.poll(saved).toBeGreaterThan(0);
+  await page.selectOption('#period', '3'); // preferenza: resta
+  await page.selectOption('#seenFilter', 'old'); // filtri dell'elenco: ripartono azzerati
+  await page.fill('#search', 'bolt');
+  const rm = page.locator('#removeColl');
+  await expect(rm).toHaveAccessibleName(tr('load.remove'));
+  expect((await rm.boundingBox())!.height).toBeGreaterThanOrEqual(isMobile ? 44 : 34); // area di tocco
+  await rm.click();
+  // nessuna conferma: la collezione sparisce subito e si riapre l'area di caricamento
+  await expect(page.locator('#loaded')).toBeHidden();
+  await expect(page.locator('#loadArea')).toBeVisible();
+  const bar = page.locator('#undoBar');
+  await expect(bar).toHaveAttribute('role', 'status'); // annunciato dai lettori di schermo
+  await expect(bar).toContainText(tr('load.removed'));
+  await expect(page.locator('#undoRemove')).toBeFocused(); // raggiungibile subito da tastiera
+  await expect(page.locator('#seenFilter')).toHaveValue('all');
+  await expect(page.locator('#search')).toHaveValue('');
+  await expect(page.locator('#period')).toHaveValue('3');
+  expect(await saved()).toBeGreaterThan(0); // finché si può annullare, i dati restano nel browser
+  // Annulla (da tastiera) ripristina tutto com'era
+  await page.keyboard.press('Enter');
+  await expect(bar).toBeHidden();
+  await expect(page.locator('#loaded')).toContainText(tr('load.collection').trim());
+  await expect(page.locator('#seenFilter')).toHaveValue('old');
+  await expect(page.locator('#search')).toHaveValue('bolt');
+  // di nuovo, lasciando scadere il messaggio: la collezione viene cancellata davvero
+  await page.locator('#removeColl').click();
+  await expect(bar).toBeVisible();
+  await expect(bar).toBeHidden({ timeout: 10000 });
+  await expect.poll(saved).toBe(0);
+  await page.reload();
+  await expect(page.locator('#dataline')).toContainText(head('data.line'));
+  await expect(page.locator('#loadArea')).toBeVisible();
+  await expect(page.locator('#loaded')).toBeHidden();
+  await expect(page.locator('#period')).toHaveValue('3');
+});
+
 async function pickSet(page: Page, query: string, name: string): Promise<void> {
   const input = page.locator('#setInput');
   await input.click();

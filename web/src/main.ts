@@ -7,7 +7,7 @@ import {
 import { detectLang, fmtDateTime, getLang, setLang, t, type Key, type Lang } from './i18n';
 import { baseName, looksLikeCSV, readTable } from './lib/csv';
 import { imageUrl, loadData, type Data } from './lib/data';
-import { $, h } from './lib/dom';
+import { $, h, svg } from './lib/dom';
 import { realignedCSV, textList } from './lib/exports';
 import { daysBetween, fmtDate, fmtInt, fmtPct, fmtPrint } from './lib/format';
 import { clearAll, idbGet, idbSet, lsGet, lsSet } from './lib/store';
@@ -81,6 +81,21 @@ let hoverTimer: number | undefined;
 let saveTimer: number | undefined;
 let focusNoSheet = false;
 
+/** Collezione appena rimossa: resta salvata nel browser finché si può annullare (circa 8 secondi). */
+interface Removed {
+  groups: Group[];
+  roles: Record<string, Role>;
+  summaries: SummaryItem[];
+  showMissing: boolean;
+  savedAt: number | null;
+  query: string;
+  seen: typeof S.seen;
+  setOwned: boolean;
+}
+const UNDO_MS = 8000;
+let removed: Removed | null = null;
+let undoTimer: number | undefined;
+
 /* ---------- utilità ---------- */
 
 function toast(msg: string): void {
@@ -121,8 +136,11 @@ function persist(): void {
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(async () => {
     S.savedAt = Date.now();
+    // con una rimozione annullabile in corso la collezione precedente resta salvata (le preferenze si aggiornano)
+    const keep = removed;
     const ok = await idbSet('state', {
-      v: 2, groups: S.groups, roles: S.roles, opts: S.opts, showMissing: S.showMissing, savedAt: S.savedAt,
+      v: 2, groups: keep ? keep.groups : S.groups, roles: keep ? keep.roles : S.roles, opts: S.opts,
+      showMissing: keep ? keep.showMissing : S.showMissing, savedAt: S.savedAt,
     } satisfies Saved);
     $('#memo').textContent = ok ? memoText() : t('err.storage');
   }, 150);
@@ -145,7 +163,69 @@ async function restore(): Promise<void> {
 
 /* ---------- importazione ---------- */
 
+/* ---------- rimozione della collezione (con Annulla) ---------- */
+
+function removeCollection(): void {
+  commitRemoval(); // una rimozione precedente ancora annullabile diventa definitiva
+  removed = {
+    groups: S.groups, roles: S.roles, summaries: S.summaries, showMissing: S.showMissing, savedAt: S.savedAt,
+    query: S.query, seen: S.seen, setOwned: S.setOwned,
+  };
+  // via solo la collezione: periodo, lingua, tema e le altre preferenze restano; i filtri dell'elenco ripartono azzerati
+  Object.assign(S, { groups: [], roles: {}, summaries: [], showMissing: false, query: '', seen: 'all', setOwned: false, replacing: false });
+  lsSet('seen', 'all');
+  ($('#search') as HTMLInputElement).value = '';
+  ($('#seenFilter') as HTMLSelectElement).value = 'all';
+  showErrors([]);
+  refresh(false);
+  const bar = $('#undoBar');
+  bar.hidden = false;
+  bar.replaceChildren(h('span', { class: 'undo-text' }, t('load.removed')),
+    h('button', { class: 'btn small undo-btn', type: 'button', id: 'undoRemove' }, t('load.undo')));
+  // il pulsante "Rimuovi" non c'è più: il focus va su Annulla, raggiungibile subito da tastiera
+  ($('#undoRemove') as HTMLButtonElement).focus();
+  window.clearTimeout(undoTimer);
+  undoTimer = window.setTimeout(() => {
+    const hadFocus = document.activeElement?.id === 'undoRemove';
+    commitRemoval();
+    if (hadFocus) ($('#files') as HTMLInputElement).focus();
+  }, UNDO_MS);
+}
+
+function undoRemoval(): void {
+  if (!removed) return;
+  const r = removed;
+  removed = null;
+  window.clearTimeout(undoTimer);
+  hideUndo();
+  Object.assign(S, {
+    groups: r.groups, roles: r.roles, summaries: r.summaries, showMissing: r.showMissing, savedAt: r.savedAt,
+    query: r.query, seen: r.seen, setOwned: r.setOwned,
+  });
+  lsSet('seen', r.seen);
+  ($('#search') as HTMLInputElement).value = r.query;
+  ($('#seenFilter') as HTMLSelectElement).value = r.seen;
+  refresh(false);
+  document.getElementById('removeColl')?.focus();
+}
+
+/** La rimozione diventa definitiva: la collezione viene cancellata anche dal browser. */
+function commitRemoval(): void {
+  window.clearTimeout(undoTimer);
+  hideUndo();
+  if (!removed) return;
+  removed = null;
+  persist();
+}
+
+function hideUndo(): void {
+  const bar = $('#undoBar');
+  bar.hidden = true;
+  bar.replaceChildren();
+}
+
 function beginImport(): void {
+  commitRemoval(); // un nuovo caricamento rende definitiva la rimozione
   // "Sostituisci": il nuovo caricamento prende il posto della collezione precedente
   if (S.replacing) {
     S.groups = [];
@@ -333,8 +413,13 @@ function renderLoad(): void {
   const line = $('#loaded');
   line.hidden = !loaded || S.replacing;
   if (loaded) {
-    line.replaceChildren(t('load.collection'), h('b', null, cardsWord(collectionCards())), ' · ',
-      h('button', { class: 'linkbtn', type: 'button', id: 'replace' }, t('load.replace')));
+    line.replaceChildren(
+      h('span', { class: 'loaded-text' }, t('load.collection'), h('b', null, cardsWord(collectionCards())), ' · ',
+        h('button', { class: 'linkbtn', type: 'button', id: 'replace' }, t('load.replace'))),
+      h('button', { class: 'btn small removecoll', type: 'button', id: 'removeColl' },
+        svg('svg', { class: 'rm-ico', viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' },
+          svg('path', { d: 'M4 4l8 8M12 4l-8 8' })),
+        h('span', null, t('load.remove'))));
   }
 }
 
@@ -790,6 +875,7 @@ function wire(): void {
     });
   }
   $('#loaded').addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('#removeColl')) return removeCollection();
     if ((e.target as HTMLElement).id !== 'replace') return;
     S.replacing = true;
     renderLoad();
@@ -969,6 +1055,9 @@ function wire(): void {
     b.classList.remove('warn');
     b.textContent = t('clear.button');
     window.clearTimeout(saveTimer);
+    window.clearTimeout(undoTimer);
+    removed = null;
+    hideUndo();
     await clearAll();
     Object.assign(S, { groups: [], roles: {}, opts: { ...DEFAULT_OPTS }, showMissing: false, savedAt: null, summaries: [], query: '', replacing: false });
     ($('#search') as HTMLInputElement).value = '';
@@ -993,6 +1082,15 @@ function wire(): void {
     applyTheme(next);
   });
   window.addEventListener('hashchange', route);
+  $('#undoBar').addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).id === 'undoRemove') undoRemoval();
+  });
+  // pagina chiusa mentre si poteva annullare: la rimozione diventa definitiva
+  window.addEventListener('pagehide', () => {
+    if (!removed) return;
+    removed = null;
+    void idbSet('state', { v: 2, groups: [], roles: {}, opts: S.opts, showMissing: false, savedAt: Date.now() } satisfies Saved);
+  });
 
   // immagine non disponibile (per esempio uno Scryfall ID sconosciuto): ripiego sulla printing di riferimento
   document.addEventListener('error', (e) => {

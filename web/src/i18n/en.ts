@@ -27,6 +27,9 @@ export const en: Record<Key, Msg> = {
   'load.submit': 'Load',
   'load.collection': 'Collection: ',
   'load.cards': { one: '{n} card', other: '{n} cards' },
+  'load.remove': 'Remove collection',
+  'load.removed': 'Collection removed',
+  'load.undo': 'Undo',
   'load.replace': 'Replace',
 
   'err.notText': '{file}: this is not a text or CSV file.',

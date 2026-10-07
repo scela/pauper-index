@@ -35,9 +35,10 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] 2026-10-07: nome "Pauper Index" in New Rocker, scelto dall'utente (vedi "Testata")
   - [x] 2026-10-07: ragnatele realistiche (combinazione dei 3 stili proposti, scelta dall'utente) e carta in 3D (vedi "Ragnatele" e "Carta in 3D")
   - [x] 2026-10-07: "Carta dimenticata" fluida e più breve, circa 0,9 s (vedi "Carta dimenticata: fluidità")
+  - [x] 2026-10-07: "Rimuovi collezione" con Annulla (vedi "Rimuovi collezione")
   - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo la nuova animazione di Carta dimenticata, 2026-10-07): 96 pytest, 58 Vitest, 97 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo "Rimuovi collezione", 2026-10-07): 96 pytest, 58 Vitest, 102 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -54,7 +55,8 @@ In quest'ordine, ciascuno **solo dopo il via dell'utente**, fermandosi alla fine
    - **Export**: carte mancanti in formato "1 Nome" (lista acquisti) e decklist completa in testo importabile in ManaBox.
    - **Calcolo nel browser**; se è pesante, in un web worker (oggi la CSP ha `worker-src 'none'`: va aperta a `'self'`).
    - Testi in IT e EN.
-3. **Fase 4**: rifinitura e README completo.
+3. **Dopo la funzione 4, nell'ordine**: Preferite; Brewing versione 1 (co-occorrenze); Brewing versione 2 (funzioni delle carte); da valutare in futuro le sinergie generate da un modello di IA. Dettagli in `docs/IDEE.md` ("Dopo la funzione 4").
+4. **Fase 4**: rifinitura e README completo.
 
 Idee per dopo, non pianificate: `docs/IDEE.md`.
 
@@ -617,6 +619,18 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - in "Carta dimenticata" il numero di "nessuna delle tue carte… ({n} in tutto)" è l'insieme da cui si pesca;
   - gli export lavorano sulla lista completa (decisione già presa), non sull'elenco filtrato.
 - **Difetto trovato con il test**: dopo aver usato il campo "Espansione", il primo `pointerdown` fuori dal campo richiudeva le opzioni sotto il campo e spostava il layout sotto il cursore, quindi il clic finiva su un altro elemento (per esempio la casella "Mostra anche le mancanti" non si spuntava). Ora la chiusura avviene su `click`.
+
+## Rimuovi collezione (2026-10-07)
+
+- Nella riga "Collezione: N carte · Sostituisci" c'è il pulsante "Rimuovi collezione" / "Remove collection" (`#removeColl`, `.btn.small` con una ×, non rosso; 44 px di altezza su mobile).
+- **Toglie solo la collezione**: gruppi, ruoli e riepiloghi dell'importazione. Periodo, lingua, tema e le altre preferenze (`opts`) restano, e in futuro anche le Preferite. "Cancella i miei dati" resta com'è e cancella tutto.
+- **Nessuna conferma**: la collezione sparisce subito e si riapre l'area di caricamento completa. I filtri dell'elenco ripartono azzerati (ricerca, "Ultima apparizione", "Solo quelle che possiedi", "Mostra anche le mancanti"); l'espansione scelta resta.
+- **Annulla per 8 secondi** (`UNDO_MS`): barra "Collezione rimossa · Annulla" (`#undoBar`, `role="status"`, `aria-live="polite"`); il focus va sul pulsante Annulla (`#undoRemove`). Annulla ripristina tutto com'era, filtri compresi, e riporta il focus su "Rimuovi collezione".
+- **Finché si può annullare la collezione resta nel browser**: `persist()` continua a scrivere i gruppi precedenti (le preferenze si aggiornano). Diventa definitiva:
+  - alla scadenza del messaggio;
+  - con un nuovo caricamento;
+  - con "Cancella i miei dati";
+  - alla chiusura della pagina (`pagehide`).
 
 ## Pagina Informazioni (riscritta il 2026-10-06)
 
