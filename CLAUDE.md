@@ -42,10 +42,10 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] prima del passo 3 (2026-10-08): scheda più rapida al passaggio del mouse e prezzi indicativi in euro (vedi "Scheda al passaggio del mouse" e "Prezzi indicativi")
     - [x] prima del passo 3 (2026-10-08): filtri per colore, costo di mana, tipo e testo delle regole, nel pannello "Filtri" (vedi "Filtri per colore, costo, tipo e testo")
     - [x] prima del passo 3 (2026-10-08): ricerca anche con i nomi italiani e filtro sul testo anche in italiano (vedi "Nomi italiani")
-    - [ ] passo 3: sezione "Mazzi" nel sito, completamento, export (formato ManaBox da `reference/private/mazzo-esempio.txt`)
+    - [x] passo 3 (2026-10-08): sezione "Mazzi" nel sito, completamento, export nel formato di MTG Arena (vedi "Sezione Mazzi")
     - [ ] passo 4: rifinitura
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi il 2026-10-08, dopo i nomi italiani): 115 pytest, 78 Vitest, 138 Playwright (più 6 saltati di proposito: i test col mouse non girano su mobile) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi il 2026-10-08, dopo la sezione Mazzi): 115 pytest, 84 Vitest, 150 Playwright (più 6 saltati di proposito: i test col mouse non girano su mobile) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -106,7 +106,7 @@ web/                    frontend (Vite + TypeScript)
 
 **File principali**:
 - Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `seticons.py` (simboli delle espansioni), `review.py` (revisioni, snapshot, allarme), `decks.py` (mazzi e archetipi), `italian.py` (nomi e testi delle stampe italiane), `prices.py` (prezzi), `scryfall.py` (client con limiti di frequenza), `config.py`.
-- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `prices`, `view` (filtri dell'elenco e nota del riepilogo), `cardfilter` (colore, costo, tipo, testo), `italian` (nomi italiani e ricerca per nome), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `filterpanel` pannello "Filtri" ed etichette, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
+- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `prices`, `view` (filtri dell'elenco e nota del riepilogo), `cardfilter` (colore, costo, tipo, testo), `italian` (nomi italiani e ricerca per nome), `decks` (mazzi: completamento, ordine, export), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `filterpanel` pannello "Filtri" ed etichette, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `decks` pagina "Mazzi", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
 - Test: `pipeline/tests/`, `web/tests/` (Vitest), `web/e2e/smoke.spec.ts` (Playwright).
 - Automazione: `.github/workflows/aggiorna.yml`.
 - Documentazione: questo file, `README.md` (avvio manuale, file manuali, comandi locali), `docs/IDEE.md`.
@@ -147,6 +147,7 @@ node scripts/header-shots.mjs <etichetta>        # con preview attivo: testata, 
 node scripts/sheet-timing.mjs <etichetta> [n]    # con preview attivo: tempi della scheda al passaggio del mouse (apertura, comparsa, cambio carta, chiusura)
 node scripts/filter-shots.mjs <etichetta>        # con preview attivo: barra, pannello "Filtri" ed etichette, desktop/mobile, chiaro/scuro
 node scripts/italian-shots.mjs <etichetta>       # con preview attivo: nomi italiani nel controllo rapido e nella scheda, desktop/mobile, IT/EN
+node scripts/decks-shots.mjs <etichetta> [it|en] # con preview attivo: pagina Mazzi senza e con collezione, decklist, desktop/mobile, chiaro/scuro
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
 # Stato della CI
@@ -467,7 +468,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - `tests/`: Vitest. `private.test.ts` gira solo se trova `reference/private/esempio-testo.txt` e stampa solo conteggi. `e2e/`: Playwright, progetti desktop e "mobile" (iPhone 13 emulato su Chromium). `tests/fixtures/`: dati sintetici.
 - `vite.config.ts`, con un plugin che:
   - in sviluppo serve `/data/*` da `../data`;
-  - in build copia in `dist/data/` **solo** `cards`, `texts`, `itnames`, `itnames-other`, `ittexts`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `seticons.svg`, `meta`, `prices` (se c'è) e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
+  - in build copia in `dist/data/` **solo** `cards`, `texts`, `itnames`, `itnames-other`, `ittexts`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `seticons.svg`, `meta`, `decks-61`, `decks-365`, `prices` (se c'è) e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
   - inietta la CSP (meta tag) **solo in build**, perché il dev server di Vite usa stili inline.
 
 **Decisioni**:
@@ -654,6 +655,21 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
      - Le liste non assegnate restano "non classificate" (solo colori).
 - **Stabilità verificata**: classificando la finestra di 7 giorni prima e poi quella di oggi con lo stesso registro, il 100% delle 3.882 liste in comune ha mantenuto il nome. Prima della regola "primo gruppo e nucleo fisso" era l'89,6%. Un archetipo che cambia molto nel tempo può dare origine a un gruppo nuovo, con un altro nome: per i mazzi principali i nomi curati lo evitano.
 - **Report** `data/reviews/archetipi.md`: tabella degli archetipi a 61 giorni, per rivedere i nomi.
+
+## Sezione "Mazzi" (funzione 4, passo 3, 2026-10-08)
+
+- **Pagina** `#mazzi` (`#viewDecks`), voce "Mazzi" / "Decks" in testata (`#navDecks`, link discreto come "Informazioni", con `aria-current`). Logica pura in `lib/decks.ts` (testata), interfaccia in `ui/decks.ts`.
+- **Dati**: `data/decks-61.json` (159 KB gzip) si scarica solo all'apertura della pagina; `data/decks-365.json` (823 KB gzip) solo se si sceglie "Ultimo anno" (il menu dice "circa 0,8 MB da scaricare"). Entrambi in `PUBLIC_DATA`. Se il file manca o non è coerente con `cards.json` (`validDecks`), compare "Mazzi non disponibili" con "Riprova". Si scartano nel sito le liste con il main di sole terre base (per esempio 60 Island: segnaposto di chi non ha registrato la lista; 1 a 61 giorni, 4 in un anno). Calcolo nel browser sul thread principale (22.663 liste in un anno: pochi millisecondi), quindi **nessun web worker** e CSP invariata.
+- **Controlli**: periodo (61 giorni / ultimo anno, non salvato: si riparte sempre da 61), archetipo (tutti quelli del periodo con il numero di liste, dal più frequente; i non classificati in fondo con i colori), completamento minimo (qualsiasi, 50, 75, 90%, solo completi) e "Solo main" / "Main e side" (predefinito main e side; **unica scelta salvata**, in `localStorage` `pauper-index:deckSide`). Archetipo e minimo sono filtri che nascondono mazzi: mai salvati. Minimo e main/side compaiono solo con la collezione; senza c'è un invito a caricarla con il link alla pagina principale.
+- **Ordine**: senza collezione per ultima apparizione; con la collezione per completamento; a parità più apparizioni, poi la data più recente.
+- **Completamento** (`completion`): per ogni carta il minimo tra copie possedute (`collectionIndex`, stessi Binder inclusi e proxy della pagina principale) e copie richieste; con "Main e side" la stessa carta in main e side somma le copie. Le 6 terre base normali (`basics`) sono escluse e sempre disponibili; le Snow-Covered contano come carte normali.
+- **Ogni mazzo**: pallini dei colori (gli stessi del pannello "Filtri", non simboli di mana; nome dei colori per i lettori di schermo) e nome dell'archetipo ("Non classificato" per i gruppi `x`), "compare N volte"; con la collezione barra, percentuale e "N di M carte"; migliore piazzamento con torneo (link), MTGO o cartaceo e data, più "ultima volta il …" se diversa. **Migliore piazzamento** (`placementScore`): il posto più basso; un record senza sconfitte (le 5-0 delle League) vale come subito dopo la top 8; a parità il più recente (decisione nostra).
+- **Mancanti** (con la collezione): "Ti mancano N carte" (copie), costo indicativo (printing non foil più economica × copie, come la colonna Prezzo; "N senza prezzo"), le prime 8 carte dalla più mancante con il prezzo, poi "e altre N, segnate nella decklist"; "Copia la lista". Mazzo completo: "Hai tutte le carte di questo mazzo".
+- **Decklist** (`<details>`): main per tipo (creature, poi terre anche artefatto, planeswalker, istantanei, stregonerie, battaglie, artefatti, incantesimi; tipo della prima faccia) e sideboard. Con la collezione: ✓ sulle carte possedute, in rosso con "mancano N" le copie mancanti (le copie possedute si assegnano prima al main, poi al side). Ogni nome apre la scheda della carta (stessi gestori della tabella: passaggio del mouse, tocco, tastiera), con il possesso dalla collezione.
+- **Export** per mazzo: "Copia la decklist", "Scarica la decklist .txt" (`mazzo-<archetipo>.txt` / `deck-<archetype>.txt`), "Scarica le mancanti .txt" e "Copia la lista" delle mancanti. Decklist nel **formato di MTG Arena** (scelto dall'utente: il file `reference/private/mazzo-esempio.txt` non c'è): "4 Nome", una riga vuota, "Sideboard", il side; sempre il mazzo intero, terre base comprese; nomi inglesi completi ("Fire // Ice"). L'utente verifica l'import in ManaBox copiando un mazzo dal sito. Mancanti: "N Nome", nello stesso ordine dell'elenco.
+- **Riepiloghi**: il titolo conta tutte le liste del periodo ("4218 liste di mazzi"), con mazzi e tornei e, con la collezione, quante sono complete e quante almeno al 75%; se archetipo o minimo ne mostrano meno, la nota "N mostrate con i filtri attivi: …" con "Togli questi filtri". "Carica altri" a 10 per volta, con il focus sul primo mazzo aggiunto.
+- **Aggiornamento**: la pagina si ridisegna quando cambiano collezione, lingua o prezzi (senza tornare alle prime 10 solo per i prezzi: `refresh` ricalcola e ridisegna).
+- **Screenshot**: `node scripts/decks-shots.mjs <etichetta> [it|en]` → `.cache/screenshots/mazzi-*` (senza e con collezione, pagina intera, decklist aperta; desktop e mobile, chiaro e scuro). La collezione degli screenshot è sintetica (carte delle liste più frequenti, con alcune copie tolte).
 
 ## Riepiloghi ed elenco (2026-10-07)
 

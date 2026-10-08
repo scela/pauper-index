@@ -24,6 +24,7 @@ import { italianLoaded, loadItalian, nameHays } from './lib/italian';
 import { renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
 import { initDust } from './ui/dust';
+import { initDecks } from './ui/decks';
 import { initQuick } from './ui/quick';
 import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openSheet, recentlyClosed, renderGrid, scheduleClose, setSheetItalian, unblockHover } from './ui/sheet';
 
@@ -87,6 +88,7 @@ const S = {
 };
 let quick: { refresh(): void } | null = null;
 let dust: { refresh(): void } | null = null;
+let decks: { show(): void; refresh(): void } | null = null;
 let setPicker: { refresh(): void } | null = null;
 let panel: { render(): void; close(): void } | null = null;
 let textsLoading: Promise<boolean> | null = null;
@@ -373,6 +375,7 @@ function render(): void {
   renderExtra();
   quick?.refresh();
   dust?.refresh();
+  decks?.refresh();
   setPicker?.refresh();
 }
 
@@ -866,12 +869,11 @@ function payload(kind: string): string {
 
 const LABEL: Record<string, Key> = { owned: 'export.labelOwned', missing: 'export.labelMissing', csv: 'export.labelCsv' };
 
-async function doCopy(kind: string): Promise<void> {
-  const text = payload(kind);
-  if (!text.trim()) return toast(t('export.nothingCopy', { what: t(LABEL[kind]) }));
+async function copyText(text: string, what: string): Promise<void> {
+  if (!text.trim()) return toast(t('export.nothingCopy', { what }));
   try {
     await navigator.clipboard.writeText(text);
-    return toast(t('export.copied', { what: t(LABEL[kind]) }));
+    return toast(t('export.copied', { what }));
   } catch {
     ($('#copyText') as HTMLTextAreaElement).value = text;
     $('#copyPanel').hidden = false;
@@ -879,11 +881,9 @@ async function doCopy(kind: string): Promise<void> {
   }
 }
 
-function doSave(kind: string): void {
-  const text = payload(kind);
-  if (!text.trim()) return toast(t('export.nothingSave', { what: t(LABEL[kind]) }));
-  const filename = t(kind === 'csv' ? 'export.fileCsv' : kind === 'owned' ? 'export.fileOwned' : 'export.fileMissing');
-  const url = URL.createObjectURL(new Blob([text], { type: kind === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' }));
+function saveText(text: string, filename: string, what: string): void {
+  if (!text.trim()) return toast(t('export.nothingSave', { what }));
+  const url = URL.createObjectURL(new Blob([text], { type: /\.csv$/.test(filename) ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' }));
   const a = h('a', { href: url, download: filename });
   document.body.appendChild(a);
   a.click();
@@ -892,15 +892,23 @@ function doSave(kind: string): void {
   toast(t('export.saved', { file: filename }));
 }
 
+const doCopy = (kind: string) => copyText(payload(kind), t(LABEL[kind]));
+
+function doSave(kind: string): void {
+  saveText(payload(kind), t(kind === 'csv' ? 'export.fileCsv' : kind === 'owned' ? 'export.fileOwned' : 'export.fileMissing'), t(LABEL[kind]));
+}
+
 /* ---------- scheda ---------- */
 
 function openFor(btn: HTMLElement, mode: 'hover' | 'click', animate = false): void {
   const d = S.d!;
   const idx = Number(btn.dataset.idx);
-  const res = S.results.find((x) => x.idx === idx) || null;
+  // carte dei mazzi: possono essere fuori dalla lista con i filtri attuali, il possesso viene dalla collezione
+  const inDecks = !!btn.closest('#viewDecks');
+  const res = (inDecks ? null : S.results.find((x) => x.idx === idx)) || (inDecks && hasColl() ? ownedResult(idx) : null);
   const approx = !!res && res.prints.length > 0 && res.prints.every((p) => !p.exact);
   // vista per espansione: la carta attiva della scheda è la stampa di quel set
-  const focusId = S.setCodes && res ? setThumb(res)?.id : undefined;
+  const focusId = S.setCodes && res && !inDecks ? setThumb(res)?.id : undefined;
   openSheet(btn, {
     d, opts: S.opts, idx, res: hasColl() ? res : null, approx, focusId,
     prices: S.prices, itNames: sheetItalian(idx),
@@ -909,13 +917,19 @@ function openFor(btn: HTMLElement, mode: 'hover' | 'click', animate = false): vo
 }
 
 /** Scheda degli artwork dal controllo rapido: anche per carte fuori dalla lista con i filtri attuali. */
-function openArtworksFor(anchor: HTMLElement, idx: number, owned: Owned | null): void {
+/** Possesso di una carta qualsiasi (anche fuori dalla lista), nel formato dei risultati. */
+function ownedResult(idx: number, owned: Owned | null = S.cix?.byCard.get(idx) || null): Result {
   const d = S.d!;
   const c = d.cards.c[idx];
-  const res: Result | null = hasColl() ? {
+  return {
     idx, owned: owned?.total || 0, need: 1, typical: typicalCopies(c, S.opts), share: deckShare(d, c, S.opts),
     status: owned && owned.total > 0 ? 'owned' : 'missing', prints: owned?.prints || [], binders: owned?.binders || [],
-  } : null;
+  };
+}
+
+function openArtworksFor(anchor: HTMLElement, idx: number, owned: Owned | null): void {
+  const d = S.d!;
+  const res: Result | null = hasColl() ? ownedResult(idx, owned) : null;
   const approx = !!res && res.prints.length > 0 && res.prints.every((p) => !p.exact);
   openSheet(anchor, {
     d, opts: S.opts, idx, res, approx, prices: S.prices, itNames: sheetItalian(idx),
@@ -962,10 +976,12 @@ function changeLang(l: Lang): void {
 function route(): void {
   const about = location.hash === '#informazioni';
   const forgotten = location.hash === '#carta-dimenticata';
-  $('#viewMain').hidden = about || forgotten;
+  const decksPage = location.hash === '#mazzi';
+  $('#viewMain').hidden = about || forgotten || decksPage;
   $('#viewAbout').hidden = !about;
   $('#viewDust').hidden = !forgotten;
-  for (const [id, on] of [['#navAbout', about], ['#navDust', forgotten]] as const) {
+  $('#viewDecks').hidden = !decksPage;
+  for (const [id, on] of [['#navAbout', about], ['#navDust', forgotten], ['#navDecks', decksPage]] as const) {
     if (on) $(id).setAttribute('aria-current', 'page');
     else $(id).removeAttribute('aria-current');
   }
@@ -973,7 +989,8 @@ function route(): void {
   document.querySelector<HTMLElement>('.wrap > .foot')!.hidden = about;
   closeSheet();
   if (about) renderAbout($('#viewAbout'), S.d);
-  if (about || forgotten) window.scrollTo(0, 0);
+  if (decksPage) decks?.show();
+  if (about || forgotten || decksPage) window.scrollTo(0, 0);
 }
 
 /* ---------- eventi ---------- */
@@ -1139,7 +1156,6 @@ function wire(): void {
   });
 
   // scheda: passaggio del cursore, focus da tastiera, tocco
-  const rows = $('#cardRows');
   const fine = window.matchMedia('(hover: hover) and (pointer: fine)');
   // si apre HOVER_OPEN_MS dopo che il cursore si ferma sulla carta; se la scheda è già aperta (o appena chiusa
   // uscendo da un'altra carta) cambia contenuto subito
@@ -1152,42 +1168,44 @@ function wire(): void {
       openFor(b, 'hover', true);
     }, HOVER_OPEN_MS);
   };
-  rows.addEventListener('mouseover', (e) => {
-    if (!fine.matches) return;
-    const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
-    if (!b) return;
-    cancelClose();
-    window.clearTimeout(hoverTimer);
-    hoverFor = null;
-    if (isOpenFor(Number(b.dataset.idx)) || isHoverBlocked(b)) return;
-    if (isWarm()) openFor(b, 'hover');
-    else armHover(b);
-  });
-  rows.addEventListener('mousemove', (e) => {
-    if (!hoverFor) return;
-    const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
-    if (b === hoverFor) armHover(b); // il cursore si muove ancora: si aspetta che si fermi
-  });
-  rows.addEventListener('mouseout', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
-    if (!b || b.contains(e.relatedTarget as Node)) return;
-    unblockHover(b);
-    window.clearTimeout(hoverTimer);
-    hoverFor = null;
-    // verso la scheda (anche quando si apre sopra la carta perché non sta né sopra né sotto): resta aperta
-    if ($('#sheet').contains(e.relatedTarget as Node)) return;
-    scheduleClose();
-  });
-  rows.addEventListener('focusin', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
-    if (b && !focusNoSheet && b.matches(':focus-visible') && !isOpenFor(Number(b.dataset.idx)) && !recentlyClosed()) openFor(b, 'hover');
-  });
-  rows.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
-    if (!b) return;
-    window.clearTimeout(hoverTimer);
-    openFor(b, 'click');
-  });
+  for (const rows of [$('#cardRows'), $('#deckList')]) {
+    rows.addEventListener('mouseover', (e) => {
+      if (!fine.matches) return;
+      const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
+      if (!b) return;
+      cancelClose();
+      window.clearTimeout(hoverTimer);
+      hoverFor = null;
+      if (isOpenFor(Number(b.dataset.idx)) || isHoverBlocked(b)) return;
+      if (isWarm()) openFor(b, 'hover');
+      else armHover(b);
+    });
+    rows.addEventListener('mousemove', (e) => {
+      if (!hoverFor) return;
+      const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
+      if (b === hoverFor) armHover(b); // il cursore si muove ancora: si aspetta che si fermi
+    });
+    rows.addEventListener('mouseout', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
+      if (!b || b.contains(e.relatedTarget as Node)) return;
+      unblockHover(b);
+      window.clearTimeout(hoverTimer);
+      hoverFor = null;
+      // verso la scheda (anche quando si apre sopra la carta perché non sta né sopra né sotto): resta aperta
+      if ($('#sheet').contains(e.relatedTarget as Node)) return;
+      scheduleClose();
+    });
+    rows.addEventListener('focusin', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
+      if (b && !focusNoSheet && b.matches(':focus-visible') && !isOpenFor(Number(b.dataset.idx)) && !recentlyClosed()) openFor(b, 'hover');
+    });
+    rows.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
+      if (!b) return;
+      window.clearTimeout(hoverTimer);
+      openFor(b, 'click');
+    });
+  }
   const sheet = $('#sheet');
   sheet.addEventListener('mouseenter', cancelClose);
   sheet.addEventListener('mouseleave', scheduleClose);
@@ -1290,6 +1308,13 @@ async function main(): Promise<void> {
   dust = initDust({
     data: () => S.d, opts: () => S.opts, collection: () => (hasColl() ? S.cix : null), openArtworks: openArtworksFor,
   });
+  decks = initDecks({
+    data: () => S.d,
+    owned: () => (hasColl() && S.cix ? (idx: number) => S.cix!.byCard.get(idx)?.total || 0 : null),
+    prices: () => S.prices,
+    copy: (text, what) => void copyText(text, what),
+    save: saveText,
+  });
   route();
   try {
     S.d = await loadData();
@@ -1312,7 +1337,10 @@ async function main(): Promise<void> {
   void renderNews();
   // prezzi indicativi: dopo il resto, senza bloccare la pagina
   S.prices = await loadPrices(S.d);
-  if (S.prices) showPrices();
+  if (S.prices) {
+    showPrices();
+    decks?.refresh();
+  }
 }
 
 void main();

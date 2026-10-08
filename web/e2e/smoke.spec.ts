@@ -638,11 +638,15 @@ test('espansione: set nascosti attivabili; con la collezione "ne possiedi" e "so
 /** Numero nel titolo, totale dell'elenco ("Mostrate n di totale") e numero nella nota dei filtri (se c'è). */
 async function counts(page: Page): Promise<{ head: number; list: number; note: number | null }> {
   const num = (s: string, i = 0) => Number((s.replace(/[.,](?=\d{3})/g, '').match(/\d+/g) || [])[i]);
-  const head = num(await page.locator('#verdict').innerText());
-  const shown = page.locator('#shownCount');
-  const list = (await shown.isVisible()) ? num(await shown.innerText(), 1) : 0;
-  const note = page.locator('#filterNote');
-  return { head, list, note: (await note.isVisible()) ? num(await note.innerText()) : null };
+  // letti tutti insieme: un ridisegno a metà lettura (per esempio all'arrivo dei nomi italiani) darebbe numeri misti
+  const raw = await page.evaluate(() => {
+    const text = (id: string) => {
+      const el = document.getElementById(id) as HTMLElement;
+      return el.hidden ? null : el.innerText;
+    };
+    return { head: text('verdict') || '', shown: text('shownCount'), note: text('filterNote') };
+  });
+  return { head: num(raw.head), list: raw.shown ? num(raw.shown, 1) : 0, note: raw.note ? num(raw.note) : null };
 }
 
 test('riepilogo ed elenco: stesso insieme, e i filtri che nascondono carte sono dichiarati', async ({ page }) => {
@@ -1234,4 +1238,162 @@ test('nomi italiani: scheda aperta prima di ogni ricerca, interfaccia in italian
   const name = (await page.locator('#sheetTitle').innerText()).trim();
   expect(name.length).toBeGreaterThan(0);
   await expect(page.locator('#sheetIt')).toBeVisible(); // arriva dopo il file, senza riaprire la scheda
+});
+
+/* ---------- Mazzi ---------- */
+
+/** File dei mazzi sintetico, con gli indici delle carte vere di data/cards.json (i dati cambiano ogni giorno). */
+function syntheticDecks(days = 61) {
+  const cards: { n: string }[] = JSON.parse(readFileSync(resolve(HERE, '../../data/cards.json'), 'utf-8')).c;
+  const ix = (n: string) => {
+    const i = cards.findIndex((c) => c.n === n);
+    if (i < 0) throw new Error(`carta assente: ${n}`);
+    return i;
+  };
+  const [bs, cs, dv, tt, lb, fi, isl, mnt] = ['Brainstorm', 'Counterspell', 'Delver of Secrets // Insectile Aberration', 'Tolarian Terror',
+    'Lightning Bolt', 'Fire // Ice', 'Island', 'Mountain'].map(ix);
+  const fillers = Array.from({ length: 12 }, () => ['xU', 'U', [bs, 1, isl, 59], [], [[2026080100, 30]]]);
+  return {
+    v: 1, days, anchor: '2026-10-04', basics: [isl, mnt],
+    t: {
+      2026100400: ['2026-10-04', 'Pauper Challenge 32', 'https://www.mtgo.com/decklist/sintetico-1', 'm'],
+      2026092000: ['2026-09-20', 'Pauper League', 'https://www.mtgo.com/decklist/sintetico-2', 'm'],
+      2026091000: ['2026-09-10', 'Torneo locale', 'https://melee.gg/Tournament/View/1', 'p'],
+      2026080100: ['2026-08-01', 'Torneo vecchio', 'https://melee.gg/Tournament/View/2', 'p'],
+    },
+    a: { c1: ['Mono-Blue Terror', '', 'c'], a2: ['Lightning Bolt + Fire // Ice', 'R', 'a'], xU: ['', 'U', 'x'] },
+    l: [
+      ['c1', 'U', [bs, 4, cs, 4, dv, 4, tt, 4, isl, 44], [fi, 2], [[2026092000, '5-0'], [2026091000, 2]]],
+      ['a2', 'R', [lb, 4, fi, 4, mnt, 52], [], [[2026100400, 7]]],
+      ['c1', 'U', [bs, 4, isl, 56], [], [[2026091000, 1], [2026080100, 3]]],
+      ...fillers,
+    ],
+  };
+}
+
+async function mockDecks(page: Page): Promise<{ year: number }> {
+  const calls = { year: 0 };
+  await page.route('**/data/decks-61.json', (r) => r.fulfill({ json: syntheticDecks() }));
+  await page.route('**/data/decks-365.json', (r) => {
+    calls.year++;
+    return r.fulfill({ json: syntheticDecks(365) });
+  });
+  return calls;
+}
+
+const first = (lang: Lang, n: number) => (lang === 'it' ? `${n}°` : `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : 'th'}`);
+
+test('mazzi senza collezione: per ultima apparizione, archetipo, Carica altri, decklist ed export', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const calls = await mockDecks(page);
+  const problems = await setup(page);
+  await expect(page.locator('#navDecks')).toHaveText(tr('nav.decks'));
+  await page.click('#navDecks');
+  await expect(page.locator('#navDecks')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#viewMain')).toBeHidden();
+  await expect(page.locator('#dVerdict')).toHaveText(tr('decks.verdict', { n: 15 }));
+  await expect(page.locator('#dSub')).toContainText(tr('decks.sortLast'));
+  await expect(page.locator('#dNoColl')).toBeVisible();
+  await expect(page.locator('#dMinWrap')).toBeHidden();
+  await expect(page.locator('#dSideWrap')).toBeHidden();
+  // dalla più recente; nome dell'archetipo, volte, migliore piazzamento con il link al torneo
+  await expect(page.locator('#deckList .dk-name').first()).toHaveText('Lightning Bolt + Fire // Ice');
+  const second = page.locator('#deckList .dk').nth(1);
+  await expect(second).toContainText(tr('decks.times', { n: 2 }));
+  await expect(second.locator('.dk-best a')).toHaveAttribute('href', 'https://melee.gg/Tournament/View/1');
+  await expect(second.locator('.dk-best b')).toHaveText(first(L, 2));
+  await expect(page.locator('#deckList .dk-comp')).toHaveCount(0);
+  // 10 alla volta
+  await expect(page.locator('#deckList .dk')).toHaveCount(10);
+  await expect(page.locator('#dShown')).toHaveText(tr('decks.shown', { n: 10, total: 15 }));
+  await page.click('#dMore');
+  await expect(page.locator('#deckList .dk')).toHaveCount(15);
+  await expect(page.locator('#dMore')).toBeHidden();
+  await expect(page.locator('#deckList .dk-name').nth(10)).toBeFocused();
+  // archetipo: la nota dice perché se ne vedono meno, "Togli questi filtri" li toglie
+  await page.selectOption('#dArch', 'c1');
+  await expect(page.locator('#deckList .dk')).toHaveCount(2);
+  await expect(page.locator('#dVerdict')).toHaveText(tr('decks.verdict', { n: 15 }));
+  await expect(page.locator('#dNote')).toContainText(tr('decks.filtered', { n: 2, why: tr('decks.whyArch', { v: 'Mono-Blue Terror' }) }));
+  await page.click('#dClear');
+  await expect(page.locator('#deckList .dk')).toHaveCount(10);
+  await expect(page.locator('#dNote')).toBeHidden();
+  // decklist per tipo, con il side; export nel formato di MTG Arena
+  await second.locator('.dk-list summary').click();
+  await expect(second.locator('.dk-side h5')).toHaveText(`${tr('decks.sideboard')} (2)`);
+  await expect(second.locator('.dk-sec h5').first()).toHaveText(`${tr('decks.sec.creature')} (8)`);
+  await second.locator('[data-dcopy="deck"]').click();
+  const clip = (await page.evaluate(() => navigator.clipboard.readText())).split('\n').map((x) => x.trimEnd());
+  expect(clip.slice(0, 8)).toEqual(['4 Brainstorm', '4 Counterspell', '4 Delver of Secrets // Insectile Aberration', '4 Tolarian Terror',
+    '44 Island', '', 'Sideboard', '2 Fire // Ice']);
+  const dl = page.waitForEvent('download');
+  await second.locator('[data-dsave="deck"]').click();
+  expect((await dl).suggestedFilename()).toBe(tr('decks.fileDeck', { name: 'mono-blue-terror' }));
+  // il nome di una carta apre la scheda
+  await second.locator('.dk-sec .dk-card').first().click();
+  await expect(page.locator('#sheet')).toBeVisible();
+  await page.keyboard.press('Escape');
+  // ultimo anno: scaricato solo su richiesta
+  expect(calls.year).toBe(0);
+  await page.selectOption('#dPeriod', '365');
+  await expect(page.locator('#dSub')).toContainText(head('decks.sub365'));
+  expect(calls.year).toBe(1);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  expect(problems).toEqual([]);
+});
+
+test('mazzi con la collezione: completamento, mancanti con le copie, solo main, minimo, export delle mancanti', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await mockDecks(page);
+  const problems = await setup(page);
+  await uploadCollection(page);
+  await page.click('#navDecks');
+  await expect(page.locator('#dSub')).toContainText(tr('decks.sortComp'));
+  await expect(page.locator('#dSub')).toContainText(tr('decks.fullN', { n: 13 }));
+  await expect(page.locator('#dNoColl')).toBeHidden();
+  // per completamento: prima le complete (a parità, più apparizioni)
+  const top = page.locator('#deckList .dk').first();
+  await expect(top.locator('.dk-best b')).toHaveText(first(L, 1));
+  await expect(top).toContainText(tr('decks.complete'));
+  await page.selectOption('#dMin', '0.5');
+  await expect(page.locator('#dShown')).toHaveText(tr('decks.shown', { n: 10, total: 14 }));
+  await page.selectOption('#dMin', '1');
+  await expect(page.locator('#dShown')).toHaveText(tr('decks.shown', { n: 10, total: 13 }));
+  await expect(page.locator('#dNote')).toContainText(tr('decks.whyFull'));
+  await page.selectOption('#dMin', '0');
+  await page.selectOption('#dArch', 'c1');
+  const deck = page.locator('#deckList .dk').nth(1);
+  // Tolarian Terror è un proxy (non contato): mancano 4 Tolarian Terror, 2 Counterspell e 1 Delver; il side c'è
+  await expect(deck.locator('.dk-cnt')).toHaveText(tr('decks.have', { have: 11, need: 18 }));
+  await expect(deck.locator('.dk-mhead b')).toHaveText(tr('decks.missing', { n: 7 }));
+  await deck.locator('[data-dcopy="missing"]').click();
+  const clip = (await page.evaluate(() => navigator.clipboard.readText())).split('\n').map((x) => x.trimEnd()).filter(Boolean);
+  expect(clip).toEqual(['4 Tolarian Terror', '2 Counterspell', '1 Delver of Secrets // Insectile Aberration']);
+  await deck.locator('.dk-list summary').click();
+  await expect(deck.locator('.dk-sec li.miss')).toContainText('Tolarian Terror');
+  await expect(deck.locator('.dk-sec li.part', { hasText: 'Counterspell' })).toContainText(tr('decks.missCopies', { n: 2 }));
+  await expect(deck.locator('.dk-sec li.have').first()).toContainText('Brainstorm');
+  // solo main: il side non conta
+  await page.locator('#dSideWrap label').first().click();
+  await expect(deck.locator('.dk-cnt')).toHaveText(tr('decks.have', { have: 9, need: 16 }));
+  // la scelta main/side resta, i filtri no
+  await page.reload();
+  await expect(page.locator('#deckList .dk').first()).toBeVisible();
+  await expect(page.locator('#dSideWrap input[value="main"]')).toBeChecked();
+  await expect(page.locator('#dArch')).toHaveValue('');
+  expect(problems).toEqual([]);
+});
+
+test('mazzi: file non disponibile, messaggio e Riprova', async ({ page }) => {
+  let fail = true;
+  await page.route('**/data/decks-61.json', (r) => (fail ? r.fulfill({ status: 404, body: '' }) : r.fulfill({ json: syntheticDecks() })));
+  await setup(page);
+  await page.goto('./#mazzi');
+  await expect(page.locator('#dStatus')).toContainText(tr('decks.error'));
+  await expect(page.locator('#dResults')).toBeHidden();
+  fail = false;
+  await page.click('#dRetry');
+  await expect(page.locator('#deckList .dk')).toHaveCount(10);
+  await expect(page.locator('#dStatus')).toBeHidden();
 });

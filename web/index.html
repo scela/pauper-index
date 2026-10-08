@@ -49,6 +49,7 @@
         <span class="nd-short" data-i18n="nav.dustShort">Dimenticata</span>
         <span class="nd-web" aria-hidden="true"></span>
       </a>
+      <a href="#mazzi" id="navDecks" class="navlink" data-i18n="nav.decks">Mazzi</a>
       <a href="#informazioni" id="navAbout" class="navlink" data-i18n="nav.about">Informazioni</a>
       <span class="langs" role="group" data-i18n-aria="nav.lang" aria-label="Lingua">
         <button class="btn quiet small" type="button" data-lang="it" lang="it" aria-label="Italiano">IT</button>
@@ -273,6 +274,50 @@
         <label class="chk dust-all" id="dustAllWrap" hidden><input type="checkbox" id="dustAll"> <span data-i18n="dust.fromAll">Pesca tra tutte le carte, non solo le tue</span></label>
       </div>
       <div id="dustResult" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <div id="viewDecks" hidden>
+    <section class="deckspage" aria-labelledby="decksHeading">
+      <h2 id="decksHeading" data-i18n="decks.title">Mazzi</h2>
+      <p class="decks-lead" data-i18n="decks.lead">Le liste giocate di recente nei tornei Pauper, con quanto ti manca per costruirle.</p>
+      <p class="note decks-nocoll" id="dNoColl" hidden><span data-i18n="decks.noColl">Carica la tua collezione nella pagina principale per vedere quali mazzi puoi costruire.</span> <a href="/" data-i18n="decks.noCollLink">Vai al caricamento</a></p>
+      <form class="filters dfilters" id="deckFilters" role="search" data-i18n-aria="decks.filters" aria-label="Filtri dei mazzi">
+        <label class="f-field"><span data-i18n="filters.period">Periodo</span>
+          <select id="dPeriod">
+            <option value="61" data-i18n="decks.p61">Ultimi 61 giorni</option>
+            <option value="365" data-i18n="decks.p365">Ultimo anno (circa 0,8 MB da scaricare)</option>
+          </select>
+        </label>
+        <label class="f-field"><span data-i18n="decks.arch">Archetipo</span>
+          <select id="dArch"></select>
+        </label>
+        <label class="f-field" id="dMinWrap" hidden><span data-i18n="decks.min">Completamento minimo</span>
+          <select id="dMin"></select>
+        </label>
+        <div class="f-field" id="dSideWrap" hidden>
+          <span id="dSideLabel" data-i18n="decks.count">Carte da contare</span>
+          <div class="seg" role="radiogroup" aria-labelledby="dSideLabel">
+            <label><input type="radio" name="dSide" value="main"><span data-i18n="decks.mainOnly">Solo main</span></label>
+            <label><input type="radio" name="dSide" value="side" checked><span data-i18n="decks.mainSide">Main e side</span></label>
+          </div>
+        </div>
+      </form>
+      <p class="dstatus" id="dStatus" role="status" aria-live="polite" hidden></p>
+      <div id="dResults" hidden>
+        <div class="res-head">
+          <div>
+            <h3 class="verdict" id="dVerdict"></h3>
+            <p class="sub" id="dSub"></p>
+            <p class="filternote" id="dNote" aria-live="polite" hidden></p>
+          </div>
+        </div>
+        <ol class="decklist" id="deckList"></ol>
+        <div class="morebar">
+          <p class="shown" id="dShown" aria-live="polite" hidden></p>
+          <button class="btn more" id="dMore" type="button" hidden data-i18n="res.loadMore">Carica altri</button>
+        </div>
+      </div>
     </section>
   </div>
 
