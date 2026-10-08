@@ -25,3 +25,6 @@ playwright-report/
 *.log
 .DS_Store
 Thumbs.db
+
+# Stato dei nomi italiani: copia grezza dei dati di Scryfall, non si ripubblica (in CI sta nella cache di Actions)
+data/reviews/italiano.json

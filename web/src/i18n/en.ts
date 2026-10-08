@@ -63,7 +63,7 @@ export const en: Record<Key, Msg> = {
   'fp.mv': 'Mana value',
   'fp.type': 'Type',
   'fp.text': 'Rules text (English or Italian)',
-  'fp.textPh': 'e.g. draw a card (Italian text only for cards printed in Italian)',
+  'fp.textPh': 'e.g. draw a card',
   'fp.textHint': 'Searches the rules text and the type line (subtypes too, like Faerie or Equipment), on every face. All words must appear. The Italian text is the one of the latest Italian printing: cards never printed in Italian are found with the English text only.',
   'fp.textLoading': 'Loading the rules text…',
   'fp.textError': 'Rules text not available: try again later.',

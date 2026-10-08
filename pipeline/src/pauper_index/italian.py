@@ -1,11 +1,13 @@
 """Nomi (e testo delle regole) delle stampe italiane, dalla ricerca di Scryfall (`lang:it`), senza il bulk all_cards.
 
-Stato committato in data/reviews/italiano.json (non pubblicato), per oracle_id:
+Stato in data/reviews/italiano.json, NON committato (.gitignore: è una copia grezza dei dati di Scryfall, che non
+si ripubblicano così come sono) e conservato in CI nella cache di GitHub Actions; per oracle_id:
   {"n": [nomi italiani distinti, dal più recente], "t": testo della stampa italiana più recente, "d": sua data}
 più `full` (data dell'ultimo scaricamento completo) e `updated` (ultimo aggiornamento).
 
 Aggiornamento (vedi CLAUDE.md, "Nomi italiani"):
-  - completo solo a richiesta (`python -m pauper_index italian --full`): circa 300 pagine di ricerca, 3 minuti;
+  - completo a richiesta (`python -m pauper_index italian --full`) o quando lo stato manca (cache di Actions
+    scaduta): circa 300 pagine di ricerca, 3 minuti;
   - incrementale durante `build`, quando esce un set nuovo o al più tardi dopo 7 giorni: solo le stampe uscite
     dai 60 giorni prima dell'ultimo aggiornamento in poi (`lang:it date>=…`), poche pagine.
 Le traduzioni delle stampe vecchie non cambiano, quindi l'incrementale basta; i nomi si uniscono, mai rimossi.

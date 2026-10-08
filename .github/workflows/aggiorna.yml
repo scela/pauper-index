@@ -90,6 +90,14 @@ jobs:
           path: .cache/source
           key: source-${{ github.run_id }}
           restore-keys: source-
+      - name: Cache dello stato dei nomi italiani
+        # copia grezza dei dati di Scryfall: non va nel repository (data/reviews/italiano.json è in .gitignore).
+        # Se la cache manca (scaduta o prima esecuzione), build riscarica tutto: circa 3 minuti.
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/reviews/italiano.json
+          key: italiano-${{ github.run_id }}
+          restore-keys: italiano-
       - name: Ricostruisci i dati (fonte + Scryfall)
         run: python -m pauper_index build > .cache-build.log && tail -n 60 .cache-build.log
       - name: Revisioni dopo le espansioni

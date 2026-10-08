@@ -69,6 +69,8 @@ Idee per dopo, non pianificate: `docs/IDEE.md`.
 
 ## Regole di lavoro (decise dall'utente)
 
+**Lingua**: rispondere **sempre in italiano**, compresi report, domande e messaggi intermedi (richiesta dell'utente del 2026-10-08, valida per tutte le sessioni).
+
 **Privacy**:
 - `reference/private/` contiene dati personali (export ManaBox reali): si apre **solo** per capire il formato dell'export e per i test in locale. Nessun suo contenuto finisce in file committati, fixture comprese: le fixture sono sintetiche. I test locali (`web/tests/private.test.ts`) stampano solo conteggi.
 - Prima di ogni push che aggiunge file: nessun file di `reference/private/` e nessuna riga dei file privati nei commit.
@@ -347,7 +349,7 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 | `itnames.json` (2026-10-08) | 0,12 MB | 0,04 MB |
 | `itnames-other.json` (2026-10-08) | 0,78 MB | 0,26 MB |
 | `ittexts.json` (2026-10-08) | 0,73 MB | 0,14 MB |
-| `reviews/italiano.json` (stato, non pubblicato) | 8,1 MB | 2,4 MB |
+| `reviews/italiano.json` (stato, né committato né pubblicato) | 8,1 MB | 2,4 MB |
 | `printings.json` | 1,46 MB | 0,70 MB |
 | `names.json` | 0,13 MB | 0,05 MB |
 | `seticons.svg` (2026-10-07) | 0,29 MB | 0,10 MB |
@@ -725,11 +727,11 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 ## Nomi italiani (2026-10-08)
 
 - **Fonte**: la ricerca di Scryfall `lang:it` con `unique=prints` (tutte le stampe italiane, 175 per pagina), con il client che rispetta i 500 ms dell'endpoint (`/cards/search`, 550 ms). **Niente bulk `all_cards`.** Al 2026-10-08: 53.074 stampe italiane in 304 pagine (circa 3 minuti e circa 290 MB di JSON), 52.607 con un nome stampato, **30.288 carte** con un nome italiano. Per le carte a più facce il nome è quello delle facce unite con " // " (verificato: nella ricerca reale `printed_name` sta nelle facce). Le pagine non vanno nella cache su disco (`cache=False`), perché sarebbero circa 290 MB.
-- **Stato** (`pipeline/src/pauper_index/italian.py`): `data/reviews/italiano.json`, committato e **non** pubblicato: `{v, full, updated, c: {oracle_id: {n: [nomi italiani distinti, dal più recente], t: testo della stampa italiana più recente, d: sua data}}}`, una riga per carta (diff leggibili). Si conservano **tutti** i nomi distinti, perché la traduzione cambia tra le edizioni (99 carte giocabili ne hanno più di uno, per esempio "Ricercatori dell'Accademia" e "Ricercatori d'Accademia"). Le stampe senza nome stampato si ignorano; i nomi uguali a quello inglese non vanno nei file del sito (per esempio Fire // Ice, che Scryfall dà come "Fire // Ice" anche in italiano).
+- **Stato** (`pipeline/src/pauper_index/italian.py`): `data/reviews/italiano.json`, **né committato né pubblicato** (in `.gitignore` dal 2026-10-08, su richiesta dell'utente: è una copia grezza dei dati di Scryfall, e le loro regole vietano di ripubblicarli così come sono; il commit `60fb567` lo conteneva, la cronologia non è stata riscritta). In CI sta nella **cache di GitHub Actions** (`italiano-<run_id>`, ripristinata con il prefisso `italiano-`, come il clone della fonte); se la cache manca (prima esecuzione, o scaduta dopo 7 giorni senza uso) `build` riscarica tutto, circa 3 minuti. Formato: `{v, full, updated, c: {oracle_id: {n: [nomi italiani distinti, dal più recente], t: testo della stampa italiana più recente, d: sua data}}}`, una riga per carta (diff leggibili). Si conservano **tutti** i nomi distinti, perché la traduzione cambia tra le edizioni (99 carte giocabili ne hanno più di uno, per esempio "Ricercatori dell'Accademia" e "Ricercatori d'Accademia"). Le stampe senza nome stampato si ignorano; i nomi uguali a quello inglese non vanno nei file del sito (per esempio Fire // Ice, che Scryfall dà come "Fire // Ice" anche in italiano).
 - **Aggiornamento** (scelto: incrementale, non ogni giorno):
-  - **completo** solo a mano: `python -m pauper_index italian --full` (anche quando lo stato manca);
+  - **completo** a mano (`python -m pauper_index italian --full`) oppure quando lo stato manca;
   - **incrementale** dentro `build` (quindi nella CI quotidiana, che però fa richieste solo quando serve): quando esce un set (`released_at` di `/sets` dopo l'ultimo aggiornamento ed entro oggi) **oppure** dopo 7 giorni (`REFRESH_DAYS`). Scarica solo `lang:it date>=<ultimo aggiornamento − 60 giorni>` (`OVERLAP_DAYS`, per le stampe italiane aggiunte in ritardo), di solito poche pagine, e unisce i nomi (mai rimossi). Le traduzioni delle stampe già uscite non cambiano, quindi non serve riscaricare tutto;
-  - senza rete (`--offline`) lo stato resta com'è. Il commit avviene con il resto dei dati (`git add data`).
+  - senza rete (`--offline`) lo stato resta com'è. Si committano solo i file del sito derivati dallo stato.
 - **File del sito** (scaricati solo quando servono, fuori dal caricamento iniziale):
   - `itnames.json` `{v, c}`: `c[i]` = nomi italiani della carta i di `cards.json` (`[]` se non ce ne sono). **121 KB, 40 KB gzip.** Si scarica al primo focus o alla prima digitazione nella ricerca per nome, al primo uso del controllo rapido, oppure alla prima scheda aperta con l'interfaccia in italiano (serve al nome sotto quello inglese);
   - `itnames-other.json` `{v, o}`: `[indice in cardnames.json, nomi…]` delle altre carte giocabili in carta o su MTGO (24.830). **785 KB, 263 KB gzip.** Solo per il controllo rapido, insieme a `cardnames.json`;
@@ -739,7 +741,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Controllo rapido**: una voce per ogni nome italiano, mostrata come "Fulmine (Lightning Bolt)"; a parità di punteggio prima le carte giocate, poi i nomi inglesi. Scelta, il campo mostra "Fulmine (Lightning Bolt)"; il risultato ha il titolo inglese e sotto, in corsivo, i nomi italiani (con l'interfaccia in italiano, o sempre se la carta è stata cercata in italiano). Il nome esatto italiano (anche di una faccia) mostra subito il risultato.
 - **Ricerca nell'elenco** (vista collezione, mancanti, espansione): `ListFilters.names`, il testo dei nomi di ogni carta. Quando i nomi italiani arrivano l'elenco si ridisegna **solo se cambia** (un ridisegno inutile toglieva il focus alla riga: difetto trovato da un test).
 - **Scheda**: con l'interfaccia in italiano, sotto il nome inglese i nomi italiani (`#sheetIt`, `lang="it"`); se il file arriva con la scheda aperta, la riga si aggiunge senza riaprirla (`setSheetItalian`).
-- **Filtro sul testo**: cerca anche nel testo italiano; etichetta "Testo delle regole (inglese o italiano)", segnaposto "es. draw a card, pesca una carta (in italiano solo per le carte stampate in italiano)".
+- **Filtro sul testo**: cerca anche nel testo italiano; etichetta "Testo delle regole (inglese o italiano)", segnaposto breve "es. draw a card · pesca una carta" ("e.g. draw a card" in inglese); la spiegazione (testo italiano solo per le carte stampate in italiano) sta nella riga sotto il campo.
 
 ## Pagina Informazioni (riscritta il 2026-10-06)
 

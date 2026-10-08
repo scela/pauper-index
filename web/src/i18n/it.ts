@@ -65,7 +65,7 @@ export const it = {
   'fp.mv': 'Costo di mana',
   'fp.type': 'Tipo',
   'fp.text': 'Testo delle regole (inglese o italiano)',
-  'fp.textPh': 'es. draw a card, pesca una carta (in italiano solo per le carte stampate in italiano)',
+  'fp.textPh': 'es. draw a card · pesca una carta',
   'fp.textHint': 'Cerca nel testo delle regole e nella riga del tipo (anche sottotipi come Faerie o Equipment), su tutte le facce. Devono comparire tutte le parole. Il testo italiano è quello dell’ultima stampa italiana: le carte mai stampate in italiano si trovano solo con il testo inglese.',
   'fp.textLoading': 'Carico il testo delle regole…',
   'fp.textError': 'Testo delle regole non disponibile: riprova più tardi.',
