@@ -24,6 +24,7 @@ Queste spiegazioni stavano nella pagina Informazioni del sito, che ora è breve.
 - Il controllo rapido dice se una carta è giocata in Pauper anche quando è fuori dalla lista con i filtri attuali e, con la collezione, se la possiedi.
 - Il filtro "Espansione" mostra le carte della lista stampate in quel set a qualsiasi rarità, perché la legalità è della carta e non della stampa. I set collegati sono raggruppati; promo, Secret Lair, The List e set solo digitali sono nascosti di default. In questa vista ogni carta mostra l'immagine della stampa di quel set, con il simbolo dell'espansione colorato secondo la rarità.
 - I simboli delle espansioni sono le icone di Scryfall, scaricate dalla pipeline e servite dal sito in un unico file (`data/seticons.svg`).
+- I prezzi sono indicativi: prezzi Cardmarket in euro (`eur`, `eur_foil`) presenti nei dati di Scryfall. Per una carta posseduta si mostra la printing posseduta di valore più alto (foil se è foil); per una mancante la printing non foil più economica ("da X €"); nella vista per espansione la stampa di quel set. Le printing in altre lingue hanno il prezzo della printing corrispondente, perché Scryfall dà un prezzo per printing e non per lingua.
 - La pagina "Carta dimenticata" (in testata) pesca una carta legale con almeno 20 mazzi nello storico e nessuna apparizione nell'ultimo anno.
 
 **Dati e limiti**
@@ -39,7 +40,7 @@ Queste spiegazioni stavano nella pagina Informazioni del sito, che ora è breve.
 Il workflow [`Aggiorna e pubblica`](.github/workflows/aggiorna.yml) gira ogni giorno alle 07:23 UTC:
 
 1. scarica le nuove decklist e i dati Scryfall e ricalcola tutto da zero;
-2. se i dati sono cambiati fa un commit (`Dati: aggiornamento del …`) e ripubblica il sito;
+2. se i dati sono cambiati fa un commit (`Dati: aggiornamento del …`) e ripubblica il sito; i prezzi (`data/prices.json`) non si committano, perché cambiano ogni giorno: li genera il job di pubblicazione (`python -m pauper_index prices`);
 3. esegue le revisioni dopo le espansioni e controlla che la fonte non sia ferma: in entrambi i casi apre una Issue;
 4. se qualcosa fallisce apre una Issue assegnata al proprietario del repository (arriva un'email).
 
@@ -79,6 +80,7 @@ Per rigenerare i dati serve Python 3.14:
 ```powershell
 python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -e "pipeline[dev]"
 python -m pauper_index build
+python -m pauper_index prices   # solo i prezzi, con il bulk Scryfall più recente
 ```
 
 ## Avviso

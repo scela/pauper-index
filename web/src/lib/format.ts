@@ -1,10 +1,10 @@
-import { fmtDate, fmtInt, fmtPct, fmtResult, t } from '../i18n';
+import { fmtDate, fmtEur, fmtInt, fmtPct, fmtResult, t } from '../i18n';
 import type { Data } from './data';
 import { isFoil } from './csv';
 import type { LastSeen, Row } from './types';
 
 // Date e numeri dipendono dalla lingua corrente (src/i18n).
-export { fmtDate, fmtInt, fmtPct, fmtResult };
+export { fmtDate, fmtEur, fmtInt, fmtPct, fmtResult };
 
 export function daysBetween(a: string, b: string): number {
   return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);

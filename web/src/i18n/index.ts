@@ -71,6 +71,11 @@ export function fmtDateTime(ms: number, l: Lang = current): string {
   return new Date(ms).toLocaleString(LOCALES[l], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
+/** Centesimi di euro -> "1,23 €" / "€1.23". */
+export function fmtEur(cents: number, l: Lang = current): string {
+  return (cents / 100).toLocaleString(LOCALES[l], { style: 'currency', currency: 'EUR' });
+}
+
 export function fmtPct(x: number, l: Lang = current): string {
   if (x <= 0) return '0%';
   if (x < 0.001) return `<${(0.1).toLocaleString(LOCALES[l])}%`;

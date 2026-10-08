@@ -38,11 +38,12 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] 2026-10-07: "Rimuovi collezione" con Annulla (vedi "Rimuovi collezione")
   - [ ] Funzione 4: mazzi che puoi costruire. Piano approvato il 2026-10-07 (vedi "Funzione 4: mazzi"):
     - [x] punto 0: filtri che nascondono carte mai salvati, espansione ricordata (commit `2c261a1`)
-    - [ ] passo 2: pipeline e archetipi, **fatto in locale e non committato**; nomi corretti il 2026-10-08 secondo le convenzioni della comunità, in attesa della conferma dell'utente (`data/reviews/archetipi.md`)
+    - [x] passo 2: pipeline e archetipi, nomi secondo le convenzioni della comunità (commit `82bf09b`, 2026-10-08). Restano gruppi automatici, da nominare quando l'utente decide (righe nuove in fondo al CSV): la parte nera di "Crypt Rats + Troll" (Gardens?), "Respite + Tangle" (Food Gardens?); Storm resta "Storm" (nessuna lista con Ruby Medallion)
+    - [x] prima del passo 3 (2026-10-08): scheda più rapida al passaggio del mouse e prezzi indicativi in euro (vedi "Scheda al passaggio del mouse" e "Prezzi indicativi")
     - [ ] passo 3: sezione "Mazzi" nel sito, completamento, export (formato ManaBox da `reference/private/mazzo-esempio.txt`)
     - [ ] passo 4: rifinitura
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo il punto 0 della funzione 4, 2026-10-07; dal passo 2, in locale: 102 pytest): 96 pytest, 58 Vitest, 105 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi il 2026-10-08, dopo scheda e prezzi): 105 pytest, 63 Vitest, 118 Playwright (più 6 saltati di proposito: i test col mouse non girano su mobile) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -100,8 +101,8 @@ web/                    frontend (Vite + TypeScript)
 ```
 
 **File principali**:
-- Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `seticons.py` (simboli delle espansioni), `review.py` (revisioni, snapshot, allarme), `scryfall.py` (client con limiti di frequenza), `config.py`.
-- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `view` (filtri dell'elenco e nota del riepilogo), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
+- Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `seticons.py` (simboli delle espansioni), `review.py` (revisioni, snapshot, allarme), `decks.py` (mazzi e archetipi), `prices.py` (prezzi), `scryfall.py` (client con limiti di frequenza), `config.py`.
+- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `prices`, `view` (filtri dell'elenco e nota del riepilogo), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
 - Test: `pipeline/tests/`, `web/tests/` (Vitest), `web/e2e/smoke.spec.ts` (Playwright).
 - Automazione: `.github/workflows/aggiorna.yml`.
 - Documentazione: questo file, `README.md` (avvio manuale, file manuali, comandi locali), `docs/IDEE.md`.
@@ -121,6 +122,7 @@ python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -e "pipeline[dev
 .\.venv\Scripts\python -m pauper_index changed    # cambiamenti significativi in data/ (usato dalla CI)
 .\.venv\Scripts\python -m pauper_index sets       # report dei set d'ingresso
 .\.venv\Scripts\python -m pauper_index baseline   # confronto con la baseline
+.\.venv\Scripts\python -m pauper_index prices     # solo data/prices.json (bulk default_cards più recente); --offline usa quello in cache
 #   build: --offline (niente rete, usa cache e fuzzy_matches.csv), --no-fetch (non aggiorna la fonte)
 .\.venv\Scripts\python -m pytest pipeline; .\.venv\Scripts\ruff check pipeline
 
@@ -137,6 +139,7 @@ node scripts/dust-button-shots.mjs <etichetta>   # con preview attivo: pulsante 
 node scripts/dust-perf.mjs <etichetta> [rallentamento]   # con preview attivo: video di 3 pesche e misure (fotogrammi persi, layout shift)
 node scripts/tilt-frames.mjs                     # con preview attivo: carta in 3D inclinata in direzioni diverse (mouse e dito)
 node scripts/header-shots.mjs <etichetta>        # con preview attivo: testata, desktop/mobile/mobile piccolo, chiaro/scuro, IT/EN, con focus
+node scripts/sheet-timing.mjs <etichetta> [n]    # con preview attivo: tempi della scheda al passaggio del mouse (apertura, comparsa, cambio carta, chiusura)
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
 # Stato della CI
@@ -310,6 +313,8 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 
 **`seticons.svg`** (aggiunto il 2026-10-07): sprite con un `<symbol id="nome" viewBox data-v>` per ogni icona dei set di `sets.json` (vedi "Simboli delle espansioni"). 333 icone, **285 KB grezzi, 102 KB con gzip**; si scarica solo quando si apre il selettore o si sceglie un'espansione.
 
+**`prices.json`** (2026-10-08, **non committato**, in `.gitignore`): `{v, date, p}`, allineato a `printings.json`; `p[i]` = `[eur, eur_foil, …]` in centesimi, una coppia per printing della carta i, 0 = assente. 141 KB grezzi, 46 KB gzip. Vedi "Prezzi indicativi".
+
 **`meta.json`**: generazione, ultimo torneo, totali per finestra, date dei bulk, commit della fonte, stato (`ok`/`ferma`), deduplica, statistiche di risoluzione.
 
 **`reviews/`** (non mostrato nel sito: contiene testo grezzo delle decklist):
@@ -445,7 +450,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - `tests/`: Vitest. `private.test.ts` gira solo se trova `reference/private/esempio-testo.txt` e stampa solo conteggi. `e2e/`: Playwright, progetti desktop e "mobile" (iPhone 13 emulato su Chromium). `tests/fixtures/`: dati sintetici.
 - `vite.config.ts`, con un plugin che:
   - in sviluppo serve `/data/*` da `../data`;
-  - in build copia in `dist/data/` **solo** `cards`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `seticons.svg`, `meta` e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
+  - in build copia in `dist/data/` **solo** `cards`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `seticons.svg`, `meta`, `prices` (se c'è) e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
   - inietta la CSP (meta tag) **solo in build**, perché il dev server di Vite usa stili inline.
 
 **Decisioni**:
@@ -658,12 +663,41 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - con "Cancella i miei dati";
   - alla chiusura della pagina (`pagehide`).
 
+## Scheda al passaggio del mouse (2026-10-08)
+
+- **Misure** (`node scripts/sheet-timing.mjs`, desktop, build di produzione):
+
+  | | Prima | Dopo |
+  |---|---|---|
+  | Apertura (dal cursore sulla carta) | circa 235 ms (timer di 220 ms) | circa 117 ms (100 ms dopo l'ultimo movimento) |
+  | Comparsa | nessuna animazione (appariva di colpo) | 100 ms (opacità e 4 px di spostamento) |
+  | Da una carta all'altra | circa 230–285 ms con la scheda vecchia ferma | subito (3–36 ms), senza chiudersi |
+  | Chiusura (dall'uscita del cursore) | circa 300 ms (timer di 280 ms), senza dissolvenza | 80–100 ms (dissolvenza di 80 ms) |
+- **Regole** (`ui/sheet.ts` e `main.ts`): `HOVER_OPEN_MS = 100` misurati dall'ultimo `mousemove` sulla carta; se la scheda è aperta al passaggio del mouse, o si è chiusa da meno di 250 ms (`isWarm`), la carta successiva la apre subito, solo cambiando il contenuto; uscendo dalla carta o dalla scheda parte la dissolvenza (`sheet-out`, 80 ms), annullata se il cursore entra nella scheda o torna sulla carta. **Uscire dalla carta verso la scheda non avvia la chiusura**: quando non sta né sopra né sotto, la scheda si apre sopra la carta stessa (prima il "mouseout" faceva partire la chiusura, interrotta subito: un lampo).
+- Tocco e tastiera invariati (nessuna animazione); con `prefers-reduced-motion` nessuna animazione e chiusura immediata.
+- **Anteprima**: sotto l'immagine grande della carta attiva c'è la `small` della stessa printing (spesso già in cache dalla miniatura), visibile finché la grande non arriva. Stessa carta e stessa proporzione, nessun filtro (regole di Scryfall).
+
+## Prezzi indicativi (2026-10-08)
+
+- **Fonte**: `prices.eur` e `prices.eur_foil` (Cardmarket) del bulk `default_cards` di Scryfall. Nessuna richiesta esterna in più dal sito: legge `data/prices.json` dal proprio dominio, dopo il resto e senza bloccare la pagina; all'arrivo aggiorna solo le celle e il riepilogo (un ridisegno completo staccava dalla sua carta una scheda in apertura).
+- **Non committato**: committando il file il repository crescerebbe di circa **48 KB al giorno** (misurato con due bulk consecutivi, 2026-10-06 e 2026-10-07: 3.045 righe su 5.039 cambiano; circa 17 MB l'anno, quasi 7 volte i file dei mazzi). Lo genera il job `deploy` (`python -m pauper_index prices`: scarica il bulk e usa gli Scryfall ID di `printings.json`), che gira ogni giorno dopo `update`; anche `build` lo scrive in locale. Se la generazione fallisce, la pubblicazione prosegue e il sito mostra "—".
+- **Quale prezzo** (`lib/prices.ts`):
+  - posseduta: la printing posseduta (foil se la riga è foil) di valore più alto; la printing si riconosce da Scryfall ID, poi set + numero. Nessun ripiego tra normale e foil;
+  - mancante: la printing non foil più economica, "da X €";
+  - vista per espansione: la stampa di quel set (`displayPrint`), non foil;
+  - scheda: prezzo sotto ogni printing del ventaglio, prezzo normale e foil della printing attiva, "Prezzi delle tue printing" con ogni printing posseduta;
+  - prezzo assente o file mancante: "—", senza errori.
+- **Riepilogo** (`#priceSummary`, sotto il titolo), sulle carte dell'elenco con i filtri attivi (ricerca, ultima apparizione, espansione), comprese le mancanti anche se l'elenco non le mostra: "Valore indicativo delle tue copie" (tutte le copie di ogni printing posseduta) e "Costo indicativo delle mancanti" (una copia ciascuna, con lo stesso prezzo della colonna), più quante carte non hanno prezzo; senza collezione "Costo indicativo di una copia di ciascuna".
+- Le printing in altre lingue hanno il prezzo della printing corrispondente (Scryfall dà un prezzo per printing, non per lingua).
+- **Informazioni**: una domanda frequente, "Da dove vengono i prezzi?", con una sola frase.
+- Il passo 3 (Mazzi) userà gli stessi prezzi per il costo delle carte mancanti di ogni mazzo.
+
 ## Pagina Informazioni (riscritta il 2026-10-06)
 
 - Obiettivo: si legge in 30 secondi, ogni concetto compare una sola volta. Struttura in `ui/about.ts`:
   1. una frase su cosa fa il sito; "Come si usa" in 3 passi con icone SVG originali (carica, filtri, carta con spunta), in griglia su desktop e in colonna su mobile;
   2. "I dati": una frase con la data dell'ultimo aggiornamento (`meta.generated_at`);
-  3. "Domande frequenti": 5 `<details>` chiusi (giocata in Pauper, precisione delle percentuali, privacy, segnalare un errore, sostenere il sito);
+  3. "Domande frequenti": 6 `<details>` chiusi (giocata in Pauper, precisione delle percentuali, privacy, prezzi, segnalare un errore, sostenere il sito);
   4. in fondo un unico blocco legale piccolo (`.legal`): testo ufficiale della Fan Content Policy in inglese (`#fcp`, una sola volta), sintesi in una riga **solo in italiano** (`about.legal.summary`, vuota in inglese), non affiliazione con ManaBox e Scryfall, crediti con i link.
 - Tolti: la traduzione italiana integrale dell'avviso, le ripetizioni e le spiegazioni tecniche, ora nel README ("Come funziona nel dettaglio"). Nella pagina Informazioni il piè di pagina del sito è nascosto, perché il blocco legale e la FAQ sulle donazioni lo sostituiscono.
 - Screenshot prima/dopo: `node scripts/about-shots.mjs <etichetta>` (con preview attivo) in `.cache/screenshots/informazioni-*.png`.

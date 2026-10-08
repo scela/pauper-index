@@ -1,6 +1,7 @@
 // Dati integrati (data/*.json) e indici costruiti nel browser.
 
 import { norm, splitFaces } from './norm';
+import type { PricesFile } from './prices';
 import type { CardsFile, MetaFile, PrintingsFile } from './types';
 
 export interface Data {
@@ -41,6 +42,20 @@ export async function loadData(base = 'data/'): Promise<Data> {
     getJSON<MetaFile>(base + 'meta.json'),
   ]);
   return buildData(cards, prints, names, meta);
+}
+
+/**
+ * Prezzi indicativi (data/prices.json, generato durante la pubblicazione). null se manca o non è allineato alle
+ * carte caricate: il sito mostra "—" al posto dei prezzi.
+ */
+export async function loadPrices(d: Data, base = 'data/'): Promise<PricesFile | null> {
+  try {
+    const pr = await getJSON<PricesFile>(base + 'prices.json');
+    if (!Array.isArray(pr?.p) || pr.p.length !== d.cards.c.length) return null;
+    return pr;
+  } catch {
+    return null;
+  }
 }
 
 /** Indice della carta dal nome: nome intero, poi faccia frontale, poi "A/B" come "A // B". */

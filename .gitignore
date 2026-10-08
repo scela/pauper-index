@@ -4,6 +4,9 @@ reference/private/
 # Cache locali: clone della fonte, bulk Scryfall, cache HTTP
 .cache/
 
+# Prezzi indicativi: cambiano ogni giorno, si generano durante la pubblicazione (python -m pauper_index prices)
+data/prices.json
+
 # Python
 .venv/
 __pycache__/

@@ -337,7 +337,9 @@ table{width:100%;border-collapse:collapse}
 .cards{font-size:.9375rem}
 .cards th{font-weight:500;color:var(--muted);font-size:.8125rem;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-strong);white-space:nowrap}
 .cards td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
-.cards .c-qty,.cards .c-pct{text-align:right;white-space:nowrap}
+.cards .c-qty,.cards .c-pct,.cards .c-price{text-align:right;white-space:nowrap}
+.cards td.c-price{font-variant-numeric:tabular-nums}
+.pricesum{margin-top:4px}
 .cards .c-seen,.cards .c-entry,.cards .muted{color:var(--muted);font-size:.875rem;white-space:nowrap}
 .cards tr.r-missing .nm{color:var(--muted)}
 .cardbtn{all:unset;display:flex;gap:10px;align-items:flex-start;cursor:pointer;border-radius:var(--r-s)}
@@ -391,7 +393,14 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 .sheet-head h3{margin:0;font-size:1.125rem}
 .sheet-body{display:grid;grid-template-columns:minmax(200px,280px) 1fr;gap:16px;margin-top:12px}
 .active-card{display:grid;gap:8px;justify-items:center}
-.active-card img{width:100%;max-width:280px;aspect-ratio:488/680;height:auto;border-radius:12px;background:var(--line)}
+.active-card img{grid-area:1/1;width:100%;max-width:280px;aspect-ratio:488/680;height:auto;border-radius:12px}
+.active-card img.ph{background:var(--line)}
+.active-card>button{grid-row:2}
+.sheet.sheet-in{animation:sheet-in .1s ease-out}
+.sheet.sheet-out{animation:sheet-out 80ms ease-in forwards}
+@keyframes sheet-in{from{opacity:0;transform:translateY(4px)}}
+@keyframes sheet-out{to{opacity:0}}
+@media (prefers-reduced-motion: reduce){.sheet.sheet-in,.sheet.sheet-out{animation:none}}
 .active-card.owned img{outline:3px solid var(--accent);outline-offset:2px}
 .details{font-size:.9375rem}
 .details dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:8px 0}
@@ -404,6 +413,7 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 .fan-item{all:unset;flex:none;cursor:pointer;transform:rotate(var(--r,0deg)) translateY(var(--y,0px));transition:transform .15s;border-radius:6px}
 .fan-item img{display:block;width:76px;aspect-ratio:488/680;height:auto;border-radius:5px;background:var(--line)}
 .fan-item.owned img{outline:2px solid var(--accent);outline-offset:1px}
+.fan-price{display:block;margin-top:4px;text-align:center;font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .fan-item.active{--y:-10px}
 .fan-item.active img{box-shadow:0 0 0 3px var(--ink)}
 .fan-item:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -498,6 +508,7 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .cards td.c-pct{grid-column:1;text-align:left}
   .cards td.c-qty{grid-column:2;grid-row:2;justify-self:end}
   .cards td.c-seen,.cards td.c-entry{display:inline;grid-column:1/-1}
+  .cards td.c-price{grid-column:1/-1;text-align:left;color:var(--muted);font-size:.875rem}
   .cards td[data-label]::before{content:attr(data-label)}
   .cards td.c-qty::before{color:var(--muted)}
   .cards .nores{display:block}

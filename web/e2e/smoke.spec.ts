@@ -205,7 +205,7 @@ test('scheda con ventaglio: tastiera, carta attiva visibile, Esc', async ({ page
   await expect(sheet.locator('.tag')).toHaveText(tr('sheet.yours'));
   await expect(sheet).toContainText(tr('sheet.lastMtgo').trim());
   await expect(sheet).toContainText(tr('sheet.artist'));
-  const img = sheet.locator('.active-card img');
+  const img = sheet.locator('.active-card img:not(.ph)');
   await img.scrollIntoViewIfNeeded();
   const box = await img.boundingBox();
   const vp = page.viewportSize()!;
@@ -281,8 +281,8 @@ test('Informazioni: breve, FAQ chiuse, avviso Fan Content Policy ufficiale una s
   await expect(about).toContainText(head('about.data.text'));
   // domande frequenti chiuse di default; le risposte si aprono
   const faqs = about.locator('details.faq');
-  await expect(faqs).toHaveCount(5);
-  for (let i = 0; i < 5; i++) await expect(faqs.nth(i)).not.toHaveAttribute('open', '');
+  await expect(faqs).toHaveCount(6); // con "Da dove vengono i prezzi?"
+  for (let i = 0; i < 6; i++) await expect(faqs.nth(i)).not.toHaveAttribute('open', '');
   await expect(about.getByText(tr('about.faq.precision.a'))).toBeHidden();
   await about.getByText(tr('about.faq.precision.q')).click();
   await expect(about.getByText(tr('about.faq.precision.a'))).toBeVisible();
@@ -892,4 +892,117 @@ test('"Carta dimenticata": passaggio fluido, circa 1 s, carta successiva precari
   expect(preloaded).toContain(await page.locator('#dustResult img.card-cur').getAttribute('src'));
   await expect.poll(() => stage.evaluate((el) => getComputedStyle(el).transform), { timeout: 3000 }).toBe('none');
   expect(await size()).toEqual(empty);
+});
+
+/** Porta la carta i in alto nella finestra: la scheda della carta i + 1 si apre sotto, la carta i resta libera. */
+async function hoverPair(page: Page, i: number) {
+  const cards = page.locator('#cardRows .cardbtn');
+  await expect(cards.nth(i + 1)).toBeVisible();
+  await cards.nth(i).evaluate((el) => window.scrollBy(0, el.getBoundingClientRect().top - 120));
+  const center = async (k: number) => {
+    const b = (await cards.nth(k).boundingBox())!;
+    return [b.x + b.width / 2, b.y + b.height / 2] as const;
+  };
+  return { above: await center(i), below: await center(i + 1), names: [await cards.nth(i).locator('.nm').textContent(), await cards.nth(i + 1).locator('.nm').textContent()] };
+}
+
+test('scheda al passaggio del mouse: si apre dopo una breve sosta, cambia carta senza chiudersi, si chiude uscendo', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'solo con il mouse');
+  await setup(page);
+  const sheet = page.locator('#sheet');
+  const { above, below, names } = await hoverPair(page, 2);
+  await page.mouse.move(5, 5);
+  await page.mouse.move(...below);
+  await expect(sheet).toBeVisible({ timeout: 1000 });
+  await expect(sheet).toHaveClass(/sheet-in/); // comparsa breve
+  await expect(page.locator('#sheetTitle')).toContainText(names[1]!);
+  // da una carta all'altra: il contenuto cambia, la scheda non si chiude mai
+  await sheet.evaluate((el) => {
+    (window as unknown as { __hid: boolean }).__hid = false;
+    new MutationObserver(() => { if (el.hidden) (window as unknown as { __hid: boolean }).__hid = true; }).observe(el, { attributes: true });
+  });
+  await page.mouse.move(...above, { steps: 4 });
+  await expect(page.locator('#sheetTitle')).toContainText(names[0]!, { timeout: 300 });
+  expect(await page.evaluate(() => (window as unknown as { __hid: boolean }).__hid)).toBe(false);
+  // dalla carta alla scheda: resta aperta
+  const sb = (await sheet.boundingBox())!;
+  await page.mouse.move(sb.x + 40, sb.y + 40, { steps: 3 });
+  await page.waitForTimeout(300);
+  await expect(sheet).toBeVisible();
+  // fuori dalla carta e dalla scheda: si chiude subito, con una dissolvenza breve
+  await page.mouse.move(sb.x + sb.width + 20, sb.y + sb.height + 40);
+  await expect(sheet).toBeHidden({ timeout: 400 });
+});
+
+test('scheda al passaggio del mouse con prefers-reduced-motion: nessuna animazione', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'solo con il mouse');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await setup(page);
+  const sheet = page.locator('#sheet');
+  const { below } = await hoverPair(page, 2);
+  await page.mouse.move(5, 5);
+  await page.mouse.move(...below);
+  await expect(sheet).toBeVisible({ timeout: 1000 });
+  await expect(sheet).not.toHaveClass(/sheet-in/);
+  expect(await sheet.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
+  await page.mouse.move(5, 5);
+  await expect(sheet).toBeHidden({ timeout: 300 });
+});
+
+/** prices.json sintetico allineato ai dati reali: prezzi solo per Brainstorm (ICE #61 1 €, FRC #39 foil 7 €). */
+function syntheticPrices(): string {
+  const data = resolve(HERE, '../../data');
+  const cards = JSON.parse(readFileSync(resolve(data, 'cards.json'), 'utf-8')) as { c: { n: string }[] };
+  const prints = JSON.parse(readFileSync(resolve(data, 'printings.json'), 'utf-8')) as { p: [string, string, string][][] };
+  const bs = cards.c.findIndex((c) => c.n === 'Brainstorm');
+  const p = prints.p.map((list, i) => list.flatMap((pr) => {
+    if (i !== bs) return [0, 0];
+    if (pr[1] === 'ice' && pr[2] === '61') return [100, 0];
+    if (pr[1] === 'frc' && pr[2] === '39') return [300, 700];
+    return [50, 0];
+  }));
+  return JSON.stringify({ v: 1, date: '2026-10-07', p });
+}
+
+test('prezzi indicativi: colonna, riepilogo, scheda e Informazioni; "—" se mancano', async ({ page }) => {
+  const eur = (c: number) => (c / 100).toLocaleString(L === 'it' ? 'it-IT' : 'en-US', { style: 'currency', currency: 'EUR' });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ contentType: 'application/json', body: syntheticPrices() }));
+  const problems = await setup(page);
+  // senza collezione: la stampa più economica, "da X €"; riepilogo di una copia di ciascuna
+  await page.fill('#search', 'brainstorm');
+  const row = page.locator('#cardRows tr').filter({ hasText: 'Brainstorm' }).first();
+  await expect(row.locator('.c-price')).toHaveText(tr('price.from', { p: eur(50) }));
+  await expect(page.locator('#priceSummary')).toContainText(head('price.list'));
+  await page.fill('#search', '');
+  await uploadCollection(page);
+  // posseduta: la printing di valore più alto (qui la foil)
+  await expect(page.locator('#cardRows tr').filter({ hasText: 'Brainstorm' }).first().locator('.c-price')).toHaveText(eur(700));
+  await expect(page.locator('#cardRows tr').filter({ hasText: 'Counterspell' }).first().locator('.c-price')).toHaveText('—');
+  // tutte le copie: 4 × 1 € + 7 € foil; le altre possedute non hanno prezzo
+  await expect(page.locator('#priceSummary')).toContainText(tr('price.owned', { v: eur(1100) }));
+  await expect(page.locator('#priceSummary')).toContainText(head('price.unpriced'));
+  // scheda: prezzo sotto ogni printing del ventaglio e dettaglio delle printing possedute
+  await page.fill('#search', 'brainstorm');
+  await page.locator('#cardRows .cardbtn').first().focus();
+  await page.keyboard.press('Enter');
+  const sheet = page.locator('#sheet');
+  await expect(sheet).toBeVisible();
+  expect(await sheet.locator('.fan-price').count()).toBe(await sheet.locator('.fan-item').count());
+  await expect(sheet.locator('dl')).toContainText(tr('sheet.price'));
+  await expect(sheet.locator('.yourprices')).toContainText(eur(700));
+  await expect(sheet.locator('.yourprices')).toContainText(eur(100));
+  await page.keyboard.press('Escape');
+  // Informazioni: una sola frase nelle domande frequenti
+  await page.goto('./#informazioni');
+  await expect(page.locator('#viewAbout')).toContainText(tr('about.faq.prices.q'));
+  expect(problems).toEqual([]);
+});
+
+test('prezzi assenti (file mancante): "—" e nessun riepilogo, senza errori', async ({ page }) => {
+  await page.route('**/data/prices.json', (r) => r.fulfill({ status: 404, body: '' }));
+  const problems = await setup(page);
+  await uploadCollection(page);
+  await expect(page.locator('#cardRows .c-price').first()).toHaveText('—');
+  await expect(page.locator('#priceSummary')).toBeHidden();
+  expect(problems).toEqual([]);
 });

@@ -9,9 +9,15 @@ import { t } from '../i18n';
 import { deckShare, typicalCopies } from '../lib/compare';
 import { imageUrl, type Data } from '../lib/data';
 import { h } from '../lib/dom';
-import { fmtDate, fmtInt, fmtPct, lastSeen } from '../lib/format';
+import { fmtDate, fmtEur, fmtInt, fmtPct, fmtPrint, lastSeen } from '../lib/format';
+import { ownedPrices, printPrice, type PricesFile } from '../lib/prices';
 
 export const FAN_MAX = 7;
+/** Passaggio del mouse: apertura dopo che il cursore si ferma, comparsa e dissolvenza in chiusura (ms). */
+export const HOVER_OPEN_MS = 100;
+const FADE_OUT_MS = 80;
+/** Dopo una chiusura per uscita del mouse, entro questo tempo la carta successiva apre la scheda subito. */
+const WARM_MS = 250;
 
 export interface FanItem {
   id: string;
@@ -23,6 +29,7 @@ export interface FanItem {
   back: boolean;
   owned: boolean;
   lang: string;
+  pi: number; // indice in printings.p[carta]; -1 per una printing posseduta non presente nei dati (altra lingua)
 }
 
 /**
@@ -41,7 +48,7 @@ export function fanItems(d: Data, idx: number, res: Result | null, focusId?: str
         const set = (op.row.s || '').toLowerCase();
         extra.push({
           id: op.row.i, set, cn: op.row.c, artist: '', setName: d.prints.sets[set]?.[0] || op.row.sn || set.toUpperCase(),
-          date: d.prints.sets[set]?.[1] || '', back: false, owned: true, lang: op.row.l,
+          date: d.prints.sets[set]?.[1] || '', back: false, owned: true, lang: op.row.l, pi: -1,
         });
       }
     }
@@ -60,7 +67,7 @@ export function fanItems(d: Data, idx: number, res: Result | null, focusId?: str
     const s = d.prints.sets[pick[1]];
     items.push({
       id: pick[0], set: pick[1], cn: pick[2], artist: d.prints.artists[pick[3]] || '', setName: s?.[0] || pick[1].toUpperCase(),
-      date: s?.[1] || '', back: pick[5] === 1, owned: ownedIds.has(pick[0]), lang: pick[7] || 'en',
+      date: s?.[1] || '', back: pick[5] === 1, owned: ownedIds.has(pick[0]), lang: pick[7] || 'en', pi: prints.indexOf(pick),
     });
   }
   const seen = new Set(items.map((i) => i.id));
@@ -72,6 +79,7 @@ export function fanItems(d: Data, idx: number, res: Result | null, focusId?: str
 let current: { anchor: HTMLElement; idx: number; mode: 'hover' | 'click' } | null = null;
 let hideTimer: number | undefined;
 let closedAt = 0;
+let hoverClosedAt = 0;
 let hoverBlocked: HTMLElement | null = null;
 
 /**
@@ -99,8 +107,23 @@ export function isOpenFor(idx: number): boolean {
   return !!current && current.idx === idx && !sheetEl().hidden;
 }
 
+function reducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * Vero se la scheda è aperta al passaggio del mouse, o si è appena chiusa perché il cursore è uscito:
+ * passando da una carta all'altra la scheda cambia contenuto subito, senza il ritardo di apertura.
+ */
+export function isWarm(): boolean {
+  if (current?.mode === 'hover' && !sheetEl().hidden) return true;
+  return Date.now() - hoverClosedAt < WARM_MS;
+}
+
 export function closeSheet(returnFocus = false): void {
   const el = sheetEl();
+  window.clearTimeout(hideTimer);
+  el.classList.remove('sheet-in', 'sheet-out');
   if (el.hidden) return;
   el.hidden = true;
   el.replaceChildren();
@@ -112,14 +135,25 @@ export function closeSheet(returnFocus = false): void {
   current = null;
 }
 
+/** Il cursore è uscito dalla carta o dalla scheda: dissolvenza breve e chiusura (subito con reduced motion). */
 export function scheduleClose(): void {
   if (current?.mode !== 'hover') return;
+  const el = sheetEl();
   window.clearTimeout(hideTimer);
-  hideTimer = window.setTimeout(() => closeSheet(), 280);
+  const done = () => {
+    closeSheet();
+    hoverClosedAt = Date.now();
+  };
+  if (reducedMotion()) return done();
+  el.classList.remove('sheet-in');
+  el.classList.add('sheet-out');
+  // se il cursore entra nella scheda (o torna sulla carta) durante la dissolvenza, cancelClose la ferma
+  hideTimer = window.setTimeout(done, FADE_OUT_MS);
 }
 
 export function cancelClose(): void {
   window.clearTimeout(hideTimer);
+  sheetEl().classList.remove('sheet-out');
 }
 
 function place(anchor: HTMLElement, el: HTMLElement): void {
@@ -144,11 +178,17 @@ export interface SheetInput {
   res: Result | null;
   approx: boolean; // printing non indicata (testo senza set/numero)
   focusId?: string; // stampa da mostrare come carta attiva (vista per espansione)
+  prices: PricesFile | null; // prezzi indicativi; null se non disponibili ("—")
   onShowAll: (items: FanItem[], title: string) => void;
 }
 
-export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' | 'click'): void {
+/**
+ * `animate`: comparsa breve (solo all'apertura col mouse; se la scheda è già aperta il contenuto cambia e basta).
+ * Tocco e tastiera aprono senza animazione, come prima.
+ */
+export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' | 'click', animate = false): void {
   cancelClose();
+  const wasHidden = sheetEl().hidden;
   const { d, idx, res, opts } = input;
   const c = d.cards.c[idx];
   const items = fanItems(d, idx, res, input.focusId);
@@ -161,15 +201,22 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
   let face: 'front' | 'back' = 'front';
 
   const img = h('img', { alt: '', width: 488, height: 680, decoding: 'async' });
+  // anteprima piccola (spesso già in cache dalla miniatura) sotto l'immagine grande finché questa non arriva:
+  // stessa carta, stessa proporzione, nessun filtro
+  const ph = h('img', { class: 'ph', alt: '', width: 488, height: 680, 'aria-hidden': 'true' });
   const flip = h('button', { class: 'btn small', type: 'button', hidden: true }, t('sheet.showBack'));
   const tag = h('span', { class: 'tag', hidden: true }, t('sheet.yours'));
   const dl = h('dl');
-  const cardBox = h('div', { class: 'active-card' }, img, flip);
+  const cardBox = h('div', { class: 'active-card' }, ph, img, flip);
 
   const renderActive = () => {
     if (!active) return;
+    ph.src = imageUrl(active.id, 'small', face);
     img.src = imageUrl(active.id, 'normal', face);
-    if (ref) img.dataset.fallback = imageUrl(ref[0], 'normal');
+    if (ref) {
+      img.dataset.fallback = imageUrl(ref[0], 'normal');
+      ph.dataset.fallback = imageUrl(ref[0], 'small');
+    }
     img.alt = `${c.n}, ${active.setName}${face === 'back' ? t('sheet.back') : ''}`;
     cardBox.classList.toggle('owned', active.owned);
     tag.hidden = !active.owned;
@@ -181,6 +228,7 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
       [t('sheet.artist'), active.artist || '—'],
     ];
     if (active.lang && active.lang !== 'en') rows.push([t('sheet.language'), active.lang]);
+    rows.push([t('sheet.price'), activePrice(active)]);
     dl.replaceChildren(...rows.flatMap(([k, v]) => [h('dt', null, k), h('dd', null, v)]));
     fan.querySelectorAll<HTMLElement>('.fan-item').forEach((b) => b.classList.toggle('active', b.dataset.id === active!.id));
   };
@@ -188,6 +236,14 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
     face = face === 'front' ? 'back' : 'front';
     renderActive();
   });
+
+  const eur = (c: number) => (c ? fmtEur(c) : '—');
+  // prezzo della printing: normale e, se c'è, foil
+  const activePrice = (it: FanItem) => {
+    const n = printPrice(input.prices, idx, it.pi);
+    const f = printPrice(input.prices, idx, it.pi, true);
+    return f ? `${eur(n)} · ${t('sheet.priceFoil', { p: fmtEur(f) })}` : eur(n);
+  };
 
   const shown = items.slice(0, FAN_MAX);
   const fan = h('div', { class: 'fan', role: 'group', 'aria-label': t('sheet.artworks') });
@@ -197,7 +253,8 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
       class: 'fan-item' + (it.owned ? ' owned' : ''), type: 'button', dataset: { id: it.id },
       style: { '--r': `${off * 3}deg`, '--y': `${Math.abs(off) * 4}px` },
       'aria-label': `${it.setName}${it.owned ? t('sheet.ownedAria') : ''}`,
-    }, h('img', { src: imageUrl(it.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204, dataset: ref ? { fallback: imageUrl(ref[0], 'small') } : undefined }));
+    }, h('img', { src: imageUrl(it.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204, dataset: ref ? { fallback: imageUrl(ref[0], 'small') } : undefined }),
+    h('span', { class: 'fan-price' }, eur(printPrice(input.prices, idx, it.pi))));
     const select = () => {
       active = it;
       face = 'front';
@@ -232,6 +289,13 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
       : t('sheet.own', { n: res.owned }))
     : res ? h('p', null, t('sheet.notOwned')) : null;
 
+  // prezzo di ogni printing posseduta (foil se è foil), dalla più cara
+  const yourPrices = res?.prints.length && input.prices
+    ? h('p', { class: 'yourprices' }, t('sheet.yourPrices', {
+      list: ownedPrices(d, input.prices, res).map((o) => `${fmtPrint(o.op.row)} ${eur(o.cents)}`).join(', '),
+    }))
+    : null;
+
   const close = h('button', { class: 'btn quiet small', type: 'button', 'aria-label': t('sheet.closeAria') }, t('sheet.close'));
   close.addEventListener('click', () => closeSheet(true));
 
@@ -247,9 +311,14 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
       cardBox,
       h('div', { class: 'details' }, tag, dl,
         input.approx ? h('p', { class: 'warnbox' }, t('sheet.approx')) : null,
-        owned, stats, seenList)),
+        owned, yourPrices, stats, seenList)),
   );
   el.hidden = false;
+  el.classList.remove('sheet-in');
+  if (animate && wasHidden && !reducedMotion()) {
+    void el.offsetWidth; // riavvia l'animazione
+    el.classList.add('sheet-in');
+  }
   renderActive();
   place(anchor, el);
   if (mode === 'click') (fan.querySelector<HTMLElement>('.fan-item.active') || close).focus({ preventScroll: true });

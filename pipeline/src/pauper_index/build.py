@@ -5,7 +5,7 @@ import time
 from collections import Counter
 from dataclasses import dataclass
 
-from . import config, decks, outputs, seticons
+from . import config, decks, outputs, prices, seticons
 from .carddb import CardDB
 from .dedup import dedupe
 from .names import clean, norm
@@ -117,6 +117,9 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     outputs.write_lines_json(config.DATA / "cards.json", head, "c", rows)
     phead, prows = outputs.build_printings(db, order, ctx.sets_info)
     outputs.write_lines_json(config.DATA / "printings.json", phead, "p", prows)
+    # prezzi indicativi (Cardmarket via Scryfall), allineati a printings.json; il bulk è quello appena caricato
+    default_path, default_upd = ensure_bulk("default_cards", None)
+    log(f"prezzi: {prices.write_prices(default_path, default_upd)}")
     set_rows = outputs.build_sets(db, order, ctx.sets_info)
     icons = seticons.build_sprite([r["c"] for r in set_rows], ctx.sets_info, online, config.DATA / "seticons.svg", log)
     outputs.write_json(config.DATA / "sets.json", outputs.with_icons(set_rows, icons))
@@ -181,7 +184,7 @@ def build(online: bool = True, fetch: bool = True) -> dict:
 
     sizes = [outputs.size_info(config.DATA / f)
              for f in ("cards.json", "printings.json", "names.json", "allnames.json", "cardnames.json", "sets.json",
-                       "seticons.svg", "decks-61.json", "decks-365.json", "meta.json")]
+                       "seticons.svg", "decks-61.json", "decks-365.json", "prices.json", "meta.json")]
     names_hist = distinct_names(kept)
     names_y1 = distinct_names(kept, y1)
     summary = {

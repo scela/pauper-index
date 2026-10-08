@@ -6,10 +6,11 @@ import {
 } from './lib/compare';
 import { detectLang, fmtDateTime, getLang, setLang, t, type Key, type Lang } from './i18n';
 import { baseName, looksLikeCSV, readTable } from './lib/csv';
-import { imageUrl, loadData, type Data } from './lib/data';
+import { imageUrl, loadData, loadPrices, type Data } from './lib/data';
 import { $, h, svg } from './lib/dom';
 import { realignedCSV, textList } from './lib/exports';
-import { daysBetween, fmtDate, fmtInt, fmtPct, fmtPrint } from './lib/format';
+import { daysBetween, fmtDate, fmtEur, fmtInt, fmtPct, fmtPrint } from './lib/format';
+import { cheapestPrice, ownedPrice, priceTotals, printPrice, type PricesFile } from './lib/prices';
 import { clearAll, idbGet, idbSet, lsDel, lsGet, lsSet } from './lib/store';
 import { parseTextList } from './lib/text';
 import type { Group, Role, Row } from './lib/types';
@@ -21,7 +22,7 @@ import { renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
 import { initDust } from './ui/dust';
 import { initQuick } from './ui/quick';
-import { cancelClose, closeSheet, isHoverBlocked, isOpenFor, openSheet, recentlyClosed, renderGrid, scheduleClose, unblockHover } from './ui/sheet';
+import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openSheet, recentlyClosed, renderGrid, scheduleClose, unblockHover } from './ui/sheet';
 
 // Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa.
 const PAGE = 10;
@@ -48,6 +49,7 @@ interface SummaryItem {
 
 const S = {
   d: null as Data | null,
+  prices: null as PricesFile | null,
   groups: [] as Group[],
   roles: {} as Record<string, Role>,
   opts: { ...DEFAULT_OPTS } as Opts,
@@ -471,6 +473,56 @@ function renderResults(): void {
   $('#thQty').textContent = coll ? t('th.qtyYours') : t('th.qtyTypical');
   renderRows();
   renderNote(headline);
+  renderPriceSummary();
+}
+
+/* ---------- prezzi indicativi ---------- */
+
+/** Prezzo di una carta mancante: la stampa del set nella vista per espansione, altrimenti la più economica. */
+function missingPrice(x: Result): number {
+  if (S.setCodes) return printPrice(S.prices, x.idx, displayPrint(S.d!, x.idx, S.setCodes, S.setFilter!));
+  return cheapestPrice(S.prices, x.idx);
+}
+
+/** Testo della colonna Prezzo: "—" se il prezzo manca. */
+function priceText(x: Result): string {
+  if (!S.prices) return '—';
+  if (S.setCodes || x.owned === 0) {
+    const c = missingPrice(x);
+    if (!c) return '—';
+    return S.setCodes ? fmtEur(c) : t('price.from', { p: fmtEur(c) });
+  }
+  const c = ownedPrice(S.d!, S.prices, x);
+  return c ? fmtEur(c) : '—';
+}
+
+/**
+ * Prezzi arrivati dopo il primo disegno: si aggiornano solo le celle e il riepilogo, senza ridisegnare le righe
+ * (una scheda in apertura al passaggio del mouse resta legata alla sua carta).
+ */
+function showPrices(): void {
+  const cells = document.querySelectorAll<HTMLElement>('#cardRows td.c-price');
+  S.view.slice(0, cells.length).forEach((x, i) => { cells[i].textContent = priceText(x); });
+  renderPriceSummary();
+}
+
+/** Valore delle copie possedute e costo delle mancanti, sulle carte dell'elenco con i filtri attivi. */
+function renderPriceSummary(): void {
+  const el = $('#priceSummary');
+  el.hidden = !S.prices || !S.d;
+  if (el.hidden) return el.replaceChildren();
+  // stessi filtri dell'elenco (ricerca, ultima apparizione), comprese le mancanti anche se l'elenco non le mostra
+  const rows = visible(S.d!, S.results, { ...listFilters(), onlyOwned: false });
+  const tot = priceTotals(S.d!, S.prices, rows, missingPrice);
+  const unpriced = (n: number) => (n ? ` (${t('price.unpriced', { n: fmtInt(n) })})` : '');
+  const parts: string[] = [];
+  if (hasColl()) {
+    parts.push(t('price.owned', { v: fmtEur(tot.ownedValue) }) + unpriced(tot.ownedUnpriced));
+    if (tot.missingCards) parts.push(t('price.missing', { v: fmtEur(tot.missingCost) }) + unpriced(tot.missingUnpriced));
+  } else {
+    parts.push(t('price.list', { v: fmtEur(tot.missingCost) }) + unpriced(tot.missingUnpriced));
+  }
+  el.textContent = parts.join(' · ');
 }
 
 /** Filtri dell'elenco: senza espansione di default solo le possedute; con un'espansione tutte, a richiesta solo le possedute. */
@@ -592,7 +644,7 @@ function renderRows(): void {
   count.hidden = !rows.length;
   count.textContent = t('res.shown', { n: fmtInt(rows.length), total: fmtInt(S.view.length) });
   if (!rows.length) {
-    $('#cardRows').replaceChildren(h('tr', { class: 'nores' }, h('td', { colspan: 5 },
+    $('#cardRows').replaceChildren(h('tr', { class: 'nores' }, h('td', { colspan: 6 },
       S.query || S.seen !== 'all' ? t('res.noMatch') : S.setCodes ? (S.setOwned ? t('res.noOwned') : t('set.empty'))
         : coll && !S.showMissing ? t('res.noOwned') : t('res.none'))));
     return;
@@ -634,7 +686,8 @@ function renderRows(): void {
       h('td', { class: 'c-qty num', 'data-label': t('mobile.qty') }, coll ? String(x.owned) : String(x.typical)),
       h('td', { class: 'c-pct num', 'data-label': t('mobile.decks') }, fmtPct(x.share), h('span', { class: 'muted' }, st ? ` · ${fmtInt(S.opts.side ? st[0] : st[1])}` : '')),
       h('td', { class: 'c-seen', 'data-label': t('mobile.last') }, fmtDate(c.z)),
-      h('td', { class: 'c-entry', 'data-label': t('mobile.entry') }, entry && c.e ? `${c.e.toUpperCase()} ${entry[1].slice(0, 4)}` : '—'));
+      h('td', { class: 'c-entry', 'data-label': t('mobile.entry') }, entry && c.e ? `${c.e.toUpperCase()} ${entry[1].slice(0, 4)}` : '—'),
+      h('td', { class: 'c-price num', 'data-label': t('mobile.price') }, priceText(x)));
   }));
 }
 
@@ -757,7 +810,7 @@ function doSave(kind: string): void {
 
 /* ---------- scheda ---------- */
 
-function openFor(btn: HTMLElement, mode: 'hover' | 'click'): void {
+function openFor(btn: HTMLElement, mode: 'hover' | 'click', animate = false): void {
   const d = S.d!;
   const idx = Number(btn.dataset.idx);
   const res = S.results.find((x) => x.idx === idx) || null;
@@ -766,8 +819,9 @@ function openFor(btn: HTMLElement, mode: 'hover' | 'click'): void {
   const focusId = S.setCodes && res ? setThumb(res)?.id : undefined;
   openSheet(btn, {
     d, opts: S.opts, idx, res: hasColl() ? res : null, approx, focusId,
+    prices: S.prices,
     onShowAll: (items, title) => renderGrid($('#gridDialog') as HTMLDialogElement, items, title),
-  }, mode);
+  }, mode, animate);
 }
 
 /** Scheda degli artwork dal controllo rapido: anche per carte fuori dalla lista con i filtri attuali. */
@@ -780,7 +834,7 @@ function openArtworksFor(anchor: HTMLElement, idx: number, owned: Owned | null):
   } : null;
   const approx = !!res && res.prints.length > 0 && res.prints.every((p) => !p.exact);
   openSheet(anchor, {
-    d, opts: S.opts, idx, res, approx,
+    d, opts: S.opts, idx, res, approx, prices: S.prices,
     onShowAll: (items, title) => renderGrid($('#gridDialog') as HTMLDialogElement, items, title),
   }, 'click');
 }
@@ -1000,20 +1054,41 @@ function wire(): void {
   // scheda: passaggio del cursore, focus da tastiera, tocco
   const rows = $('#cardRows');
   const fine = window.matchMedia('(hover: hover) and (pointer: fine)');
+  // si apre HOVER_OPEN_MS dopo che il cursore si ferma sulla carta; se la scheda è già aperta (o appena chiusa
+  // uscendo da un'altra carta) cambia contenuto subito
+  let hoverFor: HTMLElement | null = null;
+  const armHover = (b: HTMLElement) => {
+    window.clearTimeout(hoverTimer);
+    hoverFor = b;
+    hoverTimer = window.setTimeout(() => {
+      hoverFor = null;
+      openFor(b, 'hover', true);
+    }, HOVER_OPEN_MS);
+  };
   rows.addEventListener('mouseover', (e) => {
     if (!fine.matches) return;
     const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
     if (!b) return;
     cancelClose();
     window.clearTimeout(hoverTimer);
+    hoverFor = null;
     if (isOpenFor(Number(b.dataset.idx)) || isHoverBlocked(b)) return;
-    hoverTimer = window.setTimeout(() => openFor(b, 'hover'), 220);
+    if (isWarm()) openFor(b, 'hover');
+    else armHover(b);
+  });
+  rows.addEventListener('mousemove', (e) => {
+    if (!hoverFor) return;
+    const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
+    if (b === hoverFor) armHover(b); // il cursore si muove ancora: si aspetta che si fermi
   });
   rows.addEventListener('mouseout', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
     if (!b || b.contains(e.relatedTarget as Node)) return;
     unblockHover(b);
     window.clearTimeout(hoverTimer);
+    hoverFor = null;
+    // verso la scheda (anche quando si apre sopra la carta perché non sta né sopra né sotto): resta aperta
+    if ($('#sheet').contains(e.relatedTarget as Node)) return;
     scheduleClose();
   });
   rows.addEventListener('focusin', (e) => {
@@ -1142,6 +1217,9 @@ async function main(): Promise<void> {
   refresh(false);
   if (location.hash === '#informazioni') renderAbout($('#viewAbout'), S.d);
   void renderNews();
+  // prezzi indicativi: dopo il resto, senza bloccare la pagina
+  S.prices = await loadPrices(S.d);
+  if (S.prices) showPrices();
 }
 
 void main();

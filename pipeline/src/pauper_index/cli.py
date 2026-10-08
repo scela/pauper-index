@@ -6,6 +6,7 @@
   review     revisioni dopo le espansioni (--force SET per forzarne una)
   alarm      allarme "fonte ferma" (scrive il testo della Issue in .cache/issues/)
   changed    exit 0 se data/ ha cambiamenti significativi da committare
+  prices     solo prezzi: scarica il bulk default_cards se è cambiato e riscrive data/prices.json
 
 Opzioni: --offline (niente rete: usa cache e fuzzy_matches.csv), --no-fetch (non aggiorna la fonte).
 """
@@ -26,6 +27,13 @@ from .stats import compute
 BASELINE_FILE = config.BASELINE_DIR / "pauper-2026-09-14.csv"
 BASELINE_DATE = dt.date(2026, 9, 14)
 BASELINE_NUMBERS = {"tornei": 8496, "mazzi": 204366, "nomi_storico": 4992, "nomi_12_mesi": 3064}
+
+
+def cmd_prices(args) -> None:
+    from .prices import write_prices
+    from .scryfall import Api, ensure_bulk
+    path, updated = ensure_bulk("default_cards", None if args.offline else Api())
+    print(json.dumps(write_prices(path, updated), ensure_ascii=False))
 
 
 def cmd_build(args) -> None:
@@ -245,7 +253,7 @@ def cmd_changed(args) -> None:
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="pauper_index", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["build", "sets", "baseline", "review", "alarm", "changed"])
+    ap.add_argument("command", choices=["build", "sets", "baseline", "review", "alarm", "changed", "prices"])
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--no-fetch", action="store_true")
     ap.add_argument("--force", help="review: forza la revisione di questo set (codice Scryfall)")
@@ -254,4 +262,4 @@ def main(argv=None) -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     {"build": cmd_build, "sets": cmd_sets, "baseline": cmd_baseline, "review": cmd_review, "alarm": cmd_alarm,
-     "changed": cmd_changed}[args.command](args)
+     "changed": cmd_changed, "prices": cmd_prices}[args.command](args)
