@@ -36,9 +36,13 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] 2026-10-07: ragnatele realistiche (combinazione dei 3 stili proposti, scelta dall'utente) e carta in 3D (vedi "Ragnatele" e "Carta in 3D")
   - [x] 2026-10-07: "Carta dimenticata" fluida e più breve, circa 0,9 s (vedi "Carta dimenticata: fluidità")
   - [x] 2026-10-07: "Rimuovi collezione" con Annulla (vedi "Rimuovi collezione")
-  - [ ] Funzione 4: mazzi che puoi costruire (vedi "Prossimi passi")
+  - [ ] Funzione 4: mazzi che puoi costruire. Piano approvato il 2026-10-07 (vedi "Funzione 4: mazzi"):
+    - [x] punto 0: filtri che nascondono carte mai salvati, espansione ricordata (commit `2c261a1`)
+    - [ ] passo 2: pipeline e archetipi, **fatto in locale e non committato**; nomi corretti il 2026-10-08 secondo le convenzioni della comunità, in attesa della conferma dell'utente (`data/reviews/archetipi.md`)
+    - [ ] passo 3: sezione "Mazzi" nel sito, completamento, export (formato ManaBox da `reference/private/mazzo-esempio.txt`)
+    - [ ] passo 4: rifinitura
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi dopo il punto 0 della funzione 4, 2026-10-07): 96 pytest, 58 Vitest, 105 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi dopo il punto 0 della funzione 4, 2026-10-07; dal passo 2, in locale: 102 pytest): 96 pytest, 58 Vitest, 105 Playwright (più 2 saltati di proposito) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -606,6 +610,28 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - **inclinazione 3D**: `tilt.pause()` la riporta piatta dolcemente (circa 150 ms) e la disattiva durante l'animazione; `resume()` alla fine;
   - se l'immagine non è pronta (prima pesca senza precaricamento, rete lenta) la spazzata aspetta sotto la polvere, al massimo 2,5 s.
 - **Risultati** (CPU rallentata 4×, 3 pesche): prima 2,3–2,4 s per pesca e layout shift 0,149 su mobile; dopo 0,89–0,97 s, 0 fotogrammi persi e layout shift 0. Lavoro di disegno con CPU rallentata 6× (una pesca, mobile): layout 137 → 64, rasterizzazioni 243 → 55 ms, paint 183 → 44 ms. Il conteggio dei fotogrammi persi in headless è ottimistico, perché il rallentamento agisce solo sul thread principale: per questo c'è anche la traccia del disegno.
+
+## Funzione 4: mazzi (dati e archetipi, passo 2)
+
+- **Pipeline** `decks.py`, chiamata da `build`: `data/decks-61.json` (887 KB, **159 KB gzip**) e `data/decks-365.json` (4,8 MB, **823 KB gzip**, solo su richiesta nel sito). Niente finestra a due anni.
+- **Formato** (v1): `{v, days, anchor, basics, t, a, l}`.
+  - `basics`: indici delle 6 terre base normali (Plains, Island, Swamp, Mountain, Forest, Wastes), sempre disponibili; le Snow-Covered contano come carte normali.
+  - `t`: tornei per identificativo stabile (`AAAAMMGG * 100 + progressivo nel giorno`), con `[data, nome, Tournament.Uri, "m"|"p"]`.
+  - `a`: archetipi per identificativo stabile (`c<n>` curato, riga di `archetypes.csv`; `a<n>` automatico, dal registro; `x<colori>` non classificato) → `[nome, colori, tipo]`.
+  - `l`: una riga per lista distinta (main e side uguali = stessa lista), nella forma `[archetipo, colori, main, side, apparizioni]`. Main e side sono coppie piatte `indice carta in cards.json, copie`; le apparizioni sono `[torneo, piazzamento]`. Le liste sono ordinate per prima apparizione.
+  - Mai `Player` né `AnchorUri`. Si scartano i main con meno di 40 carte (12 mazzi in un anno). Le carte sono indici di `cards.json`: il formato serve anche al Brewing.
+- **Crescita del repository** misurata committando due giorni consecutivi: circa **7 KB al giorno** per i due file, perché le righe di una lista non cambiano quando la finestra si sposta (identificativi stabili). Si committano entrambi.
+- **Colori del mazzo**: almeno 4 copie di carte non terra che richiedono il colore nel costo di mana (senza mana phyrexiano), e almeno una terra del mazzo che lo produce. Per questo `Card` ha i campi `colors` e `produces`. Esempio: Sneaky Snacker ({U}{B}) nel Red Madness non rende il mazzo UB.
+- **Archetipi**, in due livelli. Sono assegnati sulla finestra di un anno, quindi una lista ha lo stesso archetipo in tutti i file:
+  1. **curati**: `data/manual/archetypes.csv` (`nome,carte,minimo`), scritto da zero con nomi comuni della comunità e carte chiave scelte tra quelle caratteristiche del nostro raggruppamento. **Niente da MTGOFormatData**, che non ha licenza. Una lista prende il nome se il main contiene almeno `minimo` carte chiave; a parità vince la quota più alta di carte chiave, poi l'ordine del file. Dipende solo dalla lista. Una carta sconosciuta nel CSV fa fallire la build (le carte chiave si risolvono con lo stesso indice dei nomi delle decklist: prima un difetto faceva puntare "Tolarian Terror" alla faccia di una carta "prepare").
+     - **Nomi secondo le convenzioni della comunità** (MTGGoldfish), rivisti dall'utente il 2026-10-08. Più righe con lo stesso nome sono alternative (Faeries, Affinity): ogni riga ha quota piena quando tutte le sue carte ci sono, così l'archetipo vince sulle liste ibride.
+     - **Colonna `colori`** (`1`): solo per Affinity, Faeries e Terror il nome porta davanti i colori calcolati della lista ("Dimir Faeries", "Grixis Affinity", "Izzet Terror"), con i nomi standard (Mono-White … Temur; 4 e 5 colori: "Four-Color", "Five-Color"). Identificativo `c<n><colori>` (per esempio `c6UB`), dove n è la prima riga con quel nome. Gli altri archetipi restano senza prefisso;
+  2. **automatici**, per le liste non coperte. Registro `data/reviews/archetipi-auto.json` (committato, non pubblicato): ogni gruppo ha id, nome **fissato alla creazione** (2 carte caratteristiche non terre, cioè frequenti nel gruppo e rare fuori), colori e **nucleo fisso** (carte presenti in almeno metà delle liste, in oracle_id).
+     - Ogni lista va nel **primo gruppo registrato** con Jaccard (carte non terra del main) ≥ 0,40 rispetto al nucleo.
+     - Le liste rimaste formano gruppi nuovi (raggruppamento a soglia 0,45, almeno 6 apparizioni), che si aggiungono in fondo al registro; poi vengono assegnate con la stessa regola.
+     - Le liste non assegnate restano "non classificate" (solo colori).
+- **Stabilità verificata**: classificando la finestra di 7 giorni prima e poi quella di oggi con lo stesso registro, il 100% delle 3.882 liste in comune ha mantenuto il nome. Prima della regola "primo gruppo e nucleo fisso" era l'89,6%. Un archetipo che cambia molto nel tempo può dare origine a un gruppo nuovo, con un altro nome: per i mazzi principali i nomi curati lo evitano.
+- **Report** `data/reviews/archetipi.md`: tabella degli archetipi a 61 giorni, per rivedere i nomi.
 
 ## Riepiloghi ed elenco (2026-10-07)
 

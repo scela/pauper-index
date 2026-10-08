@@ -1,6 +1,7 @@
 """Carte (oracle_cards), printing (default_cards) e indice dei nomi."""
 
 import datetime as dt
+import re
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -31,6 +32,8 @@ class Card:
     type_line: str
     ref_id: str  # printing di riferimento scelta da oracle_cards
     playable: bool
+    colors: str = ""  # colori del costo di mana in ordine WUBRG, senza phyrexiano (per i colori degli archetipi)
+    produces: str = ""  # mana colorato prodotto (solo per le terre), in ordine WUBRG
 
     @property
     def basic(self) -> bool:
@@ -66,6 +69,24 @@ def _oracle_id(c: dict) -> str | None:
     return c.get("oracle_id") or (c.get("card_faces") or [{}])[0].get("oracle_id")
 
 
+def _colors(c: dict) -> str:
+    """Colori che servono davvero per lanciare la carta: simboli del costo di mana, senza il mana phyrexiano
+    (pagabile con la vita). Senza costo (sospendi, terre) si usano i colori della carta."""
+    f0 = (c.get("card_faces") or [{}])[0]
+    cost = c.get("mana_cost") or f0.get("mana_cost") or ""
+    if cost:
+        cols = {ch for sym in re.findall(r"\{([^}]+)\}", cost) if "P" not in sym for ch in sym if ch in "WUBRG"}
+    else:
+        cols = set(c.get("colors") or f0.get("colors") or [])
+    return "".join(x for x in "WUBRG" if x in cols)
+
+
+def _produces(c: dict) -> str:
+    if "Land" not in (c.get("type_line") or ""):
+        return ""
+    return "".join(x for x in "WUBRG" if x in (c.get("produced_mana") or []))
+
+
 def card_from_json(c: dict) -> Card:
     faces = tuple(f["name"] for f in c.get("card_faces") or []) or (c["name"],)
     return Card(
@@ -77,6 +98,8 @@ def card_from_json(c: dict) -> Card:
         type_line=c.get("type_line") or (c.get("card_faces") or [{}])[0].get("type_line", ""),
         ref_id=c["id"],
         playable=c["layout"] not in NON_PLAYABLE_LAYOUTS and c.get("set_type") not in NON_PLAYABLE_SET_TYPES,
+        colors=_colors(c),
+        produces=_produces(c),
     )
 
 

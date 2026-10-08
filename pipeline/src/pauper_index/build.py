@@ -5,7 +5,7 @@ import time
 from collections import Counter
 from dataclasses import dataclass
 
-from . import config, outputs, seticons
+from . import config, decks, outputs, seticons
 from .carddb import CardDB
 from .dedup import dedupe
 from .names import clean, norm
@@ -123,6 +123,10 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     outputs.write_json(config.DATA / "names.json", outputs.build_names(db, order))
     outputs.write_json(config.DATA / "allnames.json", outputs.build_all_names(db))
     outputs.write_json(config.DATA / "cardnames.json", outputs.build_card_names(db))
+    # decklist recenti e archetipi (funzione 4, "Mazzi che puoi costruire")
+    t = time.monotonic()
+    decks.build_decks(ctx.kept, ctx.keymap, ctx.key_oids, db, order, anchor, log=log)
+    ctx.timings["mazzi"] = round(time.monotonic() - t, 1)
 
     # report
     unresolved_ids = {i for i, r in enumerate(ctx.resolutions) if r.method in UNRESOLVED_METHODS}
@@ -177,7 +181,7 @@ def build(online: bool = True, fetch: bool = True) -> dict:
 
     sizes = [outputs.size_info(config.DATA / f)
              for f in ("cards.json", "printings.json", "names.json", "allnames.json", "cardnames.json", "sets.json",
-                       "seticons.svg", "meta.json")]
+                       "seticons.svg", "decks-61.json", "decks-365.json", "meta.json")]
     names_hist = distinct_names(kept)
     names_y1 = distinct_names(kept, y1)
     summary = {

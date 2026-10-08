@@ -92,3 +92,9 @@ DEFAULT = [
 @pytest.fixture(scope="session")
 def db() -> CardDB:
     return CardDB(ORACLE, DEFAULT)
+
+
+@pytest.fixture(scope="session")
+def carddb() -> CardDB:
+    """Come `db`, per i moduli di test che ridefiniscono `db` con un database finto."""
+    return CardDB(ORACLE, DEFAULT)
