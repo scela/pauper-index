@@ -38,7 +38,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [x] 2026-10-07: "Rimuovi collezione" con Annulla (vedi "Rimuovi collezione")
   - [ ] Funzione 4: mazzi che puoi costruire. Piano approvato il 2026-10-07 (vedi "Funzione 4: mazzi"):
     - [x] punto 0: filtri che nascondono carte mai salvati, espansione ricordata (commit `2c261a1`)
-    - [x] passo 2: pipeline e archetipi, nomi secondo le convenzioni della comunità (commit `82bf09b`, 2026-10-08). Restano gruppi automatici, da nominare quando l'utente decide (righe nuove in fondo al CSV): la parte nera di "Crypt Rats + Troll" (Gardens?), "Respite + Tangle" (Food Gardens?); Storm resta "Storm" (nessuna lista con Ruby Medallion)
+    - [x] passo 2: pipeline e archetipi, nomi secondo le convenzioni della comunità (commit `380c54a`, 2026-10-08). Restano gruppi automatici, da nominare quando l'utente decide (righe nuove in fondo al CSV): la parte nera di "Crypt Rats + Troll" (Gardens?), "Respite + Tangle" (Food Gardens?); Storm resta "Storm" (nessuna lista con Ruby Medallion)
     - [x] prima del passo 3 (2026-10-08): scheda più rapida al passaggio del mouse e prezzi indicativi in euro (vedi "Scheda al passaggio del mouse" e "Prezzi indicativi")
     - [ ] passo 3: sezione "Mazzi" nel sito, completamento, export (formato ManaBox da `reference/private/mazzo-esempio.txt`)
     - [ ] passo 4: rifinitura
