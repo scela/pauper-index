@@ -7,6 +7,7 @@
   alarm      allarme "fonte ferma" (scrive il testo della Issue in .cache/issues/)
   changed    exit 0 se data/ ha cambiamenti significativi da committare
   prices     solo prezzi: scarica il bulk default_cards se è cambiato e riscrive data/prices.json
+  italian    nomi italiani (ricerca Scryfall lang:it): aggiornamento incrementale se serve; --full per rifarli tutti
 
 Opzioni: --offline (niente rete: usa cache e fuzzy_matches.csv), --no-fetch (non aggiorna la fonte).
 """
@@ -34,6 +35,14 @@ def cmd_prices(args) -> None:
     from .scryfall import Api, ensure_bulk
     path, updated = ensure_bulk("default_cards", None if args.offline else Api())
     print(json.dumps(write_prices(path, updated), ensure_ascii=False))
+
+
+def cmd_italian(args) -> None:
+    from .italian import update
+    from .scryfall import Api, fetch_sets
+    api = None if args.offline else Api()
+    state = update(api, fetch_sets(api), full=args.full)
+    print(json.dumps({k: v for k, v in state.items() if k != "c"} | {"carte": len(state.get("c", {}))}))
 
 
 def cmd_build(args) -> None:
@@ -253,13 +262,14 @@ def cmd_changed(args) -> None:
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="pauper_index", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["build", "sets", "baseline", "review", "alarm", "changed", "prices"])
+    ap.add_argument("command", choices=["build", "sets", "baseline", "review", "alarm", "changed", "prices", "italian"])
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--no-fetch", action="store_true")
+    ap.add_argument("--full", action="store_true", help="italian: scarica di nuovo tutte le stampe italiane")
     ap.add_argument("--force", help="review: forza la revisione di questo set (codice Scryfall)")
     ap.add_argument("--today", help="review/alarm: data di riferimento AAAA-MM-GG (per i test)")
     args = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     {"build": cmd_build, "sets": cmd_sets, "baseline": cmd_baseline, "review": cmd_review, "alarm": cmd_alarm,
-     "changed": cmd_changed, "prices": cmd_prices}[args.command](args)
+     "changed": cmd_changed, "prices": cmd_prices, "italian": cmd_italian}[args.command](args)

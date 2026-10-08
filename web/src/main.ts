@@ -20,11 +20,12 @@ import { setIcon } from './ui/seticon';
 import { restrictToSet, shownNote, visible, type ListFilters, type Seen } from './lib/view';
 import { availableTypes, emptyFilters, haystacks, isActive, mvLabel, textWords, type CardFilters } from './lib/cardfilter';
 import { clearFilters, colorLabel, initFilterPanel, typeLabel } from './ui/filterpanel';
+import { italianLoaded, loadItalian, nameHays } from './lib/italian';
 import { renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
 import { initDust } from './ui/dust';
 import { initQuick } from './ui/quick';
-import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openSheet, recentlyClosed, renderGrid, scheduleClose, unblockHover } from './ui/sheet';
+import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openSheet, recentlyClosed, renderGrid, scheduleClose, setSheetItalian, unblockHover } from './ui/sheet';
 
 // Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa
 // (gli export: tutte le carte che rispettano i filtri attivi, non solo quelle mostrate).
@@ -66,6 +67,8 @@ const S = {
   /** testo in cui cercare (riga del tipo e testo delle regole), da data/texts.json scaricato al primo uso */
   hay: null as string[] | null,
   types: [] as string[],
+  /** per ogni carta, il testo in cui cercare il nome (inglese e italiani), quando i nomi italiani sono arrivati */
+  names: null as string[] | null,
   sort: (lsGet('sort') as 'share' | 'name' | 'recent' | 'oldest') || 'share',
   results: [] as Result[],
   view: [] as Result[],
@@ -540,7 +543,7 @@ function renderPriceSummary(): void {
 
 /** Filtri dell'elenco: senza espansione di default solo le possedute; con un'espansione tutte, a richiesta solo le possedute. */
 function listFilters(): ListFilters {
-  return { query: S.query, seen: S.seen, onlyOwned: hasColl() && (S.setCodes ? S.setOwned : !S.showMissing), card: S.cf, hay: S.hay };
+  return { query: S.query, seen: S.seen, onlyOwned: hasColl() && (S.setCodes ? S.setOwned : !S.showMissing), card: S.cf, hay: S.hay, names: S.names };
 }
 
 /** Carte che rispettano tutti i filtri attivi, possedute e mancanti: export e riepilogo dei prezzi. */
@@ -553,11 +556,13 @@ const cardFiltersOn = () => isActive(S.cf);
 
 async function loadTexts(): Promise<boolean> {
   if (S.hay) return true;
-  textsLoading ??= fetch('data/texts.json')
-    .then((r) => (r.ok ? r.json() : null))
-    .then((j: { t?: string[] } | null) => {
-      if (!S.d || !Array.isArray(j?.t) || j.t.length !== S.d.cards.c.length) return false;
-      S.hay = haystacks(S.d.cards.c, j.t);
+  const get = (url: string) => fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  // testo inglese (obbligatorio) e testo delle stampe italiane (facoltativo: se manca si cerca solo in inglese)
+  textsLoading ??= Promise.all([get('data/texts.json'), get('data/ittexts.json')])
+    .then(([j, it]: ({ t?: string[] } | null)[]) => {
+      const n = S.d?.cards.c.length;
+      if (!S.d || !Array.isArray(j?.t) || j.t.length !== n) return false;
+      S.hay = haystacks(S.d.cards.c, j.t, Array.isArray(it?.t) && it.t.length === n ? it.t : null);
       return true;
     })
     .catch(() => false)
@@ -566,6 +571,29 @@ async function loadTexts(): Promise<boolean> {
       return ok;
     });
   return textsLoading;
+}
+
+/** Nomi italiani per la ricerca (al primo uso): quando arrivano, l'elenco si aggiorna se c'è una ricerca. */
+function ensureItalian(): void {
+  if (S.names || !S.d) return;
+  const d = S.d;
+  void loadItalian(d.cards.c.length).then((it) => {
+    if (!it || S.d !== d || S.names) return;
+    S.names = nameHays(d.cards.c, it);
+    // si ridisegna solo se i nomi italiani cambiano l'elenco: un ridisegno inutile toglierebbe il focus alla riga
+    // (e staccherebbe dalla sua carta una scheda aperta)
+    if (S.query.trim() && filtered().map((x) => x.idx).join() !== S.view.map((x) => x.idx).join()) renderResults();
+  });
+}
+
+/** Nomi italiani della carta per la scheda: con l'interfaccia in italiano, scaricati alla prima scheda aperta. */
+function sheetItalian(idx: number): string[] | undefined {
+  const it = italianLoaded();
+  if (it) return it.played[idx];
+  if (getLang() === 'it' && S.d) {
+    void loadItalian(S.d.cards.c.length).then((x) => { if (x) setSheetItalian(idx, x.played[idx] || []); });
+  }
+  return undefined;
 }
 
 /** I filtri del pannello sono cambiati: l'elenco riparte dalle prime carte. */
@@ -875,7 +903,7 @@ function openFor(btn: HTMLElement, mode: 'hover' | 'click', animate = false): vo
   const focusId = S.setCodes && res ? setThumb(res)?.id : undefined;
   openSheet(btn, {
     d, opts: S.opts, idx, res: hasColl() ? res : null, approx, focusId,
-    prices: S.prices,
+    prices: S.prices, itNames: sheetItalian(idx),
     onShowAll: (items, title) => renderGrid($('#gridDialog') as HTMLDialogElement, items, title),
   }, mode, animate);
 }
@@ -890,7 +918,7 @@ function openArtworksFor(anchor: HTMLElement, idx: number, owned: Owned | null):
   } : null;
   const approx = !!res && res.prints.length > 0 && res.prints.every((p) => !p.exact);
   openSheet(anchor, {
-    d, opts: S.opts, idx, res, approx, prices: S.prices,
+    d, opts: S.opts, idx, res, approx, prices: S.prices, itNames: sheetItalian(idx),
     onShowAll: (items, title) => renderGrid($('#gridDialog') as HTMLDialogElement, items, title),
   }, 'click');
 }
@@ -1018,7 +1046,9 @@ function wire(): void {
     S.opts.win = Number((e.target as HTMLSelectElement).value);
     refresh();
   });
+  $('#search').addEventListener('focus', ensureItalian);
   $('#search').addEventListener('input', (e) => {
+    ensureItalian();
     S.query = (e.target as HTMLInputElement).value;
     S.shown = PAGE;
     renderResults();

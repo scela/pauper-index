@@ -2,63 +2,89 @@
 
 import { matchRow, printKey, type OwnedPrint } from './compare';
 import { cardByName, type Data } from './data';
+import { loose, spaced, type Italian } from './italian';
 import { norm, splitFaces } from './norm';
 import type { Group, Role } from './types';
 
 export interface NameEntry {
-  name: string;
-  key: string; // norm(name)
+  name: string; // nome inglese (della carta)
+  label: string; // testo del suggerimento: il nome inglese, oppure "Fulmine (Lightning Bolt)"
+  search: string; // nome cercato: inglese o italiano
+  key: string; // norm(nome inglese): possesso per nome
+  match: string; // loose(search): nome senza maiuscole, accenti e apostrofi
+  alt: string; // spaced(search): gli apostrofi come spazi ("dell antenata")
   words: string[]; // inizi di parola (anche delle facce) per la ricerca
   legal: 'l' | 'b' | 'n';
   card: number; // indice in cards.json, -1 se mai giocata
+  /** nomi italiani della carta (se scaricati), dal più recente */
+  its: string[];
+  /** il suggerimento è per un nome italiano */
+  it: boolean;
 }
 
-function entry(name: string, legal: 'l' | 'b' | 'n', card: number): NameEntry {
-  const key = norm(name);
-  return { name, key, words: key.split(/[\s/,:-]+/).filter(Boolean), legal, card };
+function entry(name: string, legal: 'l' | 'b' | 'n', card: number, its: string[], itName?: string): NameEntry {
+  const search = itName ?? name;
+  return {
+    name, label: itName ? `${itName} (${name})` : name, search, key: norm(name), match: loose(search), alt: spaced(search),
+    words: norm(search).split(/[\s/,:'-]+/).filter(Boolean), legal, card, its, it: !!itName,
+  };
 }
 
-/** Carte giocate (sempre) più, se disponibile, l'elenco di tutti i nomi (data/cardnames.json). */
-export function buildNameIndex(d: Data, all?: [string, string][]): NameEntry[] {
-  const out: NameEntry[] = d.cards.c.map((c, i) => entry(c.n, c.l, i));
-  const seen = new Set(out.map((e) => e.key));
-  for (const [name, legal] of all || []) {
+/** Voci per un nome inglese e per ciascuno dei suoi nomi italiani. */
+function entries(name: string, legal: 'l' | 'b' | 'n', card: number, its: string[]): NameEntry[] {
+  return [entry(name, legal, card, its), ...its.map((x) => entry(name, legal, card, its, x))];
+}
+
+/**
+ * Carte giocate (sempre) più, se disponibile, l'elenco di tutti i nomi (data/cardnames.json) e, se scaricati,
+ * i nomi italiani (data/itnames*.json): una voce per ogni nome italiano distinto.
+ */
+export function buildNameIndex(d: Data, all?: [string, string][], it?: Italian | null): NameEntry[] {
+  const out: NameEntry[] = d.cards.c.flatMap((c, i) => entries(c.n, c.l, i, it?.played[i] || []));
+  const seen = new Set(d.cards.c.map((c) => norm(c.n)));
+  (all || []).forEach(([name, legal], i) => {
     const k = norm(name);
-    if (seen.has(k)) continue;
+    if (seen.has(k)) return;
     seen.add(k);
-    out.push(entry(name, (legal as 'l' | 'b' | 'n') || 'n', cardByName(d, name)));
-  }
+    const card = cardByName(d, name);
+    out.push(...entries(name, (legal as 'l' | 'b' | 'n') || 'n', card,
+      card >= 0 ? it?.played[card] || [] : it?.other?.get(i) || []));
+  });
   return out;
 }
 
 /**
  * Suggerimenti: 0 = il nome inizia con la ricerca, 1 = una parola inizia con la ricerca,
  * 2 = ogni parola cercata è l'inizio di una parola del nome ("light bol"), 3 = la ricerca compare ovunque.
- * A parità: prima le carte giocate in Pauper, poi i nomi più corti.
+ * Maiuscole, accenti e apostrofi non contano. A parità: prima le carte giocate in Pauper, poi i nomi inglesi,
+ * poi i nomi più corti.
  */
 export function suggest(entries: NameEntry[], query: string, limit = 8): NameEntry[] {
-  const q = norm(query);
+  const q = loose(query);
   if (!q) return [];
-  const tokens = q.split(/\s+/).filter(Boolean);
+  const sq = spaced(query);
+  const tokens = norm(query).split(/[\s']+/).filter(Boolean);
   const scored: [number, NameEntry][] = [];
   for (const e of entries) {
     let s = -1;
-    if (e.key.startsWith(q)) s = 0;
+    if (e.match.startsWith(q) || e.alt.startsWith(sq)) s = 0;
     else if (e.words.some((w) => w.startsWith(q))) s = 1;
     else if (tokens.length > 1 && tokens.every((tk) => e.words.some((w) => w.startsWith(tk)))) s = 2;
-    else if (q.length >= 3 && e.key.includes(q)) s = 3;
+    else if (q.length >= 3 && (e.match.includes(q) || e.alt.includes(sq))) s = 3;
     if (s >= 0) scored.push([s, e]);
   }
-  scored.sort((a, b) => a[0] - b[0] || Number(a[1].card < 0) - Number(b[1].card < 0)
-    || a[1].key.length - b[1].key.length || a[1].key.localeCompare(b[1].key));
+  scored.sort((a, b) => a[0] - b[0] || Number(a[1].card < 0) - Number(b[1].card < 0) || Number(a[1].it) - Number(b[1].it)
+    || a[1].match.length - b[1].match.length || a[1].match.localeCompare(b[1].match));
   return scored.slice(0, limit).map((x) => x[1]);
 }
 
-/** Nome esatto (normalizzato) tra quelli noti, anche come faccia di una carta doppia. */
+/** Nome esatto (inglese o italiano) tra quelli noti, anche come faccia di una carta doppia. */
 export function exactEntry(entries: NameEntry[], query: string): NameEntry | null {
-  const q = norm(query);
+  const q = loose(query);
   if (!q) return null;
-  return entries.find((e) => e.key === q) || entries.find((e) => splitFaces(e.name).some((f) => norm(f) === q)) || null;
+  const sq = spaced(query);
+  return entries.find((e) => e.match === q || e.alt === sq)
+    || entries.find((e) => splitFaces(e.search).some((f) => loose(f) === q || spaced(f) === sq)) || null;
 }
 
 export interface Owned {

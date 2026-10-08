@@ -5,7 +5,7 @@ import { matchCard, textWords, type CardFilters } from './cardfilter';
 import type { Result } from './compare';
 import type { Data } from './data';
 import { daysBetween } from './format';
-import { norm } from './norm';
+import { nameHay, nameMatches } from './italian';
 import { printsInSets } from './sets';
 
 export const STALE_DAYS = 182; // "viste negli ultimi 6 mesi"
@@ -21,6 +21,8 @@ export interface ListFilters {
   card?: CardFilters;
   /** testo in cui cercare (riga del tipo e testo delle regole), null finché texts.json non è arrivato */
   hay?: string[] | null;
+  /** per ogni carta, il testo in cui cercare il nome (inglese e italiani, vedi lib/italian); senza, solo l'inglese */
+  names?: string[] | null;
 }
 
 /** Carte stampate nel gruppo di set (a qualsiasi rarità). */
@@ -30,13 +32,13 @@ export function restrictToSet(d: Data, results: Result[], codes: Set<string> | n
 
 /** Le carte che l'elenco mostra (senza ordinamento). */
 export function visible(d: Data, results: Result[], f: ListFilters): Result[] {
-  const q = norm(f.query);
+  const q = f.query.trim();
   const anchor = d.cards.anchor;
   const words = f.card ? textWords(f.card.text) : [];
   return results.filter((x) => {
     if (f.onlyOwned && x.owned === 0) return false;
     const c = d.cards.c[x.idx];
-    if (q && !norm(c.n).includes(q)) return false;
+    if (q && !nameMatches(f.names?.[x.idx] ?? nameHay([c.n]), q)) return false;
     if (f.card && !matchCard(c, x.idx, f.card, words, f.hay ?? null)) return false;
     if (f.seen !== 'all') {
       const old = daysBetween(c.z, anchor) > STALE_DAYS;

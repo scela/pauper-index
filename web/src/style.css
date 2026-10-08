@@ -314,6 +314,9 @@ textarea{font:inherit;font-size:16px;width:100%;min-height:64px;resize:vertical;
 .seticon.rar-m{color:var(--rar-m)}
 .seticon.rar-s,.seticon.rar-b{color:var(--rar-s)}
 .rarity .seticon{width:1.5em;height:1.5em}
+.itname{margin:2px 0 0;color:var(--muted);font-size:.875rem;font-style:italic}
+.sheet-titles{min-width:0}
+.sheet-titles .itname{margin:0}
 .qlist .qname{display:inline-flex;align-items:center;gap:10px;min-width:0}
 .qlist .qname .seticon{width:22px;height:22px}
 .setbox .field-ico{position:absolute;left:8px;top:50%;transform:translateY(-50%);display:flex;pointer-events:none}

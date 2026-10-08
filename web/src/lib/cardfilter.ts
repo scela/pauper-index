@@ -89,12 +89,15 @@ export function textWords(q: string): string[] {
 
 const hayCache = new WeakMap<string[], string[]>();
 
-/** Testo in cui cercare per ogni carta: riga del tipo e testo delle regole di tutte le facce. */
-export function haystacks(cards: CardRow[], texts: string[]): string[] {
-  let h = hayCache.get(texts);
+/**
+ * Testo in cui cercare per ogni carta: riga del tipo e testo delle regole di tutte le facce, più (se c'è) il testo
+ * della stampa italiana più recente (data/ittexts.json).
+ */
+export function haystacks(cards: CardRow[], texts: string[], itTexts?: string[] | null): string[] {
+  let h = itTexts ? null : hayCache.get(texts);
   if (!h) {
-    h = cards.map((c, i) => normText(`${c.tl || ''}\n${texts[i] || ''}`));
-    hayCache.set(texts, h);
+    h = cards.map((c, i) => normText(`${c.tl || ''}\n${texts[i] || ''}\n${itTexts?.[i] || ''}`));
+    if (!itTexts) hayCache.set(texts, h);
   }
   return h;
 }

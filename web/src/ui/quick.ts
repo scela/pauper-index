@@ -1,11 +1,12 @@
 // Controllo rapido di una carta: campo con suggerimenti (schema ARIA "combobox") e risultato immediato.
 // Pensato per smistare il bulk a mano, anche da telefono: tocca, scrivi poche lettere, scegli.
 
-import { t, type Key } from '../i18n';
+import { getLang, t, type Key } from '../i18n';
 import { deckShare, typicalCopies, type Opts } from '../lib/compare';
 import { imageUrl, type Data } from '../lib/data';
 import { h } from '../lib/dom';
 import { fmtDate, fmtInt, fmtPct, fmtPrint, lastSeen } from '../lib/format';
+import { loadItalian } from '../lib/italian';
 import { buildNameIndex, exactEntry, ownedFor, suggest, type CollectionIndex, type NameEntry, type Owned } from '../lib/quick';
 
 export interface QuickCtx {
@@ -38,15 +39,18 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
     }
   };
 
-  // Tutti i nomi (anche mai giocati): scaricati solo al primo uso del campo.
+  // Tutti i nomi (anche mai giocati) e i nomi italiani: scaricati solo al primo uso del campo.
   const loadAll = () => {
     if (allLoaded || loading) return loading;
-    loading = fetch('data/cardnames.json')
-      .then((r) => (r.ok ? r.json() : []))
-      .then((all: [string, string][]) => {
+    const d0 = ctx.data();
+    loading = Promise.all([
+      fetch('data/cardnames.json').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      d0 ? loadItalian(d0.cards.c.length, true) : Promise.resolve(null),
+    ])
+      .then(([all, it]: [[string, string][], Awaited<ReturnType<typeof loadItalian>>]) => {
         const d = ctx.data();
         if (d && all.length) {
-          entries = buildNameIndex(d, all);
+          entries = buildNameIndex(d, all, it);
           builtFor = d;
           allLoaded = true;
           // aggiorna i suggerimenti solo se sono ancora aperti: dopo una scelta (Invio, clic) l'elenco non si riapre
@@ -84,7 +88,7 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
     }
     list.replaceChildren(...(items.length
       ? items.map((e, i) => h('li', { id: `qopt-${i}`, role: 'option', 'aria-selected': 'false', dataset: { i: String(i) } },
-        h('span', { class: 'qname' }, e.name), e.card < 0 ? h('span', { class: 'qtag' }, t('quick.tagNever')) : null))
+        h('span', { class: 'qname' }, e.label), e.card < 0 ? h('span', { class: 'qtag' }, t('quick.tagNever')) : null))
       : [h('li', { class: 'qnone', role: 'presentation' }, t('quick.noResults'))]));
     list.hidden = false;
     input.setAttribute('aria-expanded', 'true');
@@ -95,7 +99,7 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
   };
 
   const choose = (e: NameEntry) => {
-    input.value = e.name;
+    input.value = e.label;
     close();
     show(e, true);
   };
@@ -122,6 +126,10 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
 
     info.push(h('h3', { class: 'qtitle' }, e.name, ' ',
       h('span', { class: `badge q-${legal}` }, t(`quick.legal.${legal}` as Key))));
+    // nome italiano sotto quello inglese: con l'interfaccia in italiano, o se la carta è stata cercata in italiano
+    if (e.its.length && (getLang() === 'it' || e.it)) {
+      info.push(h('p', { class: 'itname', lang: 'it' }, e.it ? [e.search, ...e.its.filter((x) => x !== e.search)].join(' · ') : e.its.join(' · ')));
+    }
 
     let img: HTMLElement | null = null;
     if (played) {

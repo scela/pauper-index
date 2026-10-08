@@ -5,7 +5,7 @@
 // così artista e copyright restano visibili), niente deformazioni, filtri o watermark.
 
 import type { Opts, Result } from '../lib/compare';
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
 import { deckShare, typicalCopies } from '../lib/compare';
 import { imageUrl, type Data } from '../lib/data';
 import { h } from '../lib/dom';
@@ -179,6 +179,7 @@ export interface SheetInput {
   approx: boolean; // printing non indicata (testo senza set/numero)
   focusId?: string; // stampa da mostrare come carta attiva (vista per espansione)
   prices: PricesFile | null; // prezzi indicativi; null se non disponibili ("—")
+  itNames?: string[]; // nomi italiani (mostrati solo con l'interfaccia in italiano)
   onShowAll: (items: FanItem[], title: string) => void;
 }
 
@@ -301,7 +302,9 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
 
   el.replaceChildren(
     h('div', { class: 'sheet-head' },
-      h('h3', { id: 'sheetTitle' }, c.n, c.l === 'b' ? h('span', { class: 'badge banned' }, t('badge.banned')) : null), close),
+      h('div', { class: 'sheet-titles' },
+        h('h3', { id: 'sheetTitle' }, c.n, c.l === 'b' ? h('span', { class: 'badge banned' }, t('badge.banned')) : null),
+        italianLine(input.itNames)), close),
     fan,
     items.length > FAN_MAX
       ? h('p', { class: 'fan-note' }, t('sheet.someOf', { n: FAN_MAX, total: items.length }),
@@ -322,6 +325,18 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
   renderActive();
   place(anchor, el);
   if (mode === 'click') (fan.querySelector<HTMLElement>('.fan-item.active') || close).focus({ preventScroll: true });
+}
+
+/** Nome italiano sotto quello inglese, solo con l'interfaccia in italiano. */
+function italianLine(names: string[] | undefined): HTMLElement {
+  const show = getLang() === 'it' && !!names?.length;
+  return h('p', { class: 'itname', id: 'sheetIt', lang: 'it', hidden: !show }, show ? names!.join(' · ') : '');
+}
+
+/** Nomi italiani arrivati dopo l'apertura della scheda (il file si scarica al primo uso). */
+export function setSheetItalian(idx: number, names: string[]): void {
+  if (!current || current.idx !== idx || sheetEl().hidden) return;
+  document.getElementById('sheetIt')?.replaceWith(italianLine(names));
 }
 
 export function renderGrid(dialog: HTMLDialogElement, items: FanItem[], title: string): void {

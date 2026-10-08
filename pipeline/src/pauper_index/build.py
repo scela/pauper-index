@@ -5,7 +5,7 @@ import time
 from collections import Counter
 from dataclasses import dataclass
 
-from . import config, decks, outputs, prices, seticons
+from . import config, decks, italian, outputs, prices, seticons
 from .carddb import CardDB
 from .dedup import dedupe
 from .names import clean, norm
@@ -32,6 +32,7 @@ class Context:
     kept: list[Tournament]
     dedup_log: dict
     timings: dict
+    api: Api | None = None  # stesso client (e stesso limite di frequenza) per tutte le richieste
 
 
 def log(msg: str) -> None:
@@ -92,7 +93,7 @@ def prepare(online: bool = True, fetch: bool = True) -> Context:
     timings["deduplica"] = round(time.monotonic() - t, 1)
     log(f"deduplica: {dlog['dopo']['tournaments']} tornei, {dlog['dopo']['decks']} mazzi")
     bulk = {"oracle_cards": oracle_upd, "default_cards": default_upd}
-    return Context(db, sets_info, bulk, src, names, resolutions, keymap, key_oids, raw, kept, dlog, timings)
+    return Context(db, sets_info, bulk, src, names, resolutions, keymap, key_oids, raw, kept, dlog, timings, api)
 
 
 def distinct_names(tournaments: list[Tournament], since: int | None = None) -> set[int]:
@@ -126,7 +127,16 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     outputs.write_json(config.DATA / "sets.json", outputs.with_icons(set_rows, icons))
     outputs.write_json(config.DATA / "names.json", outputs.build_names(db, order))
     outputs.write_json(config.DATA / "allnames.json", outputs.build_all_names(db))
-    outputs.write_json(config.DATA / "cardnames.json", outputs.build_card_names(db))
+    card_names = outputs.build_card_names(db)
+    outputs.write_json(config.DATA / "cardnames.json", card_names)
+    # nomi e testo delle stampe italiane (ricerca Scryfall, aggiornamento incrementale se serve)
+    t = time.monotonic()
+    it_state = italian.update(ctx.api, ctx.sets_info, log=log)
+    it_played, it_other = italian.build_names(db, it_state, order, card_names)
+    outputs.write_lines_json(config.DATA / "itnames.json", {"v": 1}, "c", it_played)
+    outputs.write_lines_json(config.DATA / "itnames-other.json", {"v": 1}, "o", it_other)
+    outputs.write_lines_json(config.DATA / "ittexts.json", {"v": 1}, "t", italian.build_texts(it_state, order))
+    ctx.timings["italiano"] = round(time.monotonic() - t, 1)
     # decklist recenti e archetipi (funzione 4, "Mazzi che puoi costruire")
     t = time.monotonic()
     decks.build_decks(ctx.kept, ctx.keymap, ctx.key_oids, db, order, anchor, log=log)
@@ -184,7 +194,9 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     outputs.write_json(config.DATA / "meta.json", meta, pretty=True)
 
     sizes = [outputs.size_info(config.DATA / f)
-             for f in ("cards.json", "texts.json", "printings.json", "names.json", "allnames.json", "cardnames.json",
+             for f in ("cards.json", "texts.json", "itnames.json", "itnames-other.json", "ittexts.json",
+                       "printings.json", "names.json",
+                       "allnames.json", "cardnames.json",
                        "sets.json", "seticons.svg", "decks-61.json", "decks-365.json", "prices.json", "meta.json")]
     names_hist = distinct_names(kept)
     names_y1 = distinct_names(kept, y1)

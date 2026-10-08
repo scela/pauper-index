@@ -1022,7 +1022,7 @@ const visibleNames = (page: Page) => page.locator('#cardRows .nm').allInnerTexts
 test('filtri: pannello, etichette rimovibili, nota, conteggio, testo scaricato solo al primo uso', async ({ page }, info) => {
   const problems = await setup(page);
   const texts: string[] = [];
-  page.on('request', (r) => { if (r.url().includes('texts.json')) texts.push(r.url()); });
+  page.on('request', (r) => { if (/\/data\/(it)?texts\.json/.test(r.url())) texts.push(r.url().replace(/.*\/data\//, '')); });
   const mobile = info.project.name.startsWith('mobile');
   const btn = page.locator('#filtersBtn');
   await expect(btn).toHaveText(tr('filters.more'));
@@ -1063,8 +1063,11 @@ test('filtri: pannello, etichette rimovibili, nota, conteggio, testo scaricato s
   await page.fill('#fpText', 'PUT two cards');
   await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm');
   await expect(page.locator('#fpTextStatus')).toHaveText('');
-  expect(texts).toHaveLength(1);
+  expect(texts.sort()).toEqual(['ittexts.json', 'texts.json']); // testo inglese e testo delle stampe italiane
   await expect(btn).toHaveText(tr('filters.moreN', { n: 4 }));
+  // testo italiano (stampa italiana più recente di Brainstorm: "Pesca tre carte, poi…")
+  await page.fill('#fpText', 'pesca tre carte');
+  await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm');
   // senza tipo e costo: anche i sottotipi della riga del tipo
   await page.click('#fpTypes [data-v="Instant"]');
   await page.click('#fpMv [data-v="1"]');
@@ -1156,4 +1159,79 @@ test('filtri: export di tutte le carte filtrate, vista per espansione, azzerati 
   await expect(page.locator('#activeFilters')).toBeHidden();
   await expect(page.locator('#filtersBtn')).toHaveText(tr('filters.more'));
   await expect(page.locator('#cardRows .nm', { hasText: 'Brainstorm' })).toHaveCount(1);
+});
+
+/* ---------- nomi italiani ---------- */
+
+test('nomi italiani: controllo rapido, ricerca nell’elenco, scheda; file scaricati solo al primo uso', async ({ page }) => {
+  const problems = await setup(page);
+  const files: string[] = [];
+  page.on('request', (r) => { if (/\/data\/itnames/.test(r.url())) files.push(r.url().replace(/.*\/data\//, '')); });
+  await page.waitForTimeout(300);
+  expect(files).toEqual([]);
+
+  // ricerca nell'elenco: storico, nome italiano con apostrofo scritto in un altro modo e senza accenti
+  await page.selectOption('#period', '3');
+  await expect(page.locator('#search')).toHaveAttribute('placeholder', tr('filters.search'));
+  await page.fill('#search', 'tempesta cerebr');
+  await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm');
+  expect(files).toEqual(['itnames.json']); // solo i nomi delle carte giocate
+  await page.fill('#search', 'SORGENTE D’ICORE');
+  await expect(page.locator('#cardRows .nm')).toHaveText(['Ichor Wellspring']);
+  await page.fill('#search', 'sorgente dicore');
+  await expect(page.locator('#cardRows .nm')).toHaveText(['Ichor Wellspring']);
+  // carta mai stampata in italiano: si cerca con il nome inglese
+  await page.fill('#search', 'fire // ice');
+  await expect(page.locator('#cardRows .nm')).toHaveText(['Fire // Ice']);
+  await page.fill('#search', '');
+
+  // controllo rapido: "Fulmine (Lightning Bolt)"; anche le carte mai giocate
+  const input = page.locator('#quickInput');
+  await expect(input).toHaveAttribute('placeholder', tr('quick.placeholder'));
+  await input.fill('fulmine');
+  const first = page.locator('#quickList [role="option"]').first();
+  await expect(first).toHaveText('Fulmine (Lightning Bolt)');
+  expect(files.sort()).toEqual(['itnames-other.json', 'itnames.json']);
+  await input.press('Enter');
+  await expect(input).toHaveValue('Fulmine (Lightning Bolt)');
+  const res = page.locator('#quickResult');
+  await expect(res.locator('.qtitle')).toContainText('Lightning Bolt');
+  await expect(res.locator('.itname')).toHaveText('Fulmine'); // cercata in italiano: anche con l'interfaccia in inglese
+  // nome esatto, accenti e maiuscole non contano
+  await input.fill('PRESCELTO DELL ANTENATA');
+  await expect(res.locator('.qtitle')).toContainText("Ancestor's Chosen");
+  await expect(res).toContainText(tr('quick.never'));
+
+  // scheda: il nome italiano sotto quello inglese, solo con l'interfaccia in italiano
+  await page.fill('#search', 'brainstorm');
+  await page.locator('#cardRows .cardbtn').first().click();
+  await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
+  if (L === 'it') await expect(page.locator('#sheetIt')).toHaveText('Tempesta Cerebrale');
+  else await expect(page.locator('#sheetIt')).toBeHidden();
+  expect(problems).toEqual([]);
+});
+
+test('nomi italiani: la scheda in italiano li scarica alla prima apertura; senza file si cerca in inglese', async ({ page }) => {
+  await page.route('**/data/itnames*.json', (r) => r.fulfill({ status: 404, body: '' }));
+  const problems = await setup(page);
+  await page.fill('#search', 'tempesta');
+  await expect(page.locator('#cardRows')).toContainText(tr('res.noMatch'));
+  await page.fill('#search', 'brainstorm');
+  await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm');
+  await page.locator('#quickInput').fill('brainst');
+  await expect(page.locator('#quickList [role="option"]').first()).toHaveText('Brainstorm');
+  await page.locator('#cardRows .cardbtn').first().click();
+  await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
+  await expect(page.locator('#sheetIt')).toBeHidden();
+  expect(problems.filter((p) => !/itnames/.test(p))).toEqual([]);
+});
+
+test('nomi italiani: scheda aperta prima di ogni ricerca, interfaccia in italiano', async ({ page }) => {
+  await setup(page);
+  if (L !== 'it') await page.click('[data-lang="it"]');
+  await page.fill('#search', '');
+  await page.locator('#cardRows .cardbtn').first().click();
+  const name = (await page.locator('#sheetTitle').innerText()).trim();
+  expect(name.length).toBeGreaterThan(0);
+  await expect(page.locator('#sheetIt')).toBeVisible(); // arriva dopo il file, senza riaprire la scheda
 });

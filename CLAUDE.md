@@ -41,10 +41,11 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] passo 2: pipeline e archetipi, nomi secondo le convenzioni della comunità (commit `380c54a`, 2026-10-08). Restano gruppi automatici, da nominare quando l'utente decide (righe nuove in fondo al CSV): la parte nera di "Crypt Rats + Troll" (Gardens?), "Respite + Tangle" (Food Gardens?); Storm resta "Storm" (nessuna lista con Ruby Medallion)
     - [x] prima del passo 3 (2026-10-08): scheda più rapida al passaggio del mouse e prezzi indicativi in euro (vedi "Scheda al passaggio del mouse" e "Prezzi indicativi")
     - [x] prima del passo 3 (2026-10-08): filtri per colore, costo di mana, tipo e testo delle regole, nel pannello "Filtri" (vedi "Filtri per colore, costo, tipo e testo")
+    - [x] prima del passo 3 (2026-10-08): ricerca anche con i nomi italiani e filtro sul testo anche in italiano (vedi "Nomi italiani")
     - [ ] passo 3: sezione "Mazzi" nel sito, completamento, export (formato ManaBox da `reference/private/mazzo-esempio.txt`)
     - [ ] passo 4: rifinitura
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi il 2026-10-08, dopo i nuovi filtri): 110 pytest, 73 Vitest, 126 Playwright (più 6 saltati di proposito: i test col mouse non girano su mobile) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi il 2026-10-08, dopo i nomi italiani): 115 pytest, 78 Vitest, 138 Playwright (più 6 saltati di proposito: i test col mouse non girano su mobile) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -102,8 +103,8 @@ web/                    frontend (Vite + TypeScript)
 ```
 
 **File principali**:
-- Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `seticons.py` (simboli delle espansioni), `review.py` (revisioni, snapshot, allarme), `decks.py` (mazzi e archetipi), `prices.py` (prezzi), `scryfall.py` (client con limiti di frequenza), `config.py`.
-- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `prices`, `view` (filtri dell'elenco e nota del riepilogo), `cardfilter` (colore, costo, tipo, testo), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `filterpanel` pannello "Filtri" ed etichette, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
+- Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `seticons.py` (simboli delle espansioni), `review.py` (revisioni, snapshot, allarme), `decks.py` (mazzi e archetipi), `italian.py` (nomi e testi delle stampe italiane), `prices.py` (prezzi), `scryfall.py` (client con limiti di frequenza), `config.py`.
+- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `prices`, `view` (filtri dell'elenco e nota del riepilogo), `cardfilter` (colore, costo, tipo, testo), `italian` (nomi italiani e ricerca per nome), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `filterpanel` pannello "Filtri" ed etichette, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
 - Test: `pipeline/tests/`, `web/tests/` (Vitest), `web/e2e/smoke.spec.ts` (Playwright).
 - Automazione: `.github/workflows/aggiorna.yml`.
 - Documentazione: questo file, `README.md` (avvio manuale, file manuali, comandi locali), `docs/IDEE.md`.
@@ -124,6 +125,7 @@ python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -e "pipeline[dev
 .\.venv\Scripts\python -m pauper_index sets       # report dei set d'ingresso
 .\.venv\Scripts\python -m pauper_index baseline   # confronto con la baseline
 .\.venv\Scripts\python -m pauper_index prices     # solo data/prices.json (bulk default_cards più recente); --offline usa quello in cache
+.\.venv\Scripts\python -m pauper_index italian    # nomi italiani: aggiornamento incrementale se serve; --full li riscarica tutti (circa 3 minuti)
 #   build: --offline (niente rete, usa cache e fuzzy_matches.csv), --no-fetch (non aggiorna la fonte)
 .\.venv\Scripts\python -m pytest pipeline; .\.venv\Scripts\ruff check pipeline
 
@@ -142,6 +144,7 @@ node scripts/tilt-frames.mjs                     # con preview attivo: carta in 
 node scripts/header-shots.mjs <etichetta>        # con preview attivo: testata, desktop/mobile/mobile piccolo, chiaro/scuro, IT/EN, con focus
 node scripts/sheet-timing.mjs <etichetta> [n]    # con preview attivo: tempi della scheda al passaggio del mouse (apertura, comparsa, cambio carta, chiusura)
 node scripts/filter-shots.mjs <etichetta>        # con preview attivo: barra, pannello "Filtri" ed etichette, desktop/mobile, chiaro/scuro
+node scripts/italian-shots.mjs <etichetta>       # con preview attivo: nomi italiani nel controllo rapido e nella scheda, desktop/mobile, IT/EN
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
 # Stato della CI
@@ -302,6 +305,8 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 
 **`texts.json`** (2026-10-08): `{v: 1, t}`, dove `t[i]` è il testo delle regole (in inglese, `oracle_text`) della carta i di `cards.json`; per le carte con più facce i testi delle facce sono separati da una riga `//`. **656 KB grezzi, 112 KB gzip**; il sito lo scarica solo al primo uso del campo "Testo delle regole". Le aggiunte a `cards.json` (v3) pesano 185 KB grezzi e **31 KB gzip** (da 0,39 a 0,42 MB gzip).
 
+**`itnames.json`, `itnames-other.json`, `ittexts.json`** (2026-10-08): nomi e testo delle stampe italiane, vedi "Nomi italiani".
+
 **`printings.json`**: `{v, sets: {codice: [nome, uscita]}, artists: [...], p}`
 - `p[i]`: printing della carta i di `cards.json`, nella forma `[scryfall_id, set, numero, indice artista, gruppo illustrazione, retro 0|1, rarità c|u|r|m|s|b, (lingua se non en)]` (versione 2: la rarità è stata aggiunta con il filtro per espansione).
 - Il gruppo illustrazione numera gli `illustration_id` distinti della carta, e serve al ventaglio.
@@ -339,6 +344,10 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 |---|---|---|
 | `cards.json` | 1,38 MB (v2, con `y`); 1,54 MB (v3, 2026-10-08) | 0,40 MB; 0,42 MB (v3) |
 | `texts.json` (2026-10-08) | 0,66 MB | 0,11 MB |
+| `itnames.json` (2026-10-08) | 0,12 MB | 0,04 MB |
+| `itnames-other.json` (2026-10-08) | 0,78 MB | 0,26 MB |
+| `ittexts.json` (2026-10-08) | 0,73 MB | 0,14 MB |
+| `reviews/italiano.json` (stato, non pubblicato) | 8,1 MB | 2,4 MB |
 | `printings.json` | 1,46 MB | 0,70 MB |
 | `names.json` | 0,13 MB | 0,05 MB |
 | `seticons.svg` (2026-10-07) | 0,29 MB | 0,10 MB |
@@ -456,7 +465,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - `tests/`: Vitest. `private.test.ts` gira solo se trova `reference/private/esempio-testo.txt` e stampa solo conteggi. `e2e/`: Playwright, progetti desktop e "mobile" (iPhone 13 emulato su Chromium). `tests/fixtures/`: dati sintetici.
 - `vite.config.ts`, con un plugin che:
   - in sviluppo serve `/data/*` da `../data`;
-  - in build copia in `dist/data/` **solo** `cards`, `texts`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `seticons.svg`, `meta`, `prices` (se c'è) e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
+  - in build copia in `dist/data/` **solo** `cards`, `texts`, `itnames`, `itnames-other`, `ittexts`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `seticons.svg`, `meta`, `prices` (se c'è) e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
   - inietta la CSP (meta tag) **solo in build**, perché il dev server di Vite usa stili inline.
 
 **Decisioni**:
@@ -712,6 +721,25 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Etichette** (`#activeFilters`, sotto la barra): una per colore ("Blu ×"; in "Solo questi colori" una sola, "Solo Blu, Nero ×"), una per il costo, una per tipo, una per il testo ("Testo: draw ×"), più "Togli tutti". Nome accessibile "Togli il filtro: …".
 - **Riepiloghi**: come la ricerca, sono filtri dell'elenco: il titolo conta l'insieme del periodo/espansione e la nota "N mostrate con i filtri attivi" elenca anche colore, costo, tipo e testo; "Togli questi filtri" toglie anche questi. Il riepilogo dei prezzi e gli export usano lo stesso insieme (`matching()`: tutte le carte filtrate, possedute e mancanti).
 - **Mai salvati**: ripartono azzerati a ogni visita; "Rimuovi collezione" li azzera (Annulla li ripristina), "Cancella i miei dati" pure.
+
+## Nomi italiani (2026-10-08)
+
+- **Fonte**: la ricerca di Scryfall `lang:it` con `unique=prints` (tutte le stampe italiane, 175 per pagina), con il client che rispetta i 500 ms dell'endpoint (`/cards/search`, 550 ms). **Niente bulk `all_cards`.** Al 2026-10-08: 53.074 stampe italiane in 304 pagine (circa 3 minuti e circa 290 MB di JSON), 52.607 con un nome stampato, **30.288 carte** con un nome italiano. Per le carte a più facce il nome è quello delle facce unite con " // " (verificato: nella ricerca reale `printed_name` sta nelle facce). Le pagine non vanno nella cache su disco (`cache=False`), perché sarebbero circa 290 MB.
+- **Stato** (`pipeline/src/pauper_index/italian.py`): `data/reviews/italiano.json`, committato e **non** pubblicato: `{v, full, updated, c: {oracle_id: {n: [nomi italiani distinti, dal più recente], t: testo della stampa italiana più recente, d: sua data}}}`, una riga per carta (diff leggibili). Si conservano **tutti** i nomi distinti, perché la traduzione cambia tra le edizioni (99 carte giocabili ne hanno più di uno, per esempio "Ricercatori dell'Accademia" e "Ricercatori d'Accademia"). Le stampe senza nome stampato si ignorano; i nomi uguali a quello inglese non vanno nei file del sito (per esempio Fire // Ice, che Scryfall dà come "Fire // Ice" anche in italiano).
+- **Aggiornamento** (scelto: incrementale, non ogni giorno):
+  - **completo** solo a mano: `python -m pauper_index italian --full` (anche quando lo stato manca);
+  - **incrementale** dentro `build` (quindi nella CI quotidiana, che però fa richieste solo quando serve): quando esce un set (`released_at` di `/sets` dopo l'ultimo aggiornamento ed entro oggi) **oppure** dopo 7 giorni (`REFRESH_DAYS`). Scarica solo `lang:it date>=<ultimo aggiornamento − 60 giorni>` (`OVERLAP_DAYS`, per le stampe italiane aggiunte in ritardo), di solito poche pagine, e unisce i nomi (mai rimossi). Le traduzioni delle stampe già uscite non cambiano, quindi non serve riscaricare tutto;
+  - senza rete (`--offline`) lo stato resta com'è. Il commit avviene con il resto dei dati (`git add data`).
+- **File del sito** (scaricati solo quando servono, fuori dal caricamento iniziale):
+  - `itnames.json` `{v, c}`: `c[i]` = nomi italiani della carta i di `cards.json` (`[]` se non ce ne sono). **121 KB, 40 KB gzip.** Si scarica al primo focus o alla prima digitazione nella ricerca per nome, al primo uso del controllo rapido, oppure alla prima scheda aperta con l'interfaccia in italiano (serve al nome sotto quello inglese);
+  - `itnames-other.json` `{v, o}`: `[indice in cardnames.json, nomi…]` delle altre carte giocabili in carta o su MTGO (24.830). **785 KB, 263 KB gzip.** Solo per il controllo rapido, insieme a `cardnames.json`;
+  - `ittexts.json` `{v, t}`: testo della stampa italiana più recente di ogni carta di `cards.json` (4.518 su 5.037 ne hanno uno). **731 KB, 138 KB gzip**: sotto la soglia di 500 KB fissata dall'utente, quindi incluso. Si scarica insieme a `texts.json` al primo uso del filtro sul testo; se manca, il filtro resta in inglese.
+  - Niente nomi inglesi ripetuti: il sito li ha in `cards.json` e `cardnames.json`. Se un file manca o non è allineato, la ricerca resta in inglese, senza errori.
+- **Ricerca per nome** (`lib/italian.ts`): maiuscole, accenti e apostrofi non contano: il nome si confronta senza apostrofi ("dellantenata") e con gli apostrofi come spazi ("dell antenata"); lo stesso per la ricerca. Vale anche per i nomi inglesi ("tormods crypt"). Gli spazi contano.
+- **Controllo rapido**: una voce per ogni nome italiano, mostrata come "Fulmine (Lightning Bolt)"; a parità di punteggio prima le carte giocate, poi i nomi inglesi. Scelta, il campo mostra "Fulmine (Lightning Bolt)"; il risultato ha il titolo inglese e sotto, in corsivo, i nomi italiani (con l'interfaccia in italiano, o sempre se la carta è stata cercata in italiano). Il nome esatto italiano (anche di una faccia) mostra subito il risultato.
+- **Ricerca nell'elenco** (vista collezione, mancanti, espansione): `ListFilters.names`, il testo dei nomi di ogni carta. Quando i nomi italiani arrivano l'elenco si ridisegna **solo se cambia** (un ridisegno inutile toglieva il focus alla riga: difetto trovato da un test).
+- **Scheda**: con l'interfaccia in italiano, sotto il nome inglese i nomi italiani (`#sheetIt`, `lang="it"`); se il file arriva con la scheda aperta, la riga si aggiunge senza riaprirla (`setSheetItalian`).
+- **Filtro sul testo**: cerca anche nel testo italiano; etichetta "Testo delle regole (inglese o italiano)", segnaposto "es. draw a card, pesca una carta (in italiano solo per le carte stampate in italiano)".
 
 ## Pagina Informazioni (riscritta il 2026-10-06)
 
