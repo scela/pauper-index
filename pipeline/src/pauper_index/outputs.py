@@ -80,6 +80,11 @@ def build_cards(db: CardDB, stats: dict[str, CardStats], tournaments, entries, s
         row = {"o": o, "n": c.name, "l": c.pauper[0]}
         if c.basic:
             row["b"] = 1
+        # v3, filtri del sito: colori della carta, mana value (intero, 0,5 -> 0), riga del tipo
+        if c.card_colors:
+            row["k"] = c.card_colors
+        row["m"] = int(c.mv)
+        row["tl"] = c.type_line
         p = entries.get(o)
         if p is not None:
             row["e"] = p.set
@@ -97,7 +102,7 @@ def build_cards(db: CardDB, stats: dict[str, CardStats], tournaments, entries, s
         rows.append(row)
 
     head = {
-        "v": 2,
+        "v": 3,
         "anchor": iso(anchor),
         "w": [n or 0 for n in windows],
         "tot": [[x["decks"], x["tournaments"]] for x in totals],
@@ -107,6 +112,14 @@ def build_cards(db: CardDB, stats: dict[str, CardStats], tournaments, entries, s
         "yt": year_series(year_tot, y_first, y_last),
     }
     return head, rows, order
+
+
+def build_texts(db: CardDB, order: list[str]) -> list[str]:
+    """Testo delle regole (in inglese) delle carte di cards.json, nello stesso ordine: data/texts.json.
+
+    File separato perché il sito lo scarica solo al primo uso del filtro sul testo.
+    """
+    return [db.cards[o].oracle_text for o in order]
 
 
 def build_printings(db: CardDB, order: list[str], sets_info) -> tuple[dict, list]:

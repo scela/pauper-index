@@ -40,10 +40,11 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] punto 0: filtri che nascondono carte mai salvati, espansione ricordata (commit `2c261a1`)
     - [x] passo 2: pipeline e archetipi, nomi secondo le convenzioni della comunità (commit `380c54a`, 2026-10-08). Restano gruppi automatici, da nominare quando l'utente decide (righe nuove in fondo al CSV): la parte nera di "Crypt Rats + Troll" (Gardens?), "Respite + Tangle" (Food Gardens?); Storm resta "Storm" (nessuna lista con Ruby Medallion)
     - [x] prima del passo 3 (2026-10-08): scheda più rapida al passaggio del mouse e prezzi indicativi in euro (vedi "Scheda al passaggio del mouse" e "Prezzi indicativi")
+    - [x] prima del passo 3 (2026-10-08): filtri per colore, costo di mana, tipo e testo delle regole, nel pannello "Filtri" (vedi "Filtri per colore, costo, tipo e testo")
     - [ ] passo 3: sezione "Mazzi" nel sito, completamento, export (formato ManaBox da `reference/private/mazzo-esempio.txt`)
     - [ ] passo 4: rifinitura
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi il 2026-10-08, dopo scheda e prezzi): 105 pytest, 63 Vitest, 118 Playwright (più 6 saltati di proposito: i test col mouse non girano su mobile) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (tutti verdi il 2026-10-08, dopo i nuovi filtri): 110 pytest, 73 Vitest, 126 Playwright (più 6 saltati di proposito: i test col mouse non girano su mobile) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -102,7 +103,7 @@ web/                    frontend (Vite + TypeScript)
 
 **File principali**:
 - Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `seticons.py` (simboli delle espansioni), `review.py` (revisioni, snapshot, allarme), `decks.py` (mazzi e archetipi), `prices.py` (prezzi), `scryfall.py` (client con limiti di frequenza), `config.py`.
-- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `prices`, `view` (filtri dell'elenco e nota del riepilogo), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
+- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `prices`, `view` (filtri dell'elenco e nota del riepilogo), `cardfilter` (colore, costo, tipo, testo), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `filterpanel` pannello "Filtri" ed etichette, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
 - Test: `pipeline/tests/`, `web/tests/` (Vitest), `web/e2e/smoke.spec.ts` (Playwright).
 - Automazione: `.github/workflows/aggiorna.yml`.
 - Documentazione: questo file, `README.md` (avvio manuale, file manuali, comandi locali), `docs/IDEE.md`.
@@ -140,6 +141,7 @@ node scripts/dust-perf.mjs <etichetta> [rallentamento]   # con preview attivo: v
 node scripts/tilt-frames.mjs                     # con preview attivo: carta in 3D inclinata in direzioni diverse (mouse e dito)
 node scripts/header-shots.mjs <etichetta>        # con preview attivo: testata, desktop/mobile/mobile piccolo, chiaro/scuro, IT/EN, con focus
 node scripts/sheet-timing.mjs <etichetta> [n]    # con preview attivo: tempi della scheda al passaggio del mouse (apertura, comparsa, cambio carta, chiusura)
+node scripts/filter-shots.mjs <etichetta>        # con preview attivo: barra, pannello "Filtri" ed etichette, desktop/mobile, chiaro/scuro
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
 # Stato della CI
@@ -290,12 +292,15 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 - `t`: tornei citati dalle ultime apparizioni, `[data, nome, Tournament.Uri, "m"|"p"]`.
 - `c`: una carta per riga, ordinate per nome:
   - `o` oracle_id; `n` nome; `l` legalità `l|b|n`; `b` 1 se terra base; `e` set d'ingresso (solo per le carte legali o bannate);
+  - (v3, 2026-10-08, per i filtri) `k` colori della carta in ordine WUBRG, assente se incolore: `colors` di Scryfall, oppure l'unione dei colori delle facce quando manca al livello principale (transform, modal_dfc); **non** l'identità di colore e non i colori del costo (`Card.colors`, usati per gli archetipi). `m` mana value intero (`cmc` troncato: 0,5 → 0). `tl` riga del tipo di tutte le facce ("Sorcery // Land");
   - `s[i]`: `0` oppure `[mazzi main+side, mazzi main, copie totali, mediana copie main+side, mediana copie main]`;
   - `f` / `z`: prima e ultima apparizione;
   - `lm` / `lp`: ultima apparizione MTGO e cartacea, `[indice in t, risultato (rank intero o "5-0"), copie main, copie side]`;
   - `r`: indice della printing di riferimento in `printings.json`;
   - `y` (v2, per "Rispolvera una carta"): mazzi per anno su tutto lo storico, `[primo anno, mazzi, …]` dal primo all'ultimo anno in cui è giocata (anni vuoti = 0).
 - `yt` (v2): mazzi totali per anno, `[primo anno, mazzi, …]`; serve a calcolare la quota per anno. `y` e `yt` aggiungono circa 0,12 MB grezzi e **0,04 MB con gzip**.
+
+**`texts.json`** (2026-10-08): `{v: 1, t}`, dove `t[i]` è il testo delle regole (in inglese, `oracle_text`) della carta i di `cards.json`; per le carte con più facce i testi delle facce sono separati da una riga `//`. **656 KB grezzi, 112 KB gzip**; il sito lo scarica solo al primo uso del campo "Testo delle regole". Le aggiunte a `cards.json` (v3) pesano 185 KB grezzi e **31 KB gzip** (da 0,39 a 0,42 MB gzip).
 
 **`printings.json`**: `{v, sets: {codice: [nome, uscita]}, artists: [...], p}`
 - `p[i]`: printing della carta i di `cards.json`, nella forma `[scryfall_id, set, numero, indice artista, gruppo illustrazione, retro 0|1, rarità c|u|r|m|s|b, (lingua se non en)]` (versione 2: la rarità è stata aggiunta con il filtro per espansione).
@@ -332,7 +337,8 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 
 | File | Grezzo | gzip |
 |---|---|---|
-| `cards.json` | 1,38 MB (v2, con `y`) | 0,40 MB |
+| `cards.json` | 1,38 MB (v2, con `y`); 1,54 MB (v3, 2026-10-08) | 0,40 MB; 0,42 MB (v3) |
+| `texts.json` (2026-10-08) | 0,66 MB | 0,11 MB |
 | `printings.json` | 1,46 MB | 0,70 MB |
 | `names.json` | 0,13 MB | 0,05 MB |
 | `seticons.svg` (2026-10-07) | 0,29 MB | 0,10 MB |
@@ -420,7 +426,7 @@ Idee da valutare dopo la prima versione: `docs/IDEE.md`.
 
 **Layout** (rivisto su richiesta dopo la Fase 2: una sola funzione principale):
 1. **In alto**: titolo, riga dei dati ("Dati al …", con l'avviso se la fonte è ferma) e area di caricamento (file CSV o testo incollato). Dopo il caricamento l'area diventa la riga "Collezione: N carte · Sostituisci". "Sostituisci" riapre l'area, e il caricamento successivo **rimpiazza** la collezione.
-2. **Filtri** su una o due righe: periodo (menu con il numero di carte per periodo), minimo mazzi, espansione, solo legali, conta anche il side, ricerca. Ogni modifica aggiorna subito i risultati. Su mobile le opzioni stanno su una riga scorrevole.
+2. **Filtri**: nella barra solo periodo (menu con il numero di carte per periodo), espansione, ricerca per nome e il pulsante "Filtri"; minimo mazzi, solo legali e conta anche il side sono nel pannello "Filtri" (dal 2026-10-08, vedi "Filtri per colore, costo, tipo e testo"). Ogni modifica aggiorna subito i risultati.
    **Terre base** (Plains, Island, Swamp, Mountain, Forest, Wastes e le sei Snow-Covered, cioè le carte con flag `b` in `cards.json`): **sempre escluse** dalla lista e dai risultati, senza opzione nell'interfaccia (decisione dopo la Fase 2). Restano nei dati della pipeline: serviranno al calcolo dei mazzi costruibili, dove contano come sempre disponibili.
 3. **Risultati**:
    - intestazione "Possiedi N carte giocate in Pauper";
@@ -450,7 +456,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - `tests/`: Vitest. `private.test.ts` gira solo se trova `reference/private/esempio-testo.txt` e stampa solo conteggi. `e2e/`: Playwright, progetti desktop e "mobile" (iPhone 13 emulato su Chromium). `tests/fixtures/`: dati sintetici.
 - `vite.config.ts`, con un plugin che:
   - in sviluppo serve `/data/*` da `../data`;
-  - in build copia in `dist/data/` **solo** `cards`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `seticons.svg`, `meta`, `prices` (se c'è) e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
+  - in build copia in `dist/data/` **solo** `cards`, `texts`, `printings`, `names`, `allnames`, `cardnames`, `sets`, `seticons.svg`, `meta`, `prices` (se c'è) e `reviews/index.json` (elenco `PUBLIC_DATA`). I report interni (`unresolved.csv`, `risoluzione.csv`, `dedup.json`, `set-ingresso.md`, `baseline-*.md`, `reviews/<set>.*`) restano fuori dal sito. **Un nuovo file di dati va aggiunto a `PUBLIC_DATA`**, altrimenti nel sito dà 404 (è successo con `sets.json`);
   - inietta la CSP (meta tag) **solo in build**, perché il dev server di Vite usa stili inline.
 
 **Decisioni**:
@@ -466,7 +472,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Riepilogo dell'importazione**: righe lette, carte della lista, carte mai giocate in Pauper (Scryfall ID o nome in `allnames.json`), righe non riconosciute (elencate), righe senza set e numero (immagine di riferimento, segnalata anche nella scheda).
 - **"Conta le copie"**: opzione **tolta** su richiesta dell'utente (dopo la funzione 2). Una carta è posseduta se ne hai almeno una copia; export "1 Nome" e List riallineata con quantità 1. Le copie tipiche (mediana) restano solo come informazione, nella scheda e nel controllo rapido.
 - **Ventaglio**: un artwork per `illustration_id`, preferendo la printing posseduta, poi la più recente in inglese. Al massimo 7, più "Mostra tutte" che apre una griglia in un `<dialog>`. Le carte sono **distanziate e ruotate di pochi gradi, senza sovrapporsi**, per non coprire artista e copyright (regole di Scryfall). La carta attiva è mostrata intera e più grande.
-- **Persistenza**: IndexedDB (database `pauper-index`) per la collezione e le opzioni (periodo, minimo mazzi, solo legali, side, proxy, "Mostra anche le mancanti"); localStorage, con prefisso `pauper-index:`, per tema, lingua, ordinamento ed **espansione selezionata** (`set`, `setHidden`, dal 2026-10-07). **I filtri che nascondono carte non si salvano mai** e ripartono azzerati a ogni visita: ricerca, "Ultima apparizione" (prima era salvata ed è stata la causa del caso "69 contro 13"; la chiave vecchia `seen` si cancella all'avvio) e "Solo quelle che possiedi". "Cancella i miei dati" elimina il database e **solo** le chiavi `pauper-index:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
+- **Persistenza**: IndexedDB (database `pauper-index`) per la collezione e le opzioni (periodo, minimo mazzi, solo legali, side, proxy, "Mostra anche le mancanti"); localStorage, con prefisso `pauper-index:`, per tema, lingua, ordinamento ed **espansione selezionata** (`set`, `setHidden`, dal 2026-10-07). **I filtri che nascondono carte non si salvano mai** e ripartono azzerati a ogni visita: ricerca, "Ultima apparizione" (prima era salvata ed è stata la causa del caso "69 contro 13"; la chiave vecchia `seen` si cancella all'avvio) e "Solo quelle che possiedi", e i filtri del pannello "Filtri" (colore, costo, tipo, testo). "Cancella i miei dati" elimina il database e **solo** le chiavi `pauper-index:`: su GitHub Pages l'origine è condivisa con gli altri siti dello stesso utente, quindi niente `localStorage.clear()`.
 - **Tabella**: 10 righe alla volta (vedi "Carica altri"). Ordinamento per percentuale di mazzi, nome, ultima apparizione (recente o meno recente). Filtro "viste negli ultimi 6 mesi / non viste da oltre 6 mesi", rispetto alla data dei dati.
 - **Segnalare un errore**: link `mailto:massadalbe@hotmail.com` nella pagina Informazioni (`REPORT_EMAIL` in `web/src/ui/about.ts`).
 - **Icone**: generate da `logo/logo.svg` con `npm run icons` e committate (vedi "Logo"). Nessun simbolo di Wizards.
@@ -531,7 +537,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 ## "Carica altri" (prima della funzione 4)
 
 - Ogni elenco di carte mostra **10 carte** (`PAGE` in `main.ts`); sotto, "Mostrate N di M" (`#shownCount`, `res.shown`) e il pulsante "Carica altri" (`#more`, `res.loadMore`), che ne aggiunge altre 10. Vale per la vista collezione, la vista per espansione e le mancanti; varrà anche per i mazzi della funzione 4.
-- Ordinamento, filtri, ricerca, riepiloghi ed export lavorano sempre sulla lista completa (`S.results` / `S.view`); ogni cambio di filtro, ordinamento o ricerca riparte da 10.
+- Ordinamento, filtri, ricerca, riepiloghi ed export lavorano sempre sulla lista completa (`S.results` / `S.view`; gli export su tutte le carte filtrate, `matching()`), mai solo sulle 10 mostrate; ogni cambio di filtro, ordinamento o ricerca riparte da 10.
 - Dopo "Carica altri" il focus va sulla prima carta aggiunta, **senza** aprire la scheda (`focusNoSheet`).
 
 ## Rispolvera una carta: pagina "Carta dimenticata" (riprogettata il 2026-10-07)
@@ -648,7 +654,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - Controllati gli altri riepiloghi:
   - "ne possiedi M (K in questa espansione)" conta sulla stessa lista;
   - in "Carta dimenticata" il numero di "nessuna delle tue carte… ({n} in tutto)" è l'insieme da cui si pesca;
-  - gli export lavorano sulla lista completa (decisione già presa), non sull'elenco filtrato.
+  - gli export lavorano su tutte le carte che rispettano i filtri attivi, possedute e mancanti, anche quelle non ancora mostrate (decisione del 2026-10-08; prima lavoravano sulla lista completa, senza ricerca né ultima apparizione).
 - **Difetto trovato con il test**: dopo aver usato il campo "Espansione", il primo `pointerdown` fuori dal campo richiudeva le opzioni sotto il campo e spostava il layout sotto il cursore, quindi il clic finiva su un altro elemento (per esempio la casella "Mostra anche le mancanti" non si spuntava). Ora la chiusura avviene su `click`.
 
 ## Rimuovi collezione (2026-10-07)
@@ -691,6 +697,21 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - Le printing in altre lingue hanno il prezzo della printing corrispondente (Scryfall dà un prezzo per printing, non per lingua).
 - **Informazioni**: una domanda frequente, "Da dove vengono i prezzi?", con una sola frase.
 - Il passo 3 (Mazzi) userà gli stessi prezzi per il costo delle carte mancanti di ogni mazzo.
+
+## Filtri per colore, costo, tipo e testo (2026-10-08)
+
+- **Dove valgono**: vista collezione, mancanti e vista per espansione; si combinano tra loro (AND), con la ricerca per nome, "Ultima apparizione" ed espansione. Non toccano il controllo rapido né "Carta dimenticata".
+- **Barra**: restano periodo, espansione, ricerca per nome e il pulsante "Filtri" (`#filtersBtn`, "Filtri (N)" con N = numero di etichette attive, `aria-expanded`). Minimo mazzi, solo legali e side sono passati nel pannello, sezione "Opzioni della lista" (sono preferenze salvate, quindi non diventano etichette).
+- **Pannello** (`#fpanel`, `<dialog>`, `ui/filterpanel.ts`): su desktop `show()` non modale, nel flusso sotto la barra, con i risultati visibili che si aggiornano; fino a 640 px `showModal()` dal basso, con sfondo, piè di pagina fisso ("Togli tutti", "Mostra N carte") e chiusura toccando lo sfondo. Esc chiude in entrambi i casi e il focus torna su "Filtri". I pulsanti (`aria-pressed`) si creano una volta (e al cambio di lingua) e poi si aggiorna solo lo stato, così il pulsante premuto tiene il focus.
+- **Colore** (`lib/cardfilter.ts`, `matchColors`): Bianco, Blu, Nero, Rosso, Verde, Multicolore (2+ colori), Incolore; pallini CSS a tinta unita, **non** simboli di mana.
+  - "Almeno uno dei colori scelti" (predefinita): la carta ha almeno un colore scelto, oppure è multicolore con M o incolore con C;
+  - "Solo questi colori": una carta incolore passa solo con C; una colorata se tutti i suoi colori sono tra quelli scelti. Con M scelto deve anche essere multicolore; con solo M passa qualsiasi multicolore (decisione nostra: la richiesta non diceva cosa fanno M e C in questa modalità).
+- **Costo**: 0–5 esatti e 6+ (`m` ≥ 6), selezione multipla. Etichetta a intervalli: "Costo 1–2, 4, 6+".
+- **Tipo**: tipi delle carte (regola 205.2a) letti da `tl` su tutte le facce, senza supertipi né sottotipi; un'avventura conta anche come istantaneo o stregoneria, come su Scryfall. Mostrati i sei principali e poi gli altri presenti tra le carte giocate (al 2026-10-08 solo Kindred, "Tribale"). Selezione multipla in OR. I tipi senza traduzione resterebbero in inglese.
+- **Testo**: campo "Testo delle regole (in inglese)", segnaposto "es. draw a card". Cerca in riga del tipo + testo delle regole di tutte le facce, in minuscolo e senza accenti, apostrofi tipografici semplificati; ogni parola deve comparire in un punto qualsiasi (sottostringa). `data/texts.json` si scarica al primo focus o alla prima digitazione nel campo (`loadTexts`); finché non arriva il filtro sul testo non si applica e sotto il campo compare "Carico il testo delle regole…"; se fallisce si riprova al prossimo uso.
+- **Etichette** (`#activeFilters`, sotto la barra): una per colore ("Blu ×"; in "Solo questi colori" una sola, "Solo Blu, Nero ×"), una per il costo, una per tipo, una per il testo ("Testo: draw ×"), più "Togli tutti". Nome accessibile "Togli il filtro: …".
+- **Riepiloghi**: come la ricerca, sono filtri dell'elenco: il titolo conta l'insieme del periodo/espansione e la nota "N mostrate con i filtri attivi" elenca anche colore, costo, tipo e testo; "Togli questi filtri" toglie anche questi. Il riepilogo dei prezzi e gli export usano lo stesso insieme (`matching()`: tutte le carte filtrate, possedute e mancanti).
+- **Mai salvati**: ripartono azzerati a ogni visita; "Rimuovi collezione" li azzera (Annulla li ripristina), "Cancella i miei dati" pure.
 
 ## Pagina Informazioni (riscritta il 2026-10-06)
 

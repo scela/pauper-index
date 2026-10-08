@@ -34,6 +34,9 @@ class Card:
     playable: bool
     colors: str = ""  # colori del costo di mana in ordine WUBRG, senza phyrexiano (per i colori degli archetipi)
     produces: str = ""  # mana colorato prodotto (solo per le terre), in ordine WUBRG
+    card_colors: str = ""  # colori della carta (per le bifronti l'unione delle facce), in ordine WUBRG: filtro del sito
+    mv: float = 0.0  # mana value (cmc di Scryfall)
+    oracle_text: str = ""  # testo delle regole, facce separate da una riga "//"
 
     @property
     def basic(self) -> bool:
@@ -81,6 +84,23 @@ def _colors(c: dict) -> str:
     return "".join(x for x in "WUBRG" if x in cols)
 
 
+def _card_colors(c: dict) -> str:
+    """Colori della carta, non l'identità di colore: `colors` di Scryfall o, per le bifronti (dove manca al livello
+    principale), l'unione dei colori delle facce."""
+    cols = set(c.get("colors") or [])
+    if c.get("colors") is None:
+        for f in c.get("card_faces") or []:
+            cols |= set(f.get("colors") or [])
+    return "".join(x for x in "WUBRG" if x in cols)
+
+
+def _oracle_text(c: dict) -> str:
+    faces = c.get("card_faces") or []
+    if faces and not c.get("oracle_text"):
+        return "\n//\n".join(f.get("oracle_text") or "" for f in faces).strip()
+    return c.get("oracle_text") or ""
+
+
 def _produces(c: dict) -> str:
     if "Land" not in (c.get("type_line") or ""):
         return ""
@@ -100,6 +120,9 @@ def card_from_json(c: dict) -> Card:
         playable=c["layout"] not in NON_PLAYABLE_LAYOUTS and c.get("set_type") not in NON_PLAYABLE_SET_TYPES,
         colors=_colors(c),
         produces=_produces(c),
+        card_colors=_card_colors(c),
+        mv=float(c.get("cmc") or 0),
+        oracle_text=_oracle_text(c),
     )
 
 

@@ -19,7 +19,9 @@ Queste spiegazioni stavano nella pagina Informazioni del sito, che ora è breve.
 - Una carta è riconosciuta in qualunque printing, lingua o finitura: conta la carta, non la stampa.
 
 **Filtri e viste**
-- "Conta anche il side" include le carte giocate solo in sideboard; "Min. mazzi" è il numero di mazzi necessario per entrare nella lista.
+- "Conta anche il side" include le carte giocate solo in sideboard; "Min. mazzi" è il numero di mazzi necessario per entrare nella lista. Le due opzioni, con "Solo legali", stanno nel pannello "Filtri".
+- Il pannello "Filtri" filtra anche per colore (i colori della carta, non l'identità di colore; per le bifronti l'unione delle facce), costo di mana (0–5 e 6+), tipo e testo delle regole in inglese (testo e riga del tipo di tutte le facce; devono comparire tutte le parole). Con "Solo questi colori" passano le carte con tutti i colori tra quelli scelti; con anche "Multicolore" solo le multicolori. I filtri attivi compaiono come etichette sotto la barra e non vengono ricordati tra una visita e l'altra.
+- Gli export comprendono tutte le carte che rispettano i filtri attivi (ricerca, ultima apparizione, espansione, pannello "Filtri"), anche quelle non ancora mostrate.
 - Le terre base (comprese le Snow-Covered e Wastes) sono sempre escluse.
 - Il controllo rapido dice se una carta è giocata in Pauper anche quando è fuori dalla lista con i filtri attuali e, con la collezione, se la possiedi.
 - Il filtro "Espansione" mostra le carte della lista stampate in quel set a qualsiasi rarità, perché la legalità è della carta e non della stampa. I set collegati sono raggruppati; promo, Secret Lair, The List e set solo digitali sono nascosti di default. In questa vista ogni carta mostra l'immagine della stampa di quel set, con il simbolo dell'espansione colorato secondo la rarità.

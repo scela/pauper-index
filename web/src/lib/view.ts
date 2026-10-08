@@ -1,6 +1,7 @@
 // Elenco mostrato e riepilogo: la stessa catena di filtri, così i numeri del riepilogo contano esattamente
 // le carte che l'elenco può mostrare (vedi CLAUDE.md, "Riepiloghi ed elenco").
 
+import { matchCard, textWords, type CardFilters } from './cardfilter';
 import type { Result } from './compare';
 import type { Data } from './data';
 import { daysBetween } from './format';
@@ -16,6 +17,10 @@ export interface ListFilters {
   query: string;
   seen: Seen;
   onlyOwned: boolean;
+  /** colore, costo, tipo e testo delle regole */
+  card?: CardFilters;
+  /** testo in cui cercare (riga del tipo e testo delle regole), null finché texts.json non è arrivato */
+  hay?: string[] | null;
 }
 
 /** Carte stampate nel gruppo di set (a qualsiasi rarità). */
@@ -27,10 +32,12 @@ export function restrictToSet(d: Data, results: Result[], codes: Set<string> | n
 export function visible(d: Data, results: Result[], f: ListFilters): Result[] {
   const q = norm(f.query);
   const anchor = d.cards.anchor;
+  const words = f.card ? textWords(f.card.text) : [];
   return results.filter((x) => {
     if (f.onlyOwned && x.owned === 0) return false;
     const c = d.cards.c[x.idx];
     if (q && !norm(c.n).includes(q)) return false;
+    if (f.card && !matchCard(c, x.idx, f.card, words, f.hay ?? null)) return false;
     if (f.seen !== 'all') {
       const old = daysBetween(c.z, anchor) > STALE_DAYS;
       if (f.seen === 'old' ? !old : old) return false;

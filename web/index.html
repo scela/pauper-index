@@ -99,9 +99,6 @@
       <label class="f-field"><span data-i18n="filters.period">Periodo</span>
         <select id="period"></select>
       </label>
-      <label class="f-field"><span data-i18n="filters.min">Min. mazzi</span>
-        <input type="number" id="optMin" min="1" max="9999" value="1" inputmode="numeric">
-      </label>
       <div class="setwrap" id="setWrap">
         <div class="f-field setfield">
           <label for="setInput" data-i18n="set.label">Espansione</label>
@@ -117,12 +114,62 @@
           <label class="chk" id="setOwnedWrap" hidden><input type="checkbox" id="setOwned"> <span data-i18n="set.onlyOwned">Solo quelle che possiedi</span></label>
         </div>
       </div>
-      <div class="chips">
-      <label class="chk"><input type="checkbox" id="optLegal" checked> <span data-i18n="filters.legal">Solo legali</span></label>
-      <label class="chk"><input type="checkbox" id="optSide" checked> <span data-i18n="filters.side">Conta anche il side</span></label>
+      <div class="searchrow">
+        <input type="search" class="search" id="search" data-i18n-ph="filters.search" data-i18n-aria="filters.search" placeholder="Cerca una carta" aria-label="Cerca una carta">
+        <button class="btn fbtn-open" id="filtersBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="fpanel">
+          <svg class="fico" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2 4h12M4.5 8h7M7 12h2"/></svg>
+          <span id="filtersBtnText" data-i18n="filters.more">Filtri</span>
+        </button>
       </div>
-      <input type="search" class="search" id="search" data-i18n-ph="filters.search" data-i18n-aria="filters.search" placeholder="Cerca una carta" aria-label="Cerca una carta">
     </form>
+
+    <div class="activef" id="activeFilters" role="group" data-i18n-aria="chip.aria" aria-label="Filtri attivi" hidden></div>
+
+    <dialog class="fpanel" id="fpanel" aria-labelledby="fpTitle">
+      <div class="fp-inner">
+        <div class="fp-head">
+          <h2 id="fpTitle" data-i18n="fp.title">Filtri</h2>
+          <button class="btn quiet small fp-x" id="fpClose" type="button" data-i18n-aria="fp.close" aria-label="Chiudi i filtri">
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+          </button>
+        </div>
+        <fieldset class="fp-sec">
+          <legend data-i18n="fp.color">Colore</legend>
+          <div class="fp-btns" id="fpColors"></div>
+          <div class="seg fp-mode" role="radiogroup" data-i18n-aria="fp.colorMode" aria-label="Come usare i colori scelti">
+            <label><input type="radio" name="colorMode" value="any" checked><span data-i18n="fp.colorAny">Almeno uno dei colori scelti</span></label>
+            <label><input type="radio" name="colorMode" value="only"><span data-i18n="fp.colorOnly">Solo questi colori</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="fp-sec">
+          <legend data-i18n="fp.mv">Costo di mana</legend>
+          <div class="fp-btns" id="fpMv"></div>
+        </fieldset>
+        <fieldset class="fp-sec">
+          <legend data-i18n="fp.type">Tipo</legend>
+          <div class="fp-btns" id="fpTypes"></div>
+        </fieldset>
+        <div class="fp-sec">
+          <label class="fp-label" for="fpText" data-i18n="fp.text">Testo delle regole (in inglese)</label>
+          <input type="search" id="fpText" lang="en" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"
+            data-i18n-ph="fp.textPh" placeholder="es. draw a card" aria-describedby="fpTextHint fpTextStatus">
+          <p class="note" id="fpTextHint" data-i18n="fp.textHint"></p>
+          <p class="note" id="fpTextStatus" aria-live="polite"></p>
+        </div>
+        <fieldset class="fp-sec fp-opts">
+          <legend data-i18n="fp.options">Opzioni della lista</legend>
+          <label class="f-field"><span data-i18n="filters.min">Min. mazzi</span>
+            <input type="number" id="optMin" min="1" max="9999" value="1" inputmode="numeric">
+          </label>
+          <label class="chk"><input type="checkbox" id="optLegal" checked> <span data-i18n="filters.legal">Solo legali</span></label>
+          <label class="chk"><input type="checkbox" id="optSide" checked> <span data-i18n="filters.side">Conta anche il side</span></label>
+        </fieldset>
+        <div class="fp-foot">
+          <button class="btn quiet small" id="fpClear" type="button" data-i18n="fp.clear">Togli tutti</button>
+          <button class="btn primary" id="fpDone" type="button"></button>
+        </div>
+      </div>
+    </dialog>
 
     <section class="results" id="results" aria-labelledby="verdict">
       <div class="res-head">

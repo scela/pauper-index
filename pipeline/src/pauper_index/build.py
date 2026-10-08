@@ -115,6 +115,7 @@ def build(online: bool = True, fetch: bool = True) -> dict:
 
     head, rows, order = outputs.build_cards(db, stats, kept, entries, ctx.sets_info, config.WINDOWS, totals, anchor)
     outputs.write_lines_json(config.DATA / "cards.json", head, "c", rows)
+    outputs.write_lines_json(config.DATA / "texts.json", {"v": 1}, "t", outputs.build_texts(db, order))
     phead, prows = outputs.build_printings(db, order, ctx.sets_info)
     outputs.write_lines_json(config.DATA / "printings.json", phead, "p", prows)
     # prezzi indicativi (Cardmarket via Scryfall), allineati a printings.json; il bulk è quello appena caricato
@@ -183,8 +184,8 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     outputs.write_json(config.DATA / "meta.json", meta, pretty=True)
 
     sizes = [outputs.size_info(config.DATA / f)
-             for f in ("cards.json", "printings.json", "names.json", "allnames.json", "cardnames.json", "sets.json",
-                       "seticons.svg", "decks-61.json", "decks-365.json", "prices.json", "meta.json")]
+             for f in ("cards.json", "texts.json", "printings.json", "names.json", "allnames.json", "cardnames.json",
+                       "sets.json", "seticons.svg", "decks-61.json", "decks-365.json", "prices.json", "meta.json")]
     names_hist = distinct_names(kept)
     names_y1 = distinct_names(kept, y1)
     summary = {

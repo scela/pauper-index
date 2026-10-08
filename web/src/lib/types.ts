@@ -8,6 +8,12 @@ export interface CardRow {
   n: string;
   l: 'l' | 'b' | 'n';
   b?: 1;
+  /** colori della carta in ordine WUBRG, assente se incolore (v3) */
+  k?: string;
+  /** mana value intero (v3) */
+  m?: number;
+  /** riga del tipo, tutte le facce (v3) */
+  tl?: string;
   e?: string;
   s: WindowStats[];
   f: string;

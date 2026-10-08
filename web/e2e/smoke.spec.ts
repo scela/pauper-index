@@ -94,9 +94,13 @@ test('i filtri aggiornano subito i risultati; terre base sempre escluse', async 
   await page.selectOption('#period', '0');
   await expect(page.locator('#sub')).toContainText(tr('periodDesc.0'));
   const before = await page.locator('#verdict').innerText();
+  // minimo mazzi, solo legali e side sono nel pannello "Filtri": la barra mostra periodo, espansione e ricerca
+  await expect(page.locator('#optMin')).toBeHidden();
+  await page.click('#filtersBtn');
   await page.fill('#optMin', '500');
   await expect(page.locator('#verdict')).not.toHaveText(before);
   await page.fill('#optMin', '1');
+  await page.click('#fpDone');
   await page.selectOption('#period', '3');
   for (const q of ['island', 'snow-covered', 'wastes']) {
     await page.fill('#search', q);
@@ -148,8 +152,12 @@ test('CSV ManaBox: riga compatta, solo possedute, mancanti, Binder inclusi, expo
   await page.locator('#impSummary').click();
   await expect(page.locator('#importSummary')).toContainText(tr('imp.notInList', { n: 1 }));
 
-  // export, con nomi di file nella lingua
+  // export, con nomi di file nella lingua: tutte le carte che rispettano i filtri attivi (qui la ricerca)
   await page.locator('#expDetails summary').click();
+  await page.click('[data-copy="missing"]');
+  // (gli appunti di Windows possono aggiungere spazi in fondo alle righe)
+  expect((await page.evaluate(() => navigator.clipboard.readText())).trim()).toBe('1 Kor Skyfisher');
+  await page.fill('#search', '');
   await page.click('[data-copy="owned"]');
   const clip = await page.evaluate(() => navigator.clipboard.readText());
   expect(clip).toContain('1 Brainstorm');
@@ -1005,4 +1013,147 @@ test('prezzi assenti (file mancante): "—" e nessun riepilogo, senza errori', a
   await expect(page.locator('#cardRows .c-price').first()).toHaveText('—');
   await expect(page.locator('#priceSummary')).toBeHidden();
   expect(problems).toEqual([]);
+});
+
+/* ---------- filtri per colore, costo, tipo e testo ---------- */
+
+const visibleNames = (page: Page) => page.locator('#cardRows .nm').allInnerTexts();
+
+test('filtri: pannello, etichette rimovibili, nota, conteggio, testo scaricato solo al primo uso', async ({ page }, info) => {
+  const problems = await setup(page);
+  const texts: string[] = [];
+  page.on('request', (r) => { if (r.url().includes('texts.json')) texts.push(r.url()); });
+  const mobile = info.project.name.startsWith('mobile');
+  const btn = page.locator('#filtersBtn');
+  await expect(btn).toHaveText(tr('filters.more'));
+  await expect(btn).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#activeFilters')).toBeHidden();
+  await page.selectOption('#period', '3');
+  const all = await counts(page);
+
+  await btn.click();
+  const panel = page.locator('#fpanel');
+  await expect(panel).toBeVisible();
+  await expect(btn).toHaveAttribute('aria-expanded', 'true');
+  // su mobile il pannello si apre dal basso (modale), su desktop sotto la barra
+  expect(await panel.evaluate((el) => el.matches(':modal'))).toBe(mobile);
+  await expect(page.locator('#fpText')).toHaveAttribute('placeholder', tr('fp.textPh'));
+  await expect(page.locator('label[for="fpText"]')).toHaveText(tr('fp.text'));
+  await expect(page.locator('#fpTypes [data-v]').first()).toHaveText(tr('ftype.Creature'));
+
+  // blu, costo 1, istantaneo: Brainstorm sì
+  const blue = page.locator('#fpColors [data-v="U"]');
+  await blue.click();
+  await expect(blue).toHaveAttribute('aria-pressed', 'true');
+  await expect(blue).toBeFocused(); // il pulsante premuto non perde il focus
+  await page.click('#fpMv [data-v="1"]');
+  await page.click('#fpTypes [data-v="Instant"]');
+  await expect(btn).toHaveText(tr('filters.moreN', { n: 3 }));
+  const c = await counts(page);
+  expect(c.head).toBe(all.head); // il titolo conta l'insieme del periodo, come con la ricerca
+  expect(c.note).toBe(c.list);
+  expect(c.list).toBeLessThan(all.list);
+  await expect(page.locator('#fpDone')).toHaveText(tr('fp.show', { n: c.list }));
+  await expect(page.locator('#filterNote')).toContainText(tr('why.mv', { v: '1' }));
+  await expect(page.locator('#filterNote')).toContainText(tr('why.type', { v: tr('ftype.Instant').toLocaleLowerCase(L) }));
+  expect(await visibleNames(page)).toContain('Brainstorm');
+
+  // testo delle regole: texts.json solo adesso
+  expect(texts).toEqual([]);
+  await page.fill('#fpText', 'PUT two cards');
+  await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm');
+  await expect(page.locator('#fpTextStatus')).toHaveText('');
+  expect(texts).toHaveLength(1);
+  await expect(btn).toHaveText(tr('filters.moreN', { n: 4 }));
+  // senza tipo e costo: anche i sottotipi della riga del tipo
+  await page.click('#fpTypes [data-v="Instant"]');
+  await page.click('#fpMv [data-v="1"]');
+  await page.fill('#fpText', 'faerie');
+  await expect(page.locator('#cardRows .nm').first()).toBeVisible();
+  await page.fill('#fpText', '');
+
+  // chiusura: il focus torna sul pulsante; Esc chiude
+  await page.click('#fpDone');
+  await expect(panel).toBeHidden();
+  await expect(btn).toBeFocused();
+  await expect(btn).toHaveAttribute('aria-expanded', 'false');
+  await btn.click();
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+
+  // etichette: una per colore; si tolgono una alla volta o tutte insieme
+  const chips = page.locator('#activeFilters .fchip');
+  await expect(chips).toHaveText([tr('color.U')]);
+  await btn.click();
+  await page.click('#fpColors [data-v="B"]');
+  await page.click('#fpMv [data-v="2"]');
+  await page.click('#fpMv [data-v="1"]');
+  await page.click('#fpMv [data-v="6"]');
+  await page.click('#fpDone');
+  await expect(chips).toHaveText([tr('color.U'), tr('color.B'), tr('chip.mv', { v: '1–2, 6+' })]);
+  await chips.nth(1).click();
+  await expect(chips).toHaveText([tr('color.U'), tr('chip.mv', { v: '1–2, 6+' })]);
+  await expect(chips.nth(0)).toHaveAttribute('aria-label', tr('chip.remove', { f: tr('color.U') }));
+  // "solo questi colori": un'etichetta sola
+  await btn.click();
+  await page.locator('label:has(input[name="colorMode"][value="only"])').click();
+  await page.click('#fpDone');
+  await expect(chips).toHaveText([tr('chip.colorsOnly', { list: tr('color.U') }), tr('chip.mv', { v: '1–2, 6+' })]);
+  await expect(page.locator('#filterNote')).toContainText(tr('why.colorOnly', { v: tr('color.U').toLocaleLowerCase(L) }));
+  await page.locator('#activeFilters .linkbtn').click();
+  await expect(page.locator('#activeFilters')).toBeHidden();
+  await expect(page.locator('#filterNote')).toBeHidden();
+  await expect(btn).toHaveText(tr('filters.more'));
+  expect((await counts(page)).list).toBe(all.list);
+
+  // "Togli questi filtri" nella nota toglie anche questi
+  await btn.click();
+  await page.click('#fpColors [data-v="C"]');
+  await page.click('#fpDone');
+  await expect(page.locator('#filterNote')).toBeVisible();
+  await page.locator('#clearListFilters').click();
+  await expect(page.locator('#activeFilters')).toBeHidden();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  expect(problems).toEqual([]);
+});
+
+test('filtri: export di tutte le carte filtrate, vista per espansione, azzerati alla visita successiva', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await setup(page);
+  await uploadCollection(page);
+  // possedute: Brainstorm, Counterspell, Delver, Tolarian Terror (blu), Lightning Bolt (rossa), Fire // Ice (blu e rossa)
+  await page.click('#filtersBtn');
+  await page.click('#fpColors [data-v="R"]');
+  await page.click('#fpDone');
+  await expect(page.locator('#activeFilters .fchip')).toHaveCount(1);
+  expect((await visibleNames(page)).sort()).toEqual(['Fire // Ice', 'Lightning Bolt']);
+  const clip = async () => (await page.evaluate(() => navigator.clipboard.readText())).split('\n').map((x) => x.trim()).filter(Boolean);
+  await page.locator('#expDetails summary').click();
+  await page.click('[data-copy="owned"]');
+  expect((await clip()).sort()).toEqual(['1 Fire // Ice', '1 Lightning Bolt']);
+  // le mancanti filtrate vanno nell'export anche se l'elenco non le mostra
+  await page.click('[data-copy="missing"]');
+  const missing = await clip();
+  expect(missing.length).toBeGreaterThan(10); // più delle 10 righe di una pagina
+  expect(missing).not.toContain('1 Brainstorm');
+  expect(missing).not.toContain('1 Lightning Bolt');
+  // "solo questi colori" con il rosso: via Fire // Ice
+  await page.click('#filtersBtn');
+  await page.locator('label:has(input[name="colorMode"][value="only"])').click();
+  await page.click('#fpDone');
+  await expect(page.locator('#cardRows .nm')).toHaveText(['Lightning Bolt']);
+
+  // vista per espansione: il filtro si combina con l'espansione
+  await pickSet(page, 'ice age', 'Ice Age');
+  await expect(page.locator('#activeFilters .fchip')).toHaveCount(1);
+  expect(await visibleNames(page)).not.toContain('Brainstorm');
+
+  // visita successiva: azzerati (l'espansione, che è una preferenza, resta)
+  await page.reload();
+  await expect(page.locator('#dataline')).toContainText(head('data.line'));
+  await expect(page.locator('#setWrap')).toHaveClass(/has-set/);
+  await expect(page.locator('#activeFilters')).toBeHidden();
+  await expect(page.locator('#filtersBtn')).toHaveText(tr('filters.more'));
+  await expect(page.locator('#cardRows .nm', { hasText: 'Brainstorm' })).toHaveCount(1);
 });

@@ -17,14 +17,17 @@ import type { Group, Role, Row } from './lib/types';
 import { collectionIndex, type CollectionIndex, type Owned } from './lib/quick';
 import { buildGroups, displayPrint, iconOf, memberCodes, printsInSets, rarityHere, type SetGroup, type SetRow } from './lib/sets';
 import { setIcon } from './ui/seticon';
-import { restrictToSet, shownNote, visible, type Seen } from './lib/view';
+import { restrictToSet, shownNote, visible, type ListFilters, type Seen } from './lib/view';
+import { availableTypes, emptyFilters, haystacks, isActive, mvLabel, textWords, type CardFilters } from './lib/cardfilter';
+import { clearFilters, colorLabel, initFilterPanel, typeLabel } from './ui/filterpanel';
 import { renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
 import { initDust } from './ui/dust';
 import { initQuick } from './ui/quick';
 import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openSheet, recentlyClosed, renderGrid, scheduleClose, unblockHover } from './ui/sheet';
 
-// Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa.
+// Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa
+// (gli export: tutte le carte che rispettano i filtri attivi, non solo quelle mostrate).
 const PAGE = 10;
 const NEW_DAYS = 60;
 const STALE_SOURCE_DAYS = 21;
@@ -58,6 +61,11 @@ const S = {
   query: '',
   // i filtri che nascondono carte (ultima apparizione, ricerca, "Solo quelle che possiedi") non si salvano mai
   seen: 'all' as Seen,
+  // colore, costo di mana, tipo e testo delle regole (pannello "Filtri"): anche questi mai salvati
+  cf: emptyFilters() as CardFilters,
+  /** testo in cui cercare (riga del tipo e testo delle regole), da data/texts.json scaricato al primo uso */
+  hay: null as string[] | null,
+  types: [] as string[],
   sort: (lsGet('sort') as 'share' | 'name' | 'recent' | 'oldest') || 'share',
   results: [] as Result[],
   view: [] as Result[],
@@ -77,6 +85,8 @@ const S = {
 let quick: { refresh(): void } | null = null;
 let dust: { refresh(): void } | null = null;
 let setPicker: { refresh(): void } | null = null;
+let panel: { render(): void; close(): void } | null = null;
+let textsLoading: Promise<boolean> | null = null;
 let setsLoading: Promise<Map<string, SetGroup> | null> | null = null;
 let toastTimer: number | undefined;
 let resetTimer: number | undefined;
@@ -94,6 +104,7 @@ interface Removed {
   query: string;
   seen: typeof S.seen;
   setOwned: boolean;
+  cf: CardFilters;
 }
 const UNDO_MS = 8000;
 let removed: Removed | null = null;
@@ -172,10 +183,11 @@ function removeCollection(): void {
   commitRemoval(); // una rimozione precedente ancora annullabile diventa definitiva
   removed = {
     groups: S.groups, roles: S.roles, summaries: S.summaries, showMissing: S.showMissing, savedAt: S.savedAt,
-    query: S.query, seen: S.seen, setOwned: S.setOwned,
+    query: S.query, seen: S.seen, setOwned: S.setOwned, cf: S.cf,
   };
   // via solo la collezione: periodo, lingua, tema e le altre preferenze restano; i filtri dell'elenco ripartono azzerati
-  Object.assign(S, { groups: [], roles: {}, summaries: [], showMissing: false, query: '', seen: 'all', setOwned: false, replacing: false });
+  Object.assign(S, { groups: [], roles: {}, summaries: [], showMissing: false, query: '', seen: 'all', setOwned: false, replacing: false,
+    cf: emptyFilters() });
   ($('#search') as HTMLInputElement).value = '';
   ($('#seenFilter') as HTMLSelectElement).value = 'all';
   showErrors([]);
@@ -202,7 +214,7 @@ function undoRemoval(): void {
   hideUndo();
   Object.assign(S, {
     groups: r.groups, roles: r.roles, summaries: r.summaries, showMissing: r.showMissing, savedAt: r.savedAt,
-    query: r.query, seen: r.seen, setOwned: r.setOwned,
+    query: r.query, seen: r.seen, setOwned: r.setOwned, cf: r.cf,
   });
   ($('#search') as HTMLInputElement).value = r.query;
   ($('#seenFilter') as HTMLSelectElement).value = r.seen;
@@ -474,6 +486,7 @@ function renderResults(): void {
   renderRows();
   renderNote(headline);
   renderPriceSummary();
+  panel?.render();
 }
 
 /* ---------- prezzi indicativi ---------- */
@@ -512,7 +525,7 @@ function renderPriceSummary(): void {
   el.hidden = !S.prices || !S.d;
   if (el.hidden) return el.replaceChildren();
   // stessi filtri dell'elenco (ricerca, ultima apparizione), comprese le mancanti anche se l'elenco non le mostra
-  const rows = visible(S.d!, S.results, { ...listFilters(), onlyOwned: false });
+  const rows = matching();
   const tot = priceTotals(S.d!, S.prices, rows, missingPrice);
   const unpriced = (n: number) => (n ? ` (${t('price.unpriced', { n: fmtInt(n) })})` : '');
   const parts: string[] = [];
@@ -526,8 +539,39 @@ function renderPriceSummary(): void {
 }
 
 /** Filtri dell'elenco: senza espansione di default solo le possedute; con un'espansione tutte, a richiesta solo le possedute. */
-function listFilters() {
-  return { query: S.query, seen: S.seen, onlyOwned: hasColl() && (S.setCodes ? S.setOwned : !S.showMissing) };
+function listFilters(): ListFilters {
+  return { query: S.query, seen: S.seen, onlyOwned: hasColl() && (S.setCodes ? S.setOwned : !S.showMissing), card: S.cf, hay: S.hay };
+}
+
+/** Carte che rispettano tutti i filtri attivi, possedute e mancanti: export e riepilogo dei prezzi. */
+function matching(): Result[] {
+  return visible(S.d!, S.results, { ...listFilters(), onlyOwned: false });
+}
+
+/** Colore, costo, tipo e testo (pannello "Filtri") attivi; il testo conta solo quando texts.json è arrivato. */
+const cardFiltersOn = () => isActive(S.cf);
+
+async function loadTexts(): Promise<boolean> {
+  if (S.hay) return true;
+  textsLoading ??= fetch('data/texts.json')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j: { t?: string[] } | null) => {
+      if (!S.d || !Array.isArray(j?.t) || j.t.length !== S.d.cards.c.length) return false;
+      S.hay = haystacks(S.d.cards.c, j.t);
+      return true;
+    })
+    .catch(() => false)
+    .then((ok) => {
+      if (!ok) textsLoading = null; // si riprova al prossimo uso
+      return ok;
+    });
+  return textsLoading;
+}
+
+/** I filtri del pannello sono cambiati: l'elenco riparte dalle prime carte. */
+function cardFiltersChanged(): void {
+  S.shown = PAGE;
+  renderResults();
 }
 
 function filtered(): Result[] {
@@ -550,6 +594,16 @@ function noteReasons(): string[] {
   const f = listFilters();
   if (S.query.trim()) why.push(t('why.search', { q: S.query.trim() }));
   if (S.seen !== 'all') why.push(t(S.seen === 'old' ? 'why.old' : 'why.recent'));
+  const cf = S.cf;
+  const lower = (x: string) => x.toLocaleLowerCase(getLang());
+  if (cf.colors.length) {
+    why.push(cf.colorMode === 'only'
+      ? t('why.colorOnly', { v: cf.colors.map((c) => lower(colorLabel(c))).join(t('why.and')) })
+      : t('why.color', { v: cf.colors.map((c) => lower(colorLabel(c))).join(t('why.or')) }));
+  }
+  if (cf.mv.length) why.push(t('why.mv', { v: mvLabel(cf.mv) }));
+  if (cf.types.length) why.push(t('why.type', { v: cf.types.map((x) => lower(typeLabel(x))).join(t('why.or')) }));
+  if (textWords(cf.text).length) why.push(t('why.text', { q: cf.text.trim() }));
   if (S.setCodes && f.onlyOwned) why.push(t('why.onlyOwned'));
   if (!S.setCodes && hasColl() && S.showMissing) why.push(t('why.missing'));
   return why;
@@ -562,7 +616,7 @@ function renderNote(headline: Result[]): void {
   el.hidden = n === null;
   if (n === null) return el.replaceChildren();
   const why = noteReasons();
-  const clearable = !!S.query.trim() || S.seen !== 'all' || (!!S.setCodes && S.setOwned);
+  const clearable = !!S.query.trim() || S.seen !== 'all' || (!!S.setCodes && S.setOwned) || cardFiltersOn();
   el.replaceChildren(t('res.filtered', { n: fmtInt(n), why: why.join(', ') }),
     clearable ? ' · ' : '', clearable ? h('button', { class: 'linkbtn', type: 'button', id: 'clearListFilters' }, t('res.clearFilters')) : '');
 }
@@ -645,7 +699,7 @@ function renderRows(): void {
   count.textContent = t('res.shown', { n: fmtInt(rows.length), total: fmtInt(S.view.length) });
   if (!rows.length) {
     $('#cardRows').replaceChildren(h('tr', { class: 'nores' }, h('td', { colspan: 6 },
-      S.query || S.seen !== 'all' ? t('res.noMatch') : S.setCodes ? (S.setOwned ? t('res.noOwned') : t('set.empty'))
+      S.query || S.seen !== 'all' || cardFiltersOn() ? t('res.noMatch') : S.setCodes ? (S.setOwned ? t('res.noOwned') : t('set.empty'))
         : coll && !S.showMissing ? t('res.noOwned') : t('res.none'))));
     return;
   }
@@ -776,8 +830,10 @@ async function renderNews(): Promise<void> {
 
 function payload(kind: string): string {
   const d = S.d!;
-  if (kind === 'csv') return realignedCSV(d, S.results);
-  return textList(d, S.results, kind as 'owned' | 'missing');
+  // tutte le carte che rispettano i filtri attivi (anche quelle non ancora mostrate), possedute e mancanti
+  const rows = matching();
+  if (kind === 'csv') return realignedCSV(d, rows);
+  return textList(d, rows, kind as 'owned' | 'missing');
 }
 
 const LABEL: Record<string, Key> = { owned: 'export.labelOwned', missing: 'export.labelMissing', csv: 'export.labelCsv' };
@@ -987,7 +1043,8 @@ function wire(): void {
     S.query = '';
     S.seen = 'all';
     S.setOwned = false;
-      ($('#search') as HTMLInputElement).value = '';
+    clearFilters(S.cf);
+    ($('#search') as HTMLInputElement).value = '';
     seenSel.value = 'all';
     ($('#setOwned') as HTMLInputElement).checked = false;
     S.shown = PAGE;
@@ -1134,7 +1191,9 @@ function wire(): void {
     removed = null;
     hideUndo();
     await clearAll();
-    Object.assign(S, { groups: [], roles: {}, opts: { ...DEFAULT_OPTS }, showMissing: false, savedAt: null, summaries: [], query: '', replacing: false });
+    Object.assign(S, { groups: [], roles: {}, opts: { ...DEFAULT_OPTS }, showMissing: false, savedAt: null, summaries: [], query: '', replacing: false,
+      seen: 'all', setOwned: false, cf: emptyFilters() });
+    seenSel.value = 'all';
     ($('#search') as HTMLInputElement).value = '';
     showErrors([]);
     // anche la lingua scelta è cancellata: si torna a quella del browser
@@ -1192,6 +1251,9 @@ async function main(): Promise<void> {
       if (S.setFilter) refresh(false);
     },
   });
+  panel = initFilterPanel({
+    filters: () => S.cf, types: () => S.types, change: cardFiltersChanged, count: () => S.view.length, loadTexts,
+  });
   quick = initQuick({
     data: () => S.d, opts: () => S.opts, collection: () => (hasColl() ? S.cix : null), openArtworks: openArtworksFor,
   });
@@ -1208,6 +1270,7 @@ async function main(): Promise<void> {
     return;
   }
   renderDataline();
+  S.types = availableTypes(S.d.cards.c);
   await restore();
   lsDel('seen'); // salvata dalle versioni precedenti: non più usata
   // espansione scelta nella visita precedente (preferenza): si ripristina dopo aver letto data/sets.json
