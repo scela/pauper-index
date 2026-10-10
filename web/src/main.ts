@@ -21,6 +21,7 @@ import { restrictToSet, shownNote, visible, type ListFilters, type Seen } from '
 import { availableTypes, emptyFilters, haystacks, isActive, mvLabel, textWords, type CardFilters } from './lib/cardfilter';
 import { clearFilters, colorLabel, initFilterPanel, typeLabel } from './ui/filterpanel';
 import { italianLoaded, loadItalian, nameHays } from './lib/italian';
+import { initAnalytics, track } from './lib/analytics';
 import { renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
 import { initDust } from './ui/dust';
@@ -315,6 +316,7 @@ async function handleFiles(files: File[]): Promise<void> {
     await summarizeImport(p.name, p.r.kind!, p.r.groups!);
   }
   refresh();
+  track('collezione-caricata');
 }
 
 async function handleText(): Promise<void> {
@@ -350,6 +352,7 @@ async function handleText(): Promise<void> {
   ta.value = '';
   await summarizeImport(groups.length === 1 && groups[0].source !== PASTED ? groups[0].name : PASTED, kind, groups);
   refresh();
+  track('collezione-caricata');
 }
 
 function showErrors(list: string[]): void {
@@ -404,6 +407,7 @@ function applySetFilter(): void {
 
 function selectSet(code: string | null): void {
   S.setFilter = code;
+  if (code) track('filtro-espansione');
   if (code) lsSet('set', code);
   else lsDel('set');
   refresh(false);
@@ -871,6 +875,7 @@ const LABEL: Record<string, Key> = { owned: 'export.labelOwned', missing: 'expor
 
 async function copyText(text: string, what: string): Promise<void> {
   if (!text.trim()) return toast(t('export.nothingCopy', { what }));
+  track('export');
   try {
     await navigator.clipboard.writeText(text);
     return toast(t('export.copied', { what }));
@@ -883,6 +888,7 @@ async function copyText(text: string, what: string): Promise<void> {
 
 function saveText(text: string, filename: string, what: string): void {
   if (!text.trim()) return toast(t('export.nothingSave', { what }));
+  track('export');
   const url = URL.createObjectURL(new Blob([text], { type: /\.csv$/.test(filename) ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' }));
   const a = h('a', { href: url, download: filename });
   document.body.appendChild(a);
@@ -989,7 +995,10 @@ function route(): void {
   document.querySelector<HTMLElement>('.wrap > .foot')!.hidden = about;
   closeSheet();
   if (about) renderAbout($('#viewAbout'), S.d);
-  if (decksPage) decks?.show();
+  if (decksPage) {
+    decks?.show();
+    track('mazzi');
+  }
   if (about || forgotten || decksPage) window.scrollTo(0, 0);
 }
 
@@ -1288,6 +1297,7 @@ function wire(): void {
 
 async function main(): Promise<void> {
   setLang(detectLang(lsGet('lang'), navigator.languages || [navigator.language]));
+  initAnalytics();
   applyStatic();
   wire();
   setPicker = initSetPicker({

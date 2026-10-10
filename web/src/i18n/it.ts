@@ -351,7 +351,7 @@ export const it = {
   'about.faq.precision.q': 'Quanto sono precise le percentuali?',
   'about.faq.precision.a': 'Sono indicative: MTGO pubblica solo le liste 5-0 delle League e i primi 32 dei Challenge, quindi le percentuali favoriscono i mazzi vincenti.',
   'about.faq.privacy.q': 'La mia collezione è al sicuro?',
-  'about.faq.privacy.a': 'Sì: resta nel tuo browser, senza account, cookie o analytics, e “Cancella i miei dati” la elimina. Le immagini arrivano dai server di Scryfall e l’hosting (GitHub Pages) registra dati tecnici di accesso.',
+  'about.faq.privacy.a': 'Sì: resta nel tuo browser e non viene mai inviata, senza account né cookie, e “Cancella i miei dati” la elimina. Le visite vengono contate in forma anonima con GoatCounter, senza cookie: si registrano solo la pagina e quali funzioni vengono usate, mai le tue carte. Le immagini arrivano dai server di Scryfall e l’hosting (GitHub Pages) registra dati tecnici di accesso.',
   'about.faq.report.q': 'Come segnalo un errore?',
   'about.faq.report.a': 'Scrivi a {email} indicando la carta, cosa ti aspettavi e cosa vedi.',
   'about.faq.support.q': 'Come posso sostenere il sito?',
