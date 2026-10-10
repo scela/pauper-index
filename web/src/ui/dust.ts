@@ -10,6 +10,7 @@
 import { t } from '../i18n';
 import type { Opts } from '../lib/compare';
 import { imageUrl, type Data } from '../lib/data';
+import { track } from '../lib/analytics';
 import { h, svg } from '../lib/dom';
 import { commitCard, dustPool, historyWindow, peakYear, pickCard } from '../lib/dust';
 import { fmtDate, fmtInt, fmtPct, fmtPrint, lastSeen } from '../lib/format';
@@ -267,6 +268,7 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
     const d = ctx.data();
     if (!d) return;
     if (running) return running.finish(); // nuova pressione durante l'animazione: salta subito alla fine
+    track('carta-dimenticata');
     const poolList = poolNow(d);
     let p = next && poolList.includes(next.idx) ? next : null;
     if (!p) {
