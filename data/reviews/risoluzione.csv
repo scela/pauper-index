@@ -21,7 +21,7 @@ hounting misery,alias,Haunting Misery,1
 hunter's bowgun,alias,Hunter's Blowgun,1
 murmuring mistic,alias,Murmuring Mystic,1
 piroblast,alias,Pyroblast,1
-"Darval, Whose Web Protects",alt,"Spider-Man, Web-Slinger",260
+"Darval, Whose Web Protects",alt,"Spider-Man, Web-Slinger",265
 Wonderweave Aerialist,alt,Skyward Spider,131
 Skittering Kitten,alt,Masked Meower,114
 Leyline Weaver,alt,Spider Manifestation,86
@@ -40,22 +40,22 @@ Eldrazi Spawn Token,excluded,Eldrazi Spawn Token,1
 Food Token,excluded,Food Token,1
 Goblin,excluded,Goblin,1
 Undercity Card // The Initiative Card,excluded,Undercity Card // The Initiative Card,1
-Delver of Secrets,face,Delver of Secrets // Insectile Aberration,14579
-Tithing Blade,face,Tithing Blade // Consuming Sepulcher,5036
-The Modern Age,face,The Modern Age // Vector Glider,4424
-Sagu Wildling,face,Sagu Wildling // Roost Seek,3889
-Lunarch Veteran,face,Lunarch Veteran // Luminous Phantom,3344
-Fang Dragon,face,Fang Dragon // Forktail Sweep,779
-Stormshriek Feral,face,Stormshriek Feral // Flush Out,538
+Delver of Secrets,face,Delver of Secrets // Insectile Aberration,14629
+Tithing Blade,face,Tithing Blade // Consuming Sepulcher,5134
+The Modern Age,face,The Modern Age // Vector Glider,4429
+Sagu Wildling,face,Sagu Wildling // Roost Seek,4034
+Lunarch Veteran,face,Lunarch Veteran // Luminous Phantom,3379
+Fang Dragon,face,Fang Dragon // Forktail Sweep,794
+Stormshriek Feral,face,Stormshriek Feral // Flush Out,548
 Guardian Naga,face,Guardian Naga // Banishing Coils,433
 Pegasus Guardian,face,Pegasus Guardian // Rescue the Foal,326
 Loyal Cathar,face,Loyal Cathar // Unhallowed Cathar,244
-Okiba Reckoner Raid,face,Okiba Reckoner Raid // Nezumi Road Captain,220
-Elite Interceptor,face,Elite Interceptor // Rejoinder,90
+Okiba Reckoner Raid,face,Okiba Reckoner Raid // Nezumi Road Captain,221
+Elite Interceptor,face,Elite Interceptor // Rejoinder,94
 Merchant of the Vale,face,Merchant of the Vale // Haggle,58
+Blessed Hippogriff,face,Blessed Hippogriff // Tyr's Blessing,42
 Faerie Guidemother,face,Faerie Guidemother // Gift of the Fae,42
 Rimrock Knight,face,Rimrock Knight // Boulder Rush,42
-Blessed Hippogriff,face,Blessed Hippogriff // Tyr's Blessing,41
 Dirgur Island Dragon,face,Dirgur Island Dragon // Skimming Strike,23
 "Smaug, the Great Calamity",face,"Smaug, the Great Calamity // Spew Flame",19
 Sword Coast Serpent,face,Sword Coast Serpent // Capsizing Wave,19
@@ -63,7 +63,7 @@ Besotted Knight,face,Besotted Knight // Betroth the Beast,18
 Dread Linnorm,face,Dread Linnorm // Scale Deflection,18
 Ecstatic Awakener,face,Ecstatic Awakener // Awoken Demon,17
 Merfolk Secretkeeper,face,Merfolk Secretkeeper // Venture Deeper,14
-Ferocious Werefox,face,Ferocious Werefox // Guard Change,12
+Ferocious Werefox,face,Ferocious Werefox // Guard Change,13
 Reaper of Night,face,Reaper of Night // Harvest Fear,12
 Ettercap,face,Ettercap // Web Shot,9
 Ulvenwald Captive,face,Ulvenwald Captive // Ulvenwald Abomination,9

@@ -1,14 +1,21 @@
 {
   "prima": {
-    "tournaments": 8596,
-    "decks": 206836,
+    "tournaments": 8641,
+    "decks": 208086,
     "tornei_senza_mazzi": 0
   },
   "dopo": {
-    "tournaments": 7062,
-    "decks": 155432
+    "tournaments": 7101,
+    "decks": 156550
   },
   "regola1_file_identici": [
+    {
+      "scartata": "CardsRealm",
+      "tenuta": "CardsRealm",
+      "anno": 2026,
+      "tornei": 1,
+      "mazzi": 1
+    },
     {
       "scartata": "magic.wizards.com",
       "tenuta": "magic.wizards.com",
@@ -132,8 +139,8 @@
       "scartata": "mtgo.com_limited_data",
       "tenuta": "melee.gg",
       "anno": 2026,
-      "tornei": 24,
-      "mazzi": 586
+      "tornei": 26,
+      "mazzi": 623
     },
     {
       "scartata": "mtgo.com_limited_data",
@@ -153,8 +160,8 @@
       "scartata": "mtgo.com_limited_data",
       "tenuta": "mtgo.com_limited_data",
       "anno": 2026,
-      "tornei": 11,
-      "mazzi": 340
+      "tornei": 14,
+      "mazzi": 434
     }
   ],
   "regola2_mazzi_ripetuti": [

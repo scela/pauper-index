@@ -1,66 +1,66 @@
 {
-  "generated_at": "2026-10-12T16:48:36+00:00",
-  "last_tournament": "2026-10-04",
-  "tournaments": 7062,
-  "decks": 155432,
+  "generated_at": "2026-10-13T15:07:40+00:00",
+  "last_tournament": "2026-10-11",
+  "tournaments": 7101,
+  "decks": 156550,
   "windows": [
     {
       "days": 61,
-      "decks": 5790,
-      "tournaments": 237
+      "decks": 6341,
+      "tournaments": 253
     },
     {
       "days": 365,
-      "decks": 32848,
-      "tournaments": 1178
+      "decks": 33579,
+      "tournaments": 1199
     },
     {
       "days": 730,
-      "decks": 51900,
-      "tournaments": 1951
+      "decks": 52742,
+      "tournaments": 1979
     },
     {
       "days": null,
-      "decks": 155432,
-      "tournaments": 7062
+      "decks": 156550,
+      "tournaments": 7101
     }
   ],
-  "cards": 5037,
+  "cards": 5051,
   "scryfall": {
-    "oracle_cards": "2026-10-12T09:02:38.125+00:00",
-    "default_cards": "2026-10-12T09:05:45.962+00:00"
+    "oracle_cards": "2026-10-13T09:02:01.814+00:00",
+    "default_cards": "2026-10-13T09:06:00.503+00:00"
   },
   "source": {
-    "commit": "aba62d6091b463396ab1308d2682f1f7cf96b5a3",
-    "commit_date": "2026-10-05T05:16:51+02:00",
+    "commit": "686a3f1f0962dfe2e8901523b83c98b5ce59b181",
+    "commit_date": "2026-10-12T19:54:44+02:00",
     "url": "https://github.com/Jiliac/MTGODecklistCache.git",
     "status": "ok",
-    "days_since_last_tournament": 8
+    "days_since_last_tournament": 2
   },
   "dedup": {
     "before": {
-      "tournaments": 8596,
-      "decks": 206836,
+      "tournaments": 8641,
+      "decks": 208086,
       "tornei_senza_mazzi": 0
     },
     "after": {
-      "tournaments": 7062,
-      "decks": 155432
+      "tournaments": 7101,
+      "decks": 156550
     }
   },
   "resolution": {
-    "distinct_names": 5259,
+    "distinct_names": 5273,
     "methods": {
       "alias": 22,
       "alt": 15,
-      "exact": 5048,
+      "exact": 5062,
       "excluded": 4,
       "face": 54,
       "foreign": 108,
       "unresolved": 8
     },
     "unresolved_occurrences": 8,
-    "occurrences": 3886807,
+    "occurrences": 3914616,
     "unresolved_pct": 0.0002
   }
 }

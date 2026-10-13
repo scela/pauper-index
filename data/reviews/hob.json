@@ -1,0 +1,373 @@
+{
+ "set": "hob",
+ "nome": "The Hobbit",
+ "uscita": "2026-08-14",
+ "data": "2026-10-13",
+ "set_del_gruppo": [
+  "hob",
+  "hoc",
+  "thob"
+ ],
+ "confronto_con": "2026-10-05",
+ "mazzi_ultimo_anno": 33579,
+ "nuove": [
+  [
+   "Giant's Boulder",
+   763,
+   2.27
+  ],
+  [
+   "Plunder the Trollshaws",
+   288,
+   0.86
+  ],
+  [
+   "Ragged Short Spear",
+   86,
+   0.26
+  ],
+  [
+   "Patient Instructor",
+   25,
+   0.07
+  ],
+  [
+   "Smaug, the Great Calamity // Spew Flame",
+   19,
+   0.06
+  ],
+  [
+   "Old Thrush",
+   17,
+   0.05
+  ],
+  [
+   "Ravening Warg",
+   7,
+   0.02
+  ],
+  [
+   "Bilbo Baggins, Burglar // Take a Glance",
+   6,
+   0.02
+  ],
+  [
+   "Confusticate and Bebother",
+   6,
+   0.02
+  ],
+  [
+   "Gandalf, Wandering Wizard",
+   4,
+   0.01
+  ],
+  [
+   "Hobbit Hole",
+   3,
+   0.01
+  ],
+  [
+   "Attercop",
+   2,
+   0.01
+  ],
+  [
+   "Crude Bent Blade",
+   2,
+   0.01
+  ],
+  [
+   "Mirkwood Nurturer",
+   2,
+   0.01
+  ],
+  [
+   "Lake-town Lookout",
+   1,
+   0.0
+  ],
+  [
+   "Lakeshore Apothecary",
+   1,
+   0.0
+  ],
+  [
+   "Smaug's Fury",
+   1,
+   0.0
+  ],
+  [
+   "Stir Up Trouble",
+   1,
+   0.0
+  ],
+  [
+   "Stony-Voiced Goblins",
+   1,
+   0.0
+  ],
+  [
+   "Tidings of War",
+   1,
+   0.0
+  ],
+  [
+   "Velvetwing Butterflies // Gaze in Wonder",
+   1,
+   0.0
+  ]
+ ],
+ "entrate": [
+  [
+   "Greenhouse Propagator",
+   4,
+   0.01
+  ],
+  [
+   "Solve for Disappointment",
+   3,
+   0.01
+  ],
+  [
+   "Ambitious Assault",
+   2,
+   0.01
+  ],
+  [
+   "Aboshan's Desire",
+   1,
+   0.0
+  ],
+  [
+   "Act of Treason",
+   1,
+   0.0
+  ],
+  [
+   "Aegis Turtle",
+   1,
+   0.0
+  ],
+  [
+   "Aether Spellbomb",
+   1,
+   0.0
+  ],
+  [
+   "Bola Slinger",
+   1,
+   0.0
+  ],
+  [
+   "Cackling Prowler",
+   1,
+   0.0
+  ],
+  [
+   "Campus Crier",
+   1,
+   0.0
+  ],
+  [
+   "Claws of Wirewood",
+   1,
+   0.0
+  ],
+  [
+   "Confront the Unknown",
+   1,
+   0.0
+  ],
+  [
+   "Corpse Churn",
+   1,
+   0.0
+  ],
+  [
+   "Dissenter's Deliverance",
+   1,
+   0.0
+  ],
+  [
+   "Fists of Ironwood",
+   1,
+   0.0
+  ],
+  [
+   "Floodhound",
+   1,
+   0.0
+  ],
+  [
+   "Glimmerlight",
+   1,
+   0.0
+  ],
+  [
+   "Glorifier of Suffering",
+   1,
+   0.0
+  ],
+  [
+   "Helicarrier Strike",
+   1,
+   0.0
+  ],
+  [
+   "Hexhaven Battalion",
+   1,
+   0.0
+  ],
+  [
+   "Join the Ranks",
+   1,
+   0.0
+  ],
+  [
+   "Mosquito Guard",
+   1,
+   0.0
+  ],
+  [
+   "Nightblade Brigade",
+   1,
+   0.0
+  ],
+  [
+   "Order of Leitbur",
+   1,
+   0.0
+  ],
+  [
+   "Preemptive Strike",
+   1,
+   0.0
+  ],
+  [
+   "Prophetic Ravings",
+   1,
+   0.0
+  ],
+  [
+   "Soltari Emissary",
+   1,
+   0.0
+  ],
+  [
+   "Soltari Trooper",
+   1,
+   0.0
+  ],
+  [
+   "Stormplain Detainment",
+   1,
+   0.0
+  ],
+  [
+   "Sunspring Expedition",
+   1,
+   0.0
+  ],
+  [
+   "Surgical Precision",
+   1,
+   0.0
+  ],
+  [
+   "Unexpected Assistance",
+   1,
+   0.0
+  ],
+  [
+   "Wardscale Crocodile",
+   1,
+   0.0
+  ],
+  [
+   "Wavesifter",
+   1,
+   0.0
+  ],
+  [
+   "Workshop Assistant",
+   1,
+   0.0
+  ]
+ ],
+ "uscite": [
+  [
+   "Blightbelly Rat",
+   1
+  ],
+  [
+   "Chaplain's Blessing",
+   1
+  ],
+  [
+   "Colossal Dreadmaw",
+   1
+  ],
+  [
+   "Conviction",
+   1
+  ],
+  [
+   "Ember-Eye Wolf",
+   1
+  ],
+  [
+   "Fathom Fleet Firebrand",
+   1
+  ],
+  [
+   "Frenzy Sliver",
+   1
+  ],
+  [
+   "Goblin Javelineer",
+   1
+  ],
+  [
+   "Goblin Wizardry",
+   1
+  ],
+  [
+   "Gossamer Chains",
+   1
+  ],
+  [
+   "March of the Drowned",
+   1
+  ],
+  [
+   "Plague Stinger",
+   1
+  ],
+  [
+   "Rush of Adrenaline",
+   1
+  ],
+  [
+   "Swarm Surge",
+   1
+  ],
+  [
+   "Twisted Experiment",
+   1
+  ],
+  [
+   "Uncaged Fury",
+   1
+  ],
+  [
+   "Unstable Mutation",
+   1
+  ],
+  [
+   "Violent Impact",
+   1
+  ]
+ ],
+ "legalita": [],
+ "non_risolti_nuovi": []
+}
