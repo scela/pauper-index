@@ -48,7 +48,7 @@ jobs:
           pip install -r pipeline/requirements-lock.txt -e pipeline
           python -m pytest pipeline -q
           ruff check pipeline
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -174,7 +174,7 @@ jobs:
           pip install -r pipeline/requirements-lock.txt -e pipeline
           # senza prezzi il sito funziona lo stesso (mostra "—"): un errore qui non blocca la pubblicazione
           python -m pauper_index prices || echo "::warning::prezzi non generati: il sito mostra '—'"
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
