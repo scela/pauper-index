@@ -285,14 +285,30 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
 .qnotowned{font-weight:600}
 
 /* caricamento */
-.load{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-.drop{position:relative;display:grid;align-content:center;justify-items:start;gap:2px;min-height:112px;padding:16px 20px;border:1.5px dashed var(--line-strong);border-radius:var(--r-m);background:var(--surface);cursor:pointer;transition:border-color .15s,background-color .15s}
-.drop:hover,.drop.over{border-color:var(--accent)}
-.drop.over{background:var(--accent-soft)}
-.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
-.drop strong{font-size:1.0625rem;font-weight:600}
-.drop span{color:var(--muted);font-size:.875rem}
-.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+/* un solo blocco: frase, "File CSV di ManaBox", "Incolla una lista" (area di testo su richiesta), aiuto per l'export;
+   su desktop tutto il blocco accetta anche i file trascinati */
+.drop{display:grid;gap:10px;padding:14px 16px;border:1.5px dashed var(--line-strong);border-radius:var(--r-m);background:var(--surface);transition:border-color .15s,background-color .15s}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.load-intro{margin:0;font-size:1rem;font-weight:600;line-height:1.35}
+.load-actions{display:flex;flex-wrap:wrap;gap:8px}
+.load-actions .btn{min-height:44px}
+.filebtn{position:relative;cursor:pointer}
+.filebtn input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.filebtn:focus-within{outline:3px solid var(--ink);outline-offset:2px}
+.howto{font-size:.875rem}
+.howto summary{min-height:32px;display:inline-flex;align-items:center}
+.howto ol{margin:6px 0 4px;padding-left:1.3em;display:grid;gap:4px}
+.howto .note{margin:0}
+.drop-hint{margin:0;color:var(--muted);font-size:.8125rem}
+@media (min-width:761px){
+  .drop{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 16px;padding:12px 16px}
+  .load-actions{justify-content:flex-end}
+  .howto{grid-column:1}
+  .drop-hint{grid-column:2;grid-row:2;text-align:right;align-self:start;padding-top:7px}
+  .howto[open]{grid-column:1/-1}
+  .paste{grid-column:1/-1}
+}
+@media (hover:none),(max-width:760px){.drop-hint{display:none}}
 .paste{display:grid;gap:6px;align-content:start}
 .paste label{font-size:.875rem;color:var(--muted)}
 textarea{font:inherit;font-size:16px;width:100%;min-height:64px;resize:vertical;padding:8px 10px;border:1px solid var(--line-strong);border-radius:var(--r-s);background:var(--surface);color:var(--ink)}
@@ -300,7 +316,11 @@ textarea{font:inherit;font-size:16px;width:100%;min-height:64px;resize:vertical;
 .errors{margin:8px 0 0;padding:0;list-style:none;color:var(--danger);font-size:.875rem}
 .errors li+li{margin-top:4px}
 .loaded:not([hidden]){display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px}
-.removecoll{gap:6px;color:var(--ink)}
+.loaded-text{min-width:0}
+/* "Rimuovi": piccolo, ma con un'area di tocco di 44 px */
+.removecoll{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 4px;color:var(--muted);text-decoration:none;font-size:.875rem}
+.removecoll:hover{color:var(--ink);text-decoration:underline}
+.removecoll:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .rm-ico{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 /* "Collezione rimossa · Annulla": in basso come il toast, ma con un pulsante raggiungibile da tastiera */
 .undo{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:61;display:flex;align-items:center;gap:10px;
@@ -311,7 +331,7 @@ textarea{font:inherit;font-size:16px;width:100%;min-height:64px;resize:vertical;
 .undo-btn{background:transparent;color:var(--bg);border-color:color-mix(in srgb,var(--bg) 60%,transparent)}
 .undo-btn:hover{border-color:var(--bg)}
 .undo-btn:focus-visible{outline:2px solid var(--bg);outline-offset:2px}
-.loaded{margin:0;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);font-size:.9375rem}
+.loaded{margin:0;padding:2px 6px 2px 14px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);font-size:.9375rem}
 
 /* filtri */
 .filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin:12px 0 0;padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:.875rem}
@@ -397,6 +417,7 @@ textarea{font:inherit;font-size:16px;width:100%;min-height:64px;resize:vertical;
 /* risultati */
 .results{padding:16px 0 8px}
 .res-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.res-head > div:first-child{flex:1 1 420px;min-width:0}
 .verdict{font-size:clamp(1.25rem,3vw,1.75rem);line-height:1.2;letter-spacing:-0.015em;font-weight:600;margin:0}
 .sub{color:var(--muted);font-size:.875rem;margin:2px 0 0}
 .filternote{display:inline-block;margin:6px 0 0;padding:2px 10px;border-radius:var(--r-s);background:var(--warn-bg);color:var(--warn-ink);font-size:.875rem}
@@ -585,11 +606,14 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 .dk-export{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 
 @media (max-width:760px){
-  .load{grid-template-columns:1fr}
-  .paste{order:-1}
-  .drop{min-height:72px;padding:12px 16px}
+  .load-actions .btn{flex:1 1 auto;justify-content:center}
+  /* riga della collezione: una sola riga; "Rimuovi" diventa la sola ×, con area di tocco di 44 px */
+  .loaded:not([hidden]){flex-wrap:nowrap;gap:4px;font-size:.875rem}
+  .removecoll{min-width:44px;justify-content:center;flex:none}
+  .removecoll span{display:none}
+  .removecoll .rm-ico{width:16px;height:16px}
   .search{margin-left:0;width:100%}
-  .btn.removecoll,.btn.undo-btn{min-height:44px}
+  .btn.undo-btn{min-height:44px}
   /* testata su una riga: logo, nome, pulsanti speciali (icona sopra, etichetta breve sotto) e "⋯" */
   .top{gap:8px}
   h1{font-size:1.25rem;white-space:nowrap;min-width:0}

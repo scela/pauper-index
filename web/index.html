@@ -86,18 +86,28 @@
       <div id="quickResult" aria-live="polite"></div>
     </section>
 
-    <section class="loadsec" id="loadArea" data-i18n-aria="load.aria" aria-label="Carica la collezione">
-      <div class="load">
-        <label class="drop" id="drop">
-          <input type="file" id="files" multiple accept=".csv,.txt,text/csv,text/plain">
-          <strong data-i18n="load.dropTitle">Carica l'export CSV di ManaBox</strong>
-          <span data-i18n="load.dropHint">Trascina qui i file o tocca per sceglierli</span>
-        </label>
-        <div class="paste">
-          <label for="pasteText" data-i18n="load.pasteLabel">Incolla la lista in testo</label>
-          <textarea id="pasteText" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="4 Ponder&#10;1 Lightning Bolt (M10) 146"></textarea>
+    <section class="loadsec" id="loadArea" aria-labelledby="loadIntro">
+      <div class="drop" id="drop">
+        <p class="load-intro" id="loadIntro" data-i18n="load.intro">Scopri quali carte giocate in Pauper possiedi già. Gratis e senza registrazione: la tua collezione resta nel browser.</p>
+        <div class="load-actions">
+          <label class="btn primary filebtn"><input type="file" id="files" multiple accept=".csv,.txt,text/csv,text/plain"><span data-i18n="load.fileBtn">File CSV di ManaBox</span></label>
+          <button class="btn" id="pasteToggle" type="button" aria-expanded="false" aria-controls="pasteBox" data-i18n="load.pasteBtn">Incolla una lista</button>
+          <button class="btn quiet" id="cancelReplace" type="button" hidden data-i18n="load.cancel">Annulla</button>
+        </div>
+        <details class="mini howto">
+          <summary data-i18n="load.howto">Come si esporta da ManaBox?</summary>
+          <ol>
+            <li data-i18n="load.howto1">Nell'app ManaBox apri la scheda della collezione e tocca il menu in alto a destra: lì c'è l'export in CSV di tutta la collezione, con il nome del Binder di ogni carta.</li>
+            <li data-i18n="load.howto2">Per un solo Binder o una sola lista, usa lo stesso menu nella schermata del Binder o della lista.</li>
+            <li data-i18n="load.howto3">Poi scegli qui il file con "File CSV di ManaBox".</li>
+          </ol>
+          <p class="note"><a href="https://manabox.app/guides/collection/import-export/" target="_blank" rel="noopener noreferrer" data-i18n="load.howtoLink">Guida ufficiale di ManaBox (in inglese)</a></p>
+        </details>
+        <p class="drop-hint" data-i18n="load.dropHint">Su computer puoi anche trascinare i file qui.</p>
+        <div class="paste" id="pasteBox" hidden>
+          <label for="pasteText" data-i18n="load.pasteLabel">Una carta per riga, con il numero di copie davanti</label>
+          <textarea id="pasteText" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="4 Ponder&#10;1 Lightning Bolt (M10) 146"></textarea>
           <div class="row">
-            <button class="btn quiet small" id="cancelReplace" type="button" hidden data-i18n="load.cancel">Annulla</button>
             <button class="btn small" id="pasteClip" type="button" hidden data-i18n="load.clipboard">Incolla dagli appunti</button>
             <button class="btn primary small" id="pasteAdd" type="button" data-i18n="load.submit">Carica</button>
           </div>

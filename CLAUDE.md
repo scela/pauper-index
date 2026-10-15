@@ -47,7 +47,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
   - [ ] Pagina iniziale su smartphone e Carta dimenticata, piano approvato il 2026-10-15 (vedi "Pagina iniziale e Carta dimenticata"); dopo, i passi 4–5 dei Mazzi:
     - [x] A1: difetti (carte e copie della collezione, valore "almeno" con righe senza printing)
     - [x] A2: testata su una riga, menu compatto, famiglia di pulsanti, libro di Mazzi (ex passo 6 dei Mazzi), riga dei dati corta (vedi "Testata (2026-10-15)")
-    - [ ] A3: caricamento (frase, due pulsanti, aiuto per l'export di ManaBox, riga della collezione) — **controllo con screenshot dopo A2 e A3**
+    - [x] A3: caricamento (frase, due pulsanti, aiuto per l'export di ManaBox, riga della collezione) — **controllo con screenshot dopo A2 e A3**
     - [ ] A4: campo unico "Cerca una carta" con la scheda arricchita
     - [ ] A5: filtri su una riga ("Ultima apparizione" nel pannello), righe compatte, misure prima/dopo
     - [ ] B: Carta dimenticata, soglia dei mazzi storici (riquadro numerico)
@@ -167,6 +167,7 @@ node scripts/filter-shots.mjs <etichetta>        # con preview attivo: barra, pa
 node scripts/italian-shots.mjs <etichetta>       # con preview attivo: nomi italiani nel controllo rapido e nella scheda, desktop/mobile, IT/EN
 node scripts/decks-shots.mjs <etichetta> [it|en] # con preview attivo: pagina Mazzi senza e con collezione, decklist, desktop/mobile, chiaro/scuro
 node scripts/decks-perf.mjs <etichetta> [1,4,6]  # con preview attivo: tempi della pagina Mazzi (61 giorni, ultimo anno, main/side, archetipo) con il processore rallentato, su mobile
+node scripts/home-metrics.mjs <etichetta>        # con preview attivo (o SITE_URL=https://pauperindex.com/): misure del primo schermo della pagina iniziale e screenshot, desktop 1280×900 e mobile 375×667, chiaro/scuro, IT/EN, senza e con collezione
 npm run icons                        # rigenera logo, favicon, icone PNG e og-image da logo/logo.svg
 
 # Stato della CI
@@ -766,6 +767,13 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - su mobile i suggerimenti di "Espansione" larghi quanto lo schermo;
   - Carta dimenticata: un riquadro numerico "Apparsa in almeno … mazzi" (predefinito 20, mai salvato);
   - prima di ogni push: ruff e i test della parte toccata.
+- **A3 (2026-10-15)**, blocco di caricamento (`#loadArea`):
+  - senza collezione un solo blocco (`.drop`, che su desktop accetta anche i file trascinati): frase "Scopri quali carte giocate in Pauper possiedi già. Gratis e senza registrazione: la tua collezione resta nel browser." (`load.intro`), pulsanti "File CSV di ManaBox" (`label.filebtn` con l'`<input type=file>` dentro: si apre con clic, tocco e tastiera) e "Incolla una lista" (`#pasteToggle`, `aria-expanded`: l'area di testo `#pasteBox` compare solo su richiesta e riceve il focus); su desktop frase e pulsanti in riga, sotto aiuto e "Su computer puoi anche trascinare i file qui" (nascosto su touch e sotto 761 px);
+  - **aiuto "Come si esporta da ManaBox?"** (`details.howto`): passi presi **solo** dalla guida ufficiale https://manabox.app/guides/collection/import-export/ (letta il 2026-10-15): export CSV di tutta la collezione dal menu in alto a destra della scheda della collezione, con il nome del Binder; un solo Binder o lista dallo stesso menu nella loro schermata. La guida non dice dove finisce il file né differenze tra iOS e Android: non lo diciamo. Link alla guida (`noopener noreferrer`);
+  - con la collezione una riga: "Collezione: 8 carte (24 copie) · Sostituisci" e "Rimuovi" (link piccolo, area di tocco di 44 px, nome accessibile "Rimuovi collezione"; su mobile solo la ×);
+  - colonna Prezzo delle copie senza printing: "da X €" (la stampa più economica), coerente con la stima "almeno" del riepilogo; testo della stima accorciato ("8 carte senza printing: stampa più economica");
+  - intestazione dei risultati: il testo va a capo e i menu restano a destra (prima il riepilogo lungo li spingeva sotto).
+  - **Misure dopo A2+A3** (`scripts/home-metrics.mjs`, iPhone SE 375×667): prima carta a 732 px senza collezione (IT; 680 EN) e a **585** con la collezione (prima 825 e 703); testata 51, riga della collezione 50. Desktop 1280×900: prima carta a **501** senza collezione (prima 548) e 487 con la collezione (prima 447–472: il riepilogo dei prezzi va su due righe; il controllo rapido, che sparisce in A4, vale 73 px più il margine).
 - **A1 (2026-10-15)**:
   - riga della collezione: "Collezione: 8 carte (24 copie)" (`collectionSize` in `lib/quick.ts`: carte distinte per nome normalizzato, copie; proxy solo se contano, come in "Possiedi N carte"). Prima `collectionCards()` sommava le copie (e i proxy) e le chiamava carte;
   - valore delle copie con righe senza printing (liste incollate): **stima minima** con la stampa non foil più economica, "Valore indicativo delle tue copie: almeno X € (N carte senza printing, stimate con la stampa più economica)" (`ownedEstimated` in `priceTotals`). Prima "0,00 € (8 senza prezzo)".

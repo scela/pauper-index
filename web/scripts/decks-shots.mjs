@@ -41,6 +41,7 @@ for (const [name, opts] of [
     await page.screenshot({ path: `${base}-1-senza.png` });
     await page.goto(URL);
     await page.waitForFunction(() => document.querySelector('#cardRows tr'));
+    await page.click('#pasteToggle');
     await page.fill('#pasteText', text);
     await page.click('#pasteAdd');
     await page.waitForSelector('#loaded:not([hidden])');

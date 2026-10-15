@@ -10,7 +10,7 @@ import { imageUrl, loadData, loadPrices, type Data } from './lib/data';
 import { $, h, svg } from './lib/dom';
 import { realignedCSV, textList } from './lib/exports';
 import { daysBetween, fmtDate, fmtEur, fmtInt, fmtPct, fmtPrint } from './lib/format';
-import { cheapestPrice, ownedPrice, priceTotals, printPrice, type PricesFile } from './lib/prices';
+import { cheapestPrice, ownedPrice, ownedPrintIndex, priceTotals, printPrice, type PricesFile } from './lib/prices';
 import { clearAll, idbGet, idbSet, lsDel, lsGet, lsSet } from './lib/store';
 import { parseTextList } from './lib/text';
 import type { Group, Role, Row } from './lib/types';
@@ -443,10 +443,10 @@ function renderLoad(): void {
     line.replaceChildren(
       h('span', { class: 'loaded-text' }, t('load.collection'), h('b', null, collectionText()), ' · ',
         h('button', { class: 'linkbtn', type: 'button', id: 'replace' }, t('load.replace'))),
-      h('button', { class: 'btn small removecoll', type: 'button', id: 'removeColl' },
+      h('button', { class: 'linkbtn removecoll', type: 'button', id: 'removeColl', 'aria-label': t('load.remove') },
         svg('svg', { class: 'rm-ico', viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' },
           svg('path', { d: 'M4 4l8 8M12 4l-8 8' })),
-        h('span', null, t('load.remove'))));
+        h('span', { 'aria-hidden': 'true' }, t('load.removeShort'))));
   }
 }
 
@@ -518,7 +518,10 @@ function priceText(x: Result): string {
     return S.setCodes ? fmtEur(c) : t('price.from', { p: fmtEur(c) });
   }
   const c = ownedPrice(S.d!, S.prices, x);
-  return c ? fmtEur(c) : '—';
+  if (c) return fmtEur(c);
+  // printing sconosciuta (lista incollata): la stampa più economica, come la stima del riepilogo
+  const low = x.prints.some((op) => ownedPrintIndex(S.d!, x.idx, op) < 0) ? cheapestPrice(S.prices, x.idx) : 0;
+  return low ? t('price.from', { p: fmtEur(low) }) : '—';
 }
 
 /**
@@ -1028,6 +1031,14 @@ function wire(): void {
     if (fs.length) void handleFiles(fs);
   });
   $('#pasteAdd').addEventListener('click', () => void handleText());
+  // "Incolla una lista": l'area di testo compare solo su richiesta
+  const pasteToggle = $('#pasteToggle');
+  pasteToggle.addEventListener('click', () => {
+    const box = $('#pasteBox');
+    box.hidden = !box.hidden;
+    pasteToggle.setAttribute('aria-expanded', String(!box.hidden));
+    if (!box.hidden) ($('#pasteText') as HTMLTextAreaElement).focus();
+  });
   const clip = $('#pasteClip');
   if (navigator.clipboard && 'readText' in navigator.clipboard) {
     clip.hidden = false;

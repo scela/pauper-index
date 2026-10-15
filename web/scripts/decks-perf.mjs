@@ -45,6 +45,7 @@ for (const rate of rates) {
   await page.addInitScript(observe);
   await page.goto(URL);
   await page.waitForFunction(() => document.querySelector('#cardRows tr'));
+  await page.click('#pasteToggle');
   await page.fill('#pasteText', text);
   await page.click('#pasteAdd');
   await page.waitForSelector('#loaded:not([hidden])');

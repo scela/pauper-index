@@ -58,7 +58,7 @@ test('lingua del browser, testi statici, area di caricamento, filtri e lista, co
   expect((await page.request.get('fonts/OFL-NewRocker.txt')).ok()).toBe(true);
   await expect(page).toHaveTitle('Pauper Index');
   await expect(page.locator('#navAbout')).toHaveText(tr('nav.about'));
-  await expect(page.locator('#drop strong')).toHaveText(tr('load.dropTitle'));
+  await expect(page.locator('#loadIntro')).toHaveText(tr('load.intro'));
   await expect(page.locator('#search')).toHaveAttribute('placeholder', tr('filters.search'));
   await expect(page.locator('#loadArea')).toBeVisible();
   await expect(page.locator('#loaded')).toBeHidden();
@@ -86,7 +86,7 @@ test('selettore IT/EN: cambia tutti i testi e la scelta resta dopo il ricaricame
   await navClick(page, `[data-lang="${other}"]`);
   await expect(page.locator('html')).toHaveAttribute('lang', other);
   await expect(page.locator('#navAbout')).toHaveText(translate(other, 'nav.about'));
-  await expect(page.locator('#drop strong')).toHaveText(translate(other, 'load.dropTitle'));
+  await expect(page.locator('#loadIntro')).toHaveText(translate(other, 'load.intro'));
   await expect(page.locator('#period option').first()).toContainText(translate(other, 'period.0'));
   await expect(page.locator('#dataline')).toContainText(head('data.line', other));
   await page.reload();
@@ -183,6 +183,7 @@ test('Sostituisci e testo incollato: riepilogo nella lingua scelta', async ({ pa
   await uploadCollection(page);
   await page.click('#replace');
   await expect(page.locator('#loadArea')).toBeVisible();
+  await page.click('#pasteToggle');
   await page.fill('#pasteText', readFileSync(resolve(FIX, 'testo-sintetico.txt'), 'utf-8'));
   await page.click('#pasteAdd');
   await expect(page.locator('#loadArea')).toBeHidden();
@@ -200,6 +201,7 @@ test('Sostituisci e testo incollato: riepilogo nella lingua scelta', async ({ pa
 
 test('errori nella lingua scelta', async ({ page }) => {
   await setup(page);
+  await page.click('#pasteToggle');
   await page.click('#pasteAdd');
   await expect(page.locator('#errors')).toHaveText(tr('err.pasteEmpty'));
   await page.setInputFiles('#files', { name: 'strano.csv', mimeType: 'text/csv', buffer: Buffer.from('foo,bar\n1,2\n') });
@@ -518,6 +520,38 @@ test('testata: una riga, pannello "⋯" su mobile, pulsanti speciali, libro che 
   await expect.poll(() => page.locator('.book-cover').evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
   const after = (await book.boundingBox())!;
   expect([after.width, after.height].map(Math.round)).toEqual([before.width, before.height].map(Math.round));
+});
+
+test('caricamento: frase, due pulsanti, area di testo su richiesta, aiuto per ManaBox, riga della collezione', async ({ page, isMobile }) => {
+  await setup(page);
+  await expect(page.locator('#loadIntro')).toHaveText(tr('load.intro'));
+  await expect(page.locator('.filebtn')).toHaveText(tr('load.fileBtn'));
+  const toggle = page.locator('#pasteToggle');
+  await expect(toggle).toHaveText(tr('load.pasteBtn'));
+  // l'area di testo compare solo toccando "Incolla una lista"
+  await expect(page.locator('#pasteText')).toBeHidden();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#pasteText')).toBeFocused();
+  await toggle.click();
+  await expect(page.locator('#pasteText')).toBeHidden();
+  // aiuto per l'export: chiuso, con i passi e il link alla guida ufficiale
+  const howto = page.locator('details.howto');
+  await expect(howto.locator('summary')).toHaveText(tr('load.howto'));
+  await howto.locator('summary').click();
+  await expect(howto.locator('li')).toHaveCount(3);
+  await expect(howto.locator('a')).toHaveAttribute('href', 'https://manabox.app/guides/collection/import-export/');
+  await expect(howto.locator('a')).toHaveAttribute('rel', 'noopener noreferrer');
+  // il file si sceglie dal pulsante (l'input è dentro l'etichetta) e con la tastiera
+  await uploadCollection(page);
+  await expect(page.locator('#loadArea')).toBeHidden();
+  const rm = page.locator('#removeColl');
+  await expect(rm).toHaveAccessibleName(tr('load.remove'));
+  await expect(rm).toHaveText(tr('load.removeShort'));
+  if (isMobile) expect((await rm.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  // con la collezione la riga è una sola
+  expect((await page.locator('#loaded').boundingBox())!.height).toBeLessThanOrEqual(isMobile ? 100 : 56);
 });
 
 test('testata con prefers-reduced-motion: il libro cambia stato senza animazione', async ({ page }) => {
@@ -1095,6 +1129,7 @@ test('lista incollata: carte e copie nella riga della collezione, valore "almeno
   const eur = (c: number) => (c / 100).toLocaleString(L === 'it' ? 'it-IT' : 'en-US', { style: 'currency', currency: 'EUR' });
   await page.route('**/data/prices.json', (r) => r.fulfill({ contentType: 'application/json', body: syntheticPrices() }));
   await setup(page);
+  await page.click('#pasteToggle');
   await page.fill('#pasteText', '4 Brainstorm\n2 Counterspell');
   await page.click('#pasteAdd');
   await expect(page.locator('#loaded')).toContainText(tr('load.cardsCopies', { cards: tr('load.cards', { n: 2 }), copies: tr('load.copies', { n: 6 }) }));
@@ -1105,6 +1140,8 @@ test('lista incollata: carte e copie nella riga della collezione, valore "almeno
   await expect(sum).toContainText(tr('price.estimated', { n: 1 }));
   await expect(sum).toContainText(tr('price.unpriced', { n: 1 }));
   await expect(sum).not.toContainText(tr('price.owned', { v: eur(0) }));
+  // la colonna Prezzo usa la stessa stima ("da X €"), non "—"
+  await expect(page.locator('#cardRows tr').filter({ hasText: 'Brainstorm' }).first().locator('.c-price')).toHaveText(tr('price.from', { p: eur(50) }));
 });
 
 test('prezzi indicativi: colonna, riepilogo, scheda e Informazioni; "—" se mancano', async ({ page }) => {
