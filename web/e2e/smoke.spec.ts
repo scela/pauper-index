@@ -46,6 +46,13 @@ async function typeSearch(page: Page, q: string): Promise<void> {
   if (await page.locator('#searchList').isVisible()) await page.locator('#search').press('Escape');
 }
 
+/** "Ultima apparizione" (nel pannello "Filtri" dal 2026-10-15): apre il pannello, sceglie, lo richiude. */
+async function setSeen(page: Page, v: 'all' | 'recent' | 'old'): Promise<void> {
+  if (!(await page.locator('#seenFilter').isVisible())) await page.click('#filtersBtn');
+  await page.selectOption('#seenFilter', v);
+  await page.click('#fpDone');
+}
+
 async function uploadCollection(page: Page): Promise<void> {
   await page.setInputFiles('#files', resolve(FIX, 'collezione-sintetica.csv'));
   await expect(page.locator('#loaded')).toContainText(tr('load.collection').trim());
@@ -629,6 +636,71 @@ test('caricamento: frase, due pulsanti, area di testo su richiesta, aiuto per Ma
   expect((await page.locator('#loaded').boundingBox())!.height).toBeLessThanOrEqual(isMobile ? 100 : 56);
 });
 
+test('primo schermo su iPhone SE (375×667): obiettivi senza e con collezione', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'obiettivi misurati su mobile');
+  await page.setViewportSize({ width: 375, height: 667 });
+  await setup(page);
+  // i prezzi arrivano dopo: si misura con il riepilogo visibile (il caso più alto)
+  await expect(page.locator('#priceSummary')).toBeVisible();
+  const bottom = (sel: string, i = 0) => page.locator(sel).nth(i).evaluate((e) => e.getBoundingClientRect().bottom);
+  // senza collezione: frase, blocco di caricamento, campo di ricerca e le prime 2 carte
+  for (const sel of ['#loadIntro', '#loadArea', '#search']) expect(await bottom(sel)).toBeLessThanOrEqual(667);
+  expect(await bottom('#cardRows tr', 1)).toBeLessThanOrEqual(667);
+  // con la collezione: "Possiedi N carte" e almeno 3 carte
+  await page.click('#pasteToggle');
+  await page.fill('#pasteText', '4 Ponder\n4 Brainstorm\n4 Counterspell\n2 Lightning Bolt\n4 Preordain\n2 Snuff Out\n2 Cast Down\n2 Mulldrifter');
+  await page.click('#pasteAdd');
+  await expect(page.locator('#verdict')).toHaveText(tr('res.owned', { n: 8 }));
+  await expect(page.locator('#priceSummary')).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  expect(await bottom('#verdict')).toBeLessThanOrEqual(667);
+  expect(await bottom('#cardRows tr', 2)).toBeLessThanOrEqual(667);
+});
+
+test('righe compatte su mobile, filtri su una riga, "Ultima apparizione" nel pannello con la sua etichetta', async ({ page, isMobile }) => {
+  await setup(page);
+  const row = page.locator('#cardRows tr').first();
+  if (isMobile) {
+    // righe: nome e dati essenziali in chiaro; le colonne della tabella non si vedono
+    await expect(row.locator('.mline')).toBeVisible();
+    await expect(row.locator('.mline')).toContainText(tr('row.share', { pct: '' }).trim()); // "dei mazzi"
+    await expect(row.locator('.mline')).toContainText(tr('row.typical', { n: 9 }).split('9')[0].trim()); // "di solito"
+    await expect(row.locator('.mline2')).toContainText(head('row.entry'));
+    await expect(row.locator('td.c-qty')).toBeHidden();
+    expect((await row.boundingBox())!.height).toBeLessThanOrEqual(90);
+    // filtri su una riga, senza etichette visibili ma con il nome accessibile
+    expect((await page.locator('#filters').boundingBox())!.height).toBeLessThanOrEqual(64);
+    await expect(page.locator('#period')).toHaveAccessibleName(new RegExp(tr('filters.period')));
+    await expect(page.locator('#setInput')).toHaveAccessibleName(tr('set.label'));
+    // suggerimenti dell'espansione larghi quanto la barra (non quanto il campo, che è stretto)
+    await page.locator('#setInput').click();
+    await expect(page.locator('#setList')).toBeVisible(); // sets.json arriva al primo uso
+    const list = (await page.locator('#setList').boundingBox())!;
+    const bar = (await page.locator('#filters').boundingBox())!;
+    expect(list.width).toBeGreaterThanOrEqual(bar.width - 2);
+    await page.locator('#setInput').press('Escape');
+    // con la collezione: "ne hai N" invece delle copie tipiche
+    await uploadCollection(page);
+    await expect(page.locator('#cardRows tr').first().locator('.mline')).toContainText(head('row.owned'));
+  } else {
+    await expect(row.locator('.mline')).toBeHidden();
+    await expect(row.locator('td.c-qty')).toBeVisible();
+  }
+  // "Ultima apparizione": nel pannello, con l'etichetta rimovibile e il conteggio in "Filtri (N)"
+  await expect(page.locator('.res-tools #seenFilter')).toHaveCount(0);
+  await setSeen(page, 'old');
+  const chip = page.locator('#activeFilters .fchip', { hasText: tr('seen.old') });
+  await expect(chip).toBeVisible();
+  await expect(page.locator('#filtersBtnText')).toHaveText(tr('filters.moreN', { n: 1 }));
+  await chip.click();
+  await expect(page.locator('#activeFilters')).toBeHidden();
+  await page.click('#filtersBtn');
+  await expect(page.locator('#seenFilter')).toHaveValue('all');
+  await page.selectOption('#seenFilter', 'recent');
+  await page.click('#fpClear');
+  await expect(page.locator('#seenFilter')).toHaveValue('all');
+});
+
 test('testata con prefers-reduced-motion: il libro cambia stato senza animazione', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await setup(page);
@@ -652,7 +724,7 @@ test('logo e nome: link alla pagina principale da ogni sezione, collezione conse
   await uploadCollection(page);
   for (const section of ['#navAbout', '#navDust']) {
     // filtri dell'elenco attivi, poi una sezione, poi il logo
-    await page.selectOption('#seenFilter', 'old');
+    await setSeen(page, 'old');
     await typeSearch(page, 'bolt');
     await navClick(page, section);
     await expect(page.locator('#viewMain')).toBeHidden();
@@ -685,7 +757,7 @@ test('"Rimuovi collezione": via subito, Annulla per 8 secondi, poi cancellata da
   }));
   await expect.poll(saved).toBeGreaterThan(0);
   await page.selectOption('#period', '3'); // preferenza: resta
-  await page.selectOption('#seenFilter', 'old'); // filtri dell'elenco: ripartono azzerati
+  await setSeen(page, 'old'); // filtri dell'elenco: ripartono azzerati
   await typeSearch(page, 'bolt');
   const rm = page.locator('#removeColl');
   await expect(rm).toHaveAccessibleName(tr('load.remove'));
@@ -726,7 +798,7 @@ test('visita successiva: preferenze ricordate (periodo, espansione), filtri che 
   await page.selectOption('#period', '3');
   await pickSet(page, 'ice age', 'Ice Age');
   await page.locator('label:has(#setOwned)').click();
-  await page.selectOption('#seenFilter', 'old');
+  await setSeen(page, 'old');
   await typeSearch(page, 'storm');
   await page.reload();
   await expect(page.locator('#dataline')).toContainText(head('data.line'));
@@ -863,7 +935,7 @@ test('riepilogo ed elenco: stesso insieme, e i filtri che nascondono carte sono 
   expect(c.list).toBe(c.head);
   // il menu Periodo conta le carte dell'espansione, come il riepilogo
   await expect(page.locator('#period option:checked')).toContainText(c.head.toLocaleString(L === 'it' ? 'it-IT' : 'en-US'));
-  await page.selectOption('#seenFilter', 'old');
+  await setSeen(page, 'old');
   c = await counts(page);
   expect(c.list).toBeLessThan(c.head);
   expect(c.note).toBe(c.list);

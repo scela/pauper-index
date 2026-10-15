@@ -17,7 +17,10 @@ const label = process.argv[2] || 'misura';
 mkdirSync(OUT, { recursive: true });
 const PASTE = ['4 Ponder', '4 Brainstorm', '4 Counterspell', '2 Lightning Bolt', '4 Preordain', '2 Snuff Out', '2 Cast Down', '2 Mulldrifter'].join('\n');
 
-const measure = (page, state) => page.evaluate((state) => {
+// il riepilogo dei prezzi arriva dopo (prices.json): si misura con il riepilogo visibile, se c'è
+const settle = (page) => page.waitForFunction(() => !document.getElementById('priceSummary').hidden, null, { timeout: 4000 }).catch(() => {});
+
+const measure = async (page, state) => (await settle(page), page.evaluate((state) => {
   const box = (s) => {
     const e = [...document.querySelectorAll(s)].find((x) => !x.hidden && x.getClientRects().length);
     if (!e) return null;
@@ -32,7 +35,7 @@ const measure = (page, state) => page.evaluate((state) => {
     verdictTop: box('#verdict')?.top, firstCardTop: box('#cardRows tr')?.top,
     rowHeights: rows.slice(0, 3).map((r) => Math.round(r.getBoundingClientRect().height)), cardsInFirstScreen: visible,
   };
-}, state);
+}, state));
 
 const browser = await chromium.launch();
 const out = [];

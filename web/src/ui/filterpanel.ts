@@ -22,15 +22,20 @@ export interface PanelDeps {
   count: () => number;
   /** scarica texts.json (una volta sola); false se non è disponibile */
   loadTexts: () => Promise<boolean>;
+  /** "Ultima apparizione" (nel pannello dal 2026-10-15): valore e modifica */
+  seen: () => Seen;
+  setSeen: (v: Seen) => void;
 }
+
+export type Seen = 'all' | 'recent' | 'old';
 
 export interface Chip {
   label: string;
   remove: () => void;
 }
 
-/** Etichette dei filtri attivi, nell'ordine del pannello. */
-export function chips(f: CardFilters): Chip[] {
+/** Etichette dei filtri attivi, nell'ordine del pannello ("Ultima apparizione" per ultima). */
+export function chips(f: CardFilters, seen: Seen = 'all', setSeen: (v: Seen) => void = () => {}): Chip[] {
   const out: Chip[] = [];
   if (f.colorMode === 'only' && f.colors.length) {
     out.push({ label: t('chip.colorsOnly', { list: f.colors.map(colorLabel).join(', ') }), remove: () => { f.colors = []; } });
@@ -40,6 +45,7 @@ export function chips(f: CardFilters): Chip[] {
   if (f.mv.length) out.push({ label: t('chip.mv', { v: mvLabel(f.mv) }), remove: () => { f.mv = []; } });
   for (const x of f.types) out.push({ label: typeLabel(x), remove: () => { f.types = f.types.filter((y) => y !== x); } });
   if (textWords(f.text).length) out.push({ label: t('chip.text', { q: f.text.trim() }), remove: () => { f.text = ''; } });
+  if (seen !== 'all') out.push({ label: t(seen === 'old' ? 'seen.old' : 'seen.recent'), remove: () => setSeen('all') });
   return out;
 }
 
@@ -126,15 +132,18 @@ export function initFilterPanel(deps: PanelDeps): { render(): void; close(): voi
   });
   $('#fpClear').addEventListener('click', () => {
     clearFilters(deps.filters());
+    deps.setSeen('all');
     deps.change();
   });
   $('#activeFilters').addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-chip]');
     if (!b) return;
-    const list = chips(deps.filters());
+    const list = chips(deps.filters(), deps.seen(), deps.setSeen);
     const i = Number(b.dataset.chip);
-    if (i < 0) clearFilters(deps.filters());
-    else list[i]?.remove();
+    if (i < 0) {
+      clearFilters(deps.filters());
+      deps.setSeen('all');
+    } else list[i]?.remove();
     deps.change();
     // il focus resta tra le etichette (o torna sul pulsante "Filtri" se non ce ne sono più)
     const next = $('#activeFilters').querySelector<HTMLButtonElement>(`button[data-chip="${Math.max(0, i - 1)}"]`)
@@ -146,7 +155,8 @@ export function initFilterPanel(deps: PanelDeps): { render(): void; close(): voi
 
   function render(): void {
     const f = deps.filters();
-    const list = chips(f);
+    const list = chips(f, deps.seen(), deps.setSeen);
+    ($('#seenFilter') as HTMLSelectElement).value = deps.seen();
     // pulsante "Filtri (N)"
     $('#filtersBtnText').textContent = list.length ? t('filters.moreN', { n: list.length }) : t('filters.more');
     openBtn.classList.toggle('on', list.length > 0);

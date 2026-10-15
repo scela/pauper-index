@@ -437,6 +437,7 @@ table{width:100%;border-collapse:collapse}
 .nmwrap{display:block}
 .cardbtn .nm{font-weight:500;color:var(--ink)}
 .own{display:block;color:var(--muted);font-size:.8125rem;margin-top:2px}
+.mline,.mline2{display:none}
 .thumbs{display:flex;gap:3px;flex:none}
 .thumb{display:block;width:40px;height:auto;aspect-ratio:488/680;border-radius:3px;background:var(--line)}
 .thumb.owned{outline:2px solid var(--accent);outline-offset:1px}
@@ -629,15 +630,19 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .navextra.open{display:flex}
   .navextra .navlink,.navextra .btn{min-height:44px;display:flex;align-items:center;padding-inline:10px}
   .navextra .langs .btn{flex:1;justify-content:center}
-  .f-field:first-child{flex:1;min-width:0}
-  .f-field:first-child select{flex:1;min-width:0;width:100%}
-  .filters{gap:8px 12px}
-  .filters > .f-field:first-child{flex-basis:100%}
-  .setwrap{flex:1 1 100%}
-  .setfield{display:flex;width:100%}
-  .setfield .setbox{flex:1;min-width:0}
-  #setInput{width:100%}
-  .searchrow{width:100%;margin-left:0}
+  /* filtri su una riga: Periodo, Espansione, "Filtri (N)", senza etichette visibili (restano per i lettori di schermo);
+     le opzioni dell'espansione vanno sotto la riga, i suggerimenti dell'espansione sono larghi quanto la barra */
+  .filters{position:relative;flex-wrap:wrap;gap:8px 6px}
+  .flabel{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .filters > .f-field:first-child{flex:0 1 44%;min-width:0}
+  .f-field:first-child select{flex:1;min-width:0;width:100%;min-height:40px}
+  .setwrap{display:contents}
+  .setfield{flex:1 1 0;min-width:0;display:flex}
+  .setfield .setbox{position:static;flex:1;min-width:0}
+  #setInput{width:100%;min-height:40px}
+  .setwrap .qlist{left:0;right:0;min-width:0;top:calc(100% - 4px)}
+  .setopts{order:10;flex-basis:100%}
+  .searchrow{margin-left:0;flex:none}
   .fbtn-open{min-height:40px}
   .fbtn{min-height:44px}
   .fchip{min-height:36px}
@@ -671,15 +676,30 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 }
 @media (max-width:640px){
   .cards thead{display:none}
-  .cards tr{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--line)}
+  /* intestazione dei risultati: titolo su tutta la riga, "Ordina" accanto al sottotitolo e al riepilogo dei prezzi */
+  .res-head{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;row-gap:4px;align-items:start}
+  .res-head > div:first-child{display:contents}
+  .res-head .verdict{grid-column:1/-1}
+  .res-head .sub{grid-column:1;grid-row:2;align-self:center;margin:0;font-size:.875rem}
+  .res-head .filternote{grid-column:1/-1;grid-row:3}
+  .res-head .sub.pricesum{grid-column:1/-1;grid-row:4;font-size:.8125rem}
+  .res-head .res-tools{grid-column:2;grid-row:2;width:auto}
+  .res-tools select{min-height:36px;max-width:9em;font-size:.875rem}
+  .dataline{margin-bottom:8px}
+  .searchfield{margin-top:8px}
+  .filters{margin-top:8px;padding:8px 0}
+  .load-intro{font-size:.9375rem}
+  .load-actions{gap:6px}
+  .load-actions .btn{padding:0 10px;font-size:.9375rem}
+  .drop{padding:12px 14px;gap:8px}
+  /* righe compatte: miniatura, nome, "12% dei mazzi · di solito 4 copie · vista: …", poi ingresso e prezzo;
+     le colonne della tabella e le printing possedute (nella scheda) non si mostrano */
+  .cards tr{display:block;padding:8px 0;border-bottom:1px solid var(--line)}
   .cards td{padding:0;border:0}
-  .cards td.c-name{grid-column:1/-1}
-  .cards td.c-pct{grid-column:1;text-align:left}
-  .cards td.c-qty{grid-column:2;grid-row:2;justify-self:end}
-  .cards td.c-seen,.cards td.c-entry{display:inline;grid-column:1/-1}
-  .cards td.c-price{grid-column:1/-1;text-align:left;color:var(--muted);font-size:.875rem}
-  .cards td[data-label]::before{content:attr(data-label)}
-  .cards td.c-qty::before{color:var(--muted)}
+  .cards td.c-qty,.cards td.c-pct,.cards td.c-seen,.cards td.c-entry,.cards td.c-price{display:none}
+  .cards .own{display:none}
+  .cards .mline{display:block;margin-top:2px;font-size:.8125rem;line-height:1.35}
+  .cards .mline2{display:block;font-size:.75rem;line-height:1.35;color:var(--muted)}
   .cards .nores{display:block}
   .groups thead{display:none}
   .groups tr{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:8px 0;border-bottom:1px solid var(--line)}

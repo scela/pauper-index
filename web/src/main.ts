@@ -532,7 +532,11 @@ function priceText(x: Result): string {
  */
 function showPrices(): void {
   const cells = document.querySelectorAll<HTMLElement>('#cardRows td.c-price');
-  S.view.slice(0, cells.length).forEach((x, i) => { cells[i].textContent = priceText(x); });
+  const mobile = document.querySelectorAll<HTMLElement>('#cardRows .mprice');
+  S.view.slice(0, cells.length).forEach((x, i) => {
+    cells[i].textContent = priceText(x);
+    if (mobile[i]) mobile[i].textContent = priceText(x);
+  });
   renderPriceSummary();
 }
 
@@ -784,7 +788,15 @@ function renderRows(): void {
           setIcon(iconOf(S.setRows.get(setView.set)), `${setName(setView.set)} · ${t(`rarity.${setView.rarity}` as Key)}`, setView.rarity),
           h('span', null, setView.label),
           setView.mine ? h('span', { class: 'tag mine' }, t('sheet.yours')) : null) : null,
-        own));
+        own,
+        // su mobile al posto delle colonne: i dati essenziali in chiaro, poi ingresso e prezzo
+        h('span', { class: 'mline' }, [
+          t('row.share', { pct: fmtPct(x.share) }),
+          coll && x.owned > 0 ? t('row.owned', { n: x.owned }) : t('row.typical', { n: x.typical }),
+          t('row.seen', { date: fmtDate(c.z) }),
+        ].join(' · ')),
+        h('span', { class: 'mline2' }, entry && c.e ? `${t('row.entry', { set: c.e.toUpperCase(), year: entry[1].slice(0, 4) })} · ` : '',
+          h('span', { class: 'mprice' }, priceText(x)))));
     return h('tr', { class: coll ? `r-${x.status}` : '' },
       h('td', { class: 'c-name' }, btn),
       h('td', { class: 'c-qty num', 'data-label': t('mobile.qty') }, coll ? String(x.owned) : String(x.typical)),
@@ -1375,6 +1387,10 @@ async function main(): Promise<void> {
   });
   panel = initFilterPanel({
     filters: () => S.cf, types: () => S.types, change: cardFiltersChanged, count: () => S.view.length, loadTexts,
+    seen: () => S.seen,
+    setSeen: (v) => {
+      S.seen = v;
+    },
   });
   search = initSearch({
     data: () => S.d,

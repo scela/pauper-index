@@ -117,12 +117,12 @@
     </div>
 
     <form class="filters" id="filters" role="search" data-i18n-aria="filters.aria" aria-label="Filtri">
-      <label class="f-field"><span data-i18n="filters.period">Periodo</span>
+      <label class="f-field"><span class="flabel" data-i18n="filters.period">Periodo</span>
         <select id="period"></select>
       </label>
       <div class="setwrap" id="setWrap">
         <div class="f-field setfield">
-          <label for="setInput" data-i18n="set.label">Espansione</label>
+          <label class="flabel" for="setInput" data-i18n="set.label">Espansione</label>
           <div class="qbox setbox">
             <input id="setInput" type="search" role="combobox" aria-expanded="false" aria-controls="setList" aria-autocomplete="list"
               autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"
@@ -176,6 +176,14 @@
           <p class="note" id="fpTextHint" data-i18n="fp.textHint"></p>
           <p class="note" id="fpTextStatus" aria-live="polite"></p>
         </div>
+        <div class="fp-sec">
+          <label class="fp-label" for="seenFilter" data-i18n="seen.aria">Ultima apparizione</label>
+          <select id="seenFilter">
+            <option value="all" data-i18n="seen.all">Qualsiasi data</option>
+            <option value="recent" data-i18n="seen.recent">Viste negli ultimi 6 mesi</option>
+            <option value="old" data-i18n="seen.old">Non viste da oltre 6 mesi</option>
+          </select>
+        </div>
         <fieldset class="fp-sec fp-opts">
           <legend data-i18n="fp.options">Opzioni della lista</legend>
           <label class="f-field"><span data-i18n="filters.min">Min. mazzi</span>
@@ -205,11 +213,6 @@
             <option value="name" data-i18n="sort.name">Nome (A–Z)</option>
             <option value="recent" data-i18n="sort.recent">Viste di recente</option>
             <option value="oldest" data-i18n="sort.oldest">Non viste da più tempo</option>
-          </select>
-          <select id="seenFilter" data-i18n-aria="seen.aria" aria-label="Ultima apparizione">
-            <option value="all" data-i18n="seen.all">Qualsiasi data</option>
-            <option value="recent" data-i18n="seen.recent">Viste negli ultimi 6 mesi</option>
-            <option value="old" data-i18n="seen.old">Non viste da oltre 6 mesi</option>
           </select>
         </div>
       </div>
