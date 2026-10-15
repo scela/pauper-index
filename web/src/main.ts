@@ -1275,6 +1275,26 @@ function wire(): void {
     lsSet('theme', next);
     applyTheme(next);
   });
+  // "⋯" (solo su mobile): pannello con Informazioni, lingua e tema; si chiude con Esc, toccando fuori o scegliendo
+  const more = $('#navMore');
+  const extra = $('#navExtra');
+  const setMore = (open: boolean, focusBack = false) => {
+    extra.classList.toggle('open', open);
+    more.setAttribute('aria-expanded', String(open));
+    if (open) extra.querySelector<HTMLElement>('a,button')?.focus();
+    else if (focusBack) more.focus();
+  };
+  more.addEventListener('click', () => setMore(!extra.classList.contains('open')));
+  extra.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setMore(false, true);
+  });
+  extra.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('a')) setMore(false);
+  });
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target as Node;
+    if (extra.classList.contains('open') && !extra.contains(el) && !more.contains(el)) setMore(false);
+  });
   window.addEventListener('hashchange', route);
   $('#undoBar').addEventListener('click', (e) => {
     if ((e.target as HTMLElement).id === 'undoRemove') undoRemoval();

@@ -10,12 +10,13 @@ export const en: Record<Key, Msg> = {
   'nav.dust': 'Forgotten card',
   'nav.dustShort': 'Forgotten',
   'nav.lang': 'Language',
+  'nav.more': 'More: about, language and theme',
   'theme.toDark': 'Dark theme',
   'theme.toLight': 'Light theme',
 
   'data.loading': 'Loading data…',
   'data.error': 'The card list could not be loaded. Please reload the page in a few minutes.',
-  'data.line': 'Tournaments up to {last} · {tournaments} tournaments · {decks} decks · data updated on {generated}',
+  'data.line': 'Latest tournament: {last} · {decks} decks',
   'data.stale': 'The tournament source has had no new events for {days} days: the most recent data may be missing.',
 
   'load.aria': 'Load your collection',
@@ -347,7 +348,7 @@ export const en: Record<Key, Msg> = {
   'about.step3.title': 'Find your cards',
   'about.step3.text': 'Which Pauper cards you own and which you are missing.',
   'about.data': 'The data',
-  'about.data.text': 'Decklists from MTGO and paper tournaments; card data and images from Scryfall. Updated every day: last update on {date}.',
+  'about.data.text': 'Decklists from {tournaments} MTGO and paper tournaments, {decks} decks in all (latest tournament: {last}); card data and images from Scryfall. Updated every day (last update: {date}).',
   'about.data.textNoDate': 'Decklists from MTGO and paper tournaments; card data and images from Scryfall. Updated every day.',
   'about.faq': 'Frequently asked questions',
   'about.faq.played.q': 'What does “played in Pauper” mean?',

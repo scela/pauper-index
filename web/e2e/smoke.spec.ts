@@ -34,6 +34,12 @@ async function setup(page: Page): Promise<string[]> {
   return problems;
 }
 
+/** Clic su Informazioni, lingua o tema: su mobile stanno nel pannello del pulsante "⋯", che si apre se serve. */
+async function navClick(page: Page, sel: string): Promise<void> {
+  if (!(await page.locator(sel).isVisible()) && (await page.locator('#navMore').isVisible())) await page.click('#navMore');
+  await page.click(sel);
+}
+
 async function uploadCollection(page: Page): Promise<void> {
   await page.setInputFiles('#files', resolve(FIX, 'collezione-sintetica.csv'));
   await expect(page.locator('#loaded')).toContainText(tr('load.collection').trim());
@@ -77,7 +83,7 @@ test('lingua del browser, testi statici, area di caricamento, filtri e lista, co
 test('selettore IT/EN: cambia tutti i testi e la scelta resta dopo il ricaricamento', async ({ page }) => {
   await setup(page);
   const other: Lang = L === 'it' ? 'en' : 'it';
-  await page.click(`[data-lang="${other}"]`);
+  await navClick(page, `[data-lang="${other}"]`);
   await expect(page.locator('html')).toHaveAttribute('lang', other);
   await expect(page.locator('#navAbout')).toHaveText(translate(other, 'nav.about'));
   await expect(page.locator('#drop strong')).toHaveText(translate(other, 'load.dropTitle'));
@@ -473,6 +479,55 @@ test('controllo rapido: Invio prima che i suggerimenti siano pronti mostra la ca
   await expect(page.locator('#quickResult .qtitle')).toHaveCount(0);
 });
 
+test('testata: una riga, pannello "⋯" su mobile, pulsanti speciali, libro che si apre senza cambiare dimensioni', async ({ page, isMobile }) => {
+  await setup(page);
+  const top = (await page.locator('.top').boundingBox())!;
+  expect(top.height).toBeLessThanOrEqual(60); // una sola riga, anche su mobile
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+  // riga dei dati corta: ultimo torneo e mazzi; il resto è in Informazioni
+  await expect(page.locator('#dataline')).toContainText(head('data.line'));
+  expect((await page.locator('#dataline').boundingBox())!.height).toBeLessThanOrEqual(isMobile ? 40 : 24);
+  const book = page.locator('#navDecks');
+  await expect(book).toHaveAccessibleName(tr('nav.decks'));
+  await expect(page.locator('#navDust')).toHaveAccessibleName(tr('nav.dust'));
+  const more = page.locator('#navMore');
+  if (isMobile) {
+    // Informazioni, lingua e tema nel pannello "⋯": si apre, Esc lo chiude e riporta il focus, toccare fuori lo chiude
+    await expect(page.locator('#navAbout')).toBeHidden();
+    await expect(more).toHaveAccessibleName(tr('nav.more'));
+    await more.click();
+    await expect(more).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#navAbout')).toBeVisible();
+    await expect(page.locator('#navAbout')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#navAbout')).toBeHidden();
+    await expect(more).toBeFocused();
+    await more.click();
+    await page.locator('#verdict').click();
+    await expect(page.locator('#navAbout')).toBeHidden();
+    await expect(more).toHaveAttribute('aria-expanded', 'false');
+  } else {
+    await expect(more).toBeHidden();
+    await expect(page.locator('#navAbout')).toBeVisible();
+  }
+  // libro: aperto sulla pagina Mazzi, stesse dimensioni del pulsante
+  const before = (await book.boundingBox())!;
+  await page.route('**/data/decks-61.json', (r) => r.fulfill({ json: syntheticDecks() }));
+  await book.click();
+  await expect(book).toHaveAttribute('aria-current', 'page');
+  await expect.poll(() => page.locator('.book-cover').evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
+  const after = (await book.boundingBox())!;
+  expect([after.width, after.height].map(Math.round)).toEqual([before.width, before.height].map(Math.round));
+});
+
+test('testata con prefers-reduced-motion: il libro cambia stato senza animazione', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await setup(page);
+  for (const el of ['.book-cover', '#navDecks']) {
+    expect(await page.locator(el).evaluate((e) => getComputedStyle(e).transitionDuration)).toMatch(/^0s/);
+  }
+});
+
 test('logo e nome: link alla pagina principale da ogni sezione, collezione conservata, filtri azzerati', async ({ page }) => {
   await setup(page);
   const home = page.locator('#home');
@@ -490,7 +545,7 @@ test('logo e nome: link alla pagina principale da ogni sezione, collezione conse
     // filtri dell'elenco attivi, poi una sezione, poi il logo
     await page.selectOption('#seenFilter', 'old');
     await page.fill('#search', 'bolt');
-    await page.click(section);
+    await navClick(page, section);
     await expect(page.locator('#viewMain')).toBeHidden();
     await page.click('#home');
     await expect(page).toHaveURL(/:\d+\/$/); // radice del sito, senza #sezione
@@ -1343,7 +1398,7 @@ test('nomi italiani: la scheda in italiano li scarica alla prima apertura; senza
 
 test('nomi italiani: scheda aperta prima di ogni ricerca, interfaccia in italiano', async ({ page }) => {
   await setup(page);
-  if (L !== 'it') await page.click('[data-lang="it"]');
+  if (L !== 'it') await navClick(page, '[data-lang="it"]');
   await page.fill('#search', '');
   await page.locator('#cardRows .cardbtn').first().click();
   const name = (await page.locator('#sheetTitle').innerText()).trim();

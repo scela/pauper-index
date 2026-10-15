@@ -46,7 +46,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] passo 4 (2026-10-15): archetipi Golgari Gardens e Ruby Storm, nomi della decklist secondo il layout (formato MTG Arena), Invio in anticipo nel controllo rapido, test della "Carta dimenticata" indipendente dal carico, misure del calcolo dei mazzi (vedi "Funzione 4: rifinitura")
   - [ ] Pagina iniziale su smartphone e Carta dimenticata, piano approvato il 2026-10-15 (vedi "Pagina iniziale e Carta dimenticata"); dopo, i passi 4–5 dei Mazzi:
     - [x] A1: difetti (carte e copie della collezione, valore "almeno" con righe senza printing)
-    - [ ] A2: testata su una riga, menu compatto, famiglia di pulsanti, libro di Mazzi (ex passo 6 dei Mazzi), riga dei dati corta
+    - [x] A2: testata su una riga, menu compatto, famiglia di pulsanti, libro di Mazzi (ex passo 6 dei Mazzi), riga dei dati corta (vedi "Testata (2026-10-15)")
     - [ ] A3: caricamento (frase, due pulsanti, aiuto per l'export di ManaBox, riga della collezione) — **controllo con screenshot dopo A2 e A3**
     - [ ] A4: campo unico "Cerca una carta" con la scheda arricchita
     - [ ] A5: filtri su una riga ("Ultima apparizione" nel pannello), righe compatte, misure prima/dopo
@@ -611,6 +611,17 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - **File**: `web/public/fonts/pauper-index-title.woff2`, 7,6 KB, con i soli glifi di "Pauper Index" (11, più `.notdef`). Il grosso del peso è il testo della licenza, lasciato dentro il font. Servito dal sito con `font-display: swap` e `<link rel="preload">`; CSP invariata (`font-src 'self'`).
   - **Rigenerare** (solo se cambia il testo del titolo): `web/scripts/title-font.py` con fonttools in un ambiente virtuale temporaneo (fonttools non è una dipendenza del progetto); sorgente `NewRocker-Regular.ttf` dal repository google/fonts. Il testo da coprire è la costante `TEXT`: un carattere nuovo nel titolo non sarebbe coperto.
   - **og-image**: `npm run icons` carica lo stesso file con `FontFace` per disegnare "Pauper Index"; "pauperindex.com" resta nel font di sistema.
+
+## Testata (2026-10-15, passo A2; sostituisce in parte "Testata" del 2026-10-07)
+
+- **Una riga anche su mobile**: logo, nome, pulsanti speciali, "⋯". Misure (375×667 e 320×568): testata **51 px** (prima 124 su tre righe), nessuno scorrimento orizzontale; desktop 52 px come prima. Sotto 360 px resta solo il logo (il nome resta come nome accessibile del link).
+- **Pulsanti speciali, una famiglia** (`.special`): stessa altezza (40 px su desktop, **48 px** su mobile, con l'icona sopra e l'etichetta breve sotto), rilievo (`--sp-ledge`), angoli, focus (3 px nel colore del testo), premuti sulla propria pagina (`aria-current`); ognuno con il suo tema. Pronti per il terzo (Debutti), che non c'è finché la funzione non esiste. **Le dimensioni non cambiano mai** (verificato da un test: libro aperto = stesse dimensioni).
+  - **Mazzi** (`.navbook`): libro antico. Copertina di cuoio (sfumatura `#7C4C2B` → `#4F2E18` con una grana di rumore SVG originale in un data URI, ammesso da `img-src data:`), doppia cornice dorata (`::before` piena, `::after` tratteggiata), icona SVG originale di un libro con fregio e fermaglio. Testo `#F6DE9A`: contrasto **5,4:1** nel punto più chiaro (6,6:1 al centro), uguale in chiaro e scuro. Al tocco (`:active`) e sulla propria pagina la copertina (`.book-cover`) ruota di −155° sull'asse Y e mostra le pagine (0,45 s); con `prefers-reduced-motion` cambia senza animazione.
+  - **Carta dimenticata** (`.navdust`): invariata nel tema (blu, piumino, ragnatela).
+- **"⋯"** (`#navMore`, solo sotto 761 px): apre `#navExtra` con Informazioni, IT/EN e tema (righe da 44 px). `aria-expanded`/`aria-controls`; all'apertura il focus va alla prima voce, Esc chiude e riporta il focus su "⋯", toccare fuori o scegliere un link chiude. Su desktop `#navExtra` resta in riga come prima. Stessi elementi e stessi ID in entrambi i casi (cambia solo il CSS).
+- **Riga dei dati** corta: "Ultimo torneo: 11 ott 2026 · 156.550 mazzi" (`data.line`; niente "Dati al 11 ott", che in italiano richiederebbe l'elisione). Numero di tornei, mazzi e data dell'aggiornamento sono nella frase "I dati" di Informazioni (`about.data.text`, ora "ultimo aggiornamento: {date}" invece di "il {date}", che dava "il 11").
+- **Test**: `navClick` in `smoke.spec.ts` apre "⋯" quando Informazioni, lingua o tema non sono visibili (mobile); test nuovi sulla testata e sul libro con `prefers-reduced-motion`.
+- **Difetto noto, da correggere in A4**: nel controllo rapido, se tutti i nomi arrivano mentre si sceglie con le frecce, l'elenco si ridisegna e torna al primo suggerimento (test "controllo rapido: carta giocata senza collezione, tastiera", 1 fallimento su 16 con la macchina carica).
 
 ## Ragnatele (2026-10-07)
 

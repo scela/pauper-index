@@ -44,7 +44,7 @@ a{color:var(--accent)}
 @font-face{font-family:"Pauper Index Title";src:url("/fonts/pauper-index-title.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
 
 /* testata */
-.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:nowrap;position:relative}
 h1{font-size:clamp(1.75rem,4.5vw,2.5rem);line-height:1;letter-spacing:-0.03em;font-weight:700;margin:0}
 h1 a{color:inherit;text-decoration:none;cursor:pointer}
 .home{border-radius:var(--r-m);transition:opacity .15s}
@@ -56,19 +56,42 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
 .home .brand{font-family:"Pauper Index Title",var(--font);font-weight:400;letter-spacing:.01em}
 .home{display:inline-flex;align-items:center;gap:.28em}
 .logo{width:1.2em;height:1.2em;flex:none;color:var(--logo)}
-.nav{display:flex;gap:4px;align-items:center;font-size:.9375rem}
-.nav{gap:6px}
-/* "Informazioni": link discreto */
+.nav{display:flex;gap:8px;align-items:center;font-size:.9375rem;min-width:0}
+/* "Informazioni", lingua e tema: in riga su desktop, nel pannello del pulsante "⋯" su mobile */
+.navextra{display:flex;gap:6px;align-items:center}
+.nav .navmore{display:none}
 .navlink{font-weight:500;padding:6px;color:var(--muted);text-decoration:none}
 .navlink:hover,.navlink[aria-current="page"]{color:var(--ink);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
-/* "Carta dimenticata": pulsante compatto nello stile del pulsante grande della pagina */
-.navdust{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:5px 16px 5px 10px;margin:0 4px 4px 0;
-  border-radius:10px;text-decoration:none;font-weight:650;white-space:nowrap;color:var(--accent-ink);
-  background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 82%,#fff) 0%,var(--accent) 55%,color-mix(in srgb,var(--accent) 88%,#000) 100%);
-  box-shadow:0 3px 0 var(--btn-ledge),0 7px 14px -8px rgba(10,20,40,.55),inset 0 1px 0 rgba(255,255,255,.3);transition:transform .08s,box-shadow .08s,filter .15s}
-.navdust:hover{filter:brightness(1.07)}
-.navdust:active,.navdust[aria-current="page"]{transform:translateY(2px);box-shadow:0 1px 0 var(--btn-ledge),0 4px 8px -6px rgba(10,20,40,.5),inset 0 1px 0 rgba(255,255,255,.25)}
-.navdust:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+/* pulsanti speciali (Mazzi, Carta dimenticata, poi Debutti): una famiglia con stessa altezza, rilievo, angoli e
+   focus; ognuno ha il suo tema. Premuto sulla propria pagina (aria-current). Le dimensioni non cambiano mai. */
+.specials{display:flex;gap:8px;align-items:center}
+.special{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px 0 10px;margin-bottom:3px;
+  border-radius:10px;text-decoration:none;font-weight:650;white-space:nowrap;
+  box-shadow:0 3px 0 var(--sp-ledge),0 7px 14px -8px rgba(10,20,40,.55),inset 0 1px 0 rgba(255,255,255,.3);transition:transform .08s,box-shadow .08s,filter .15s}
+.special:hover{filter:brightness(1.07)}
+.special:active,.special[aria-current="page"]{transform:translateY(2px);box-shadow:0 1px 0 var(--sp-ledge),0 4px 8px -6px rgba(10,20,40,.5),inset 0 1px 0 rgba(255,255,255,.25)}
+.special:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+/* "Carta dimenticata": il blu del pulsante grande della pagina, piumino e ragnatela */
+.navdust{--sp-ledge:var(--btn-ledge);color:var(--accent-ink);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 82%,#fff) 0%,var(--accent) 55%,color-mix(in srgb,var(--accent) 88%,#000) 100%)}
+/* "Mazzi": un libro antico, copertina di cuoio con grana (rumore SVG originale) e cornice dorata */
+.navbook{--sp-ledge:#2B170A;color:#F6DE9A;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='120' height='60' filter='url(%23g)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg,#7C4C2B 0%,#6C4123 55%,#4F2E18 100%)}
+.navbook::before{content:"";position:absolute;inset:3px;border:1px solid rgba(246,222,154,.55);border-radius:7px;pointer-events:none}
+.navbook::after{content:"";position:absolute;inset:5px;border:1px dashed rgba(246,222,154,.28);border-radius:5px;pointer-events:none}
+.book{position:relative;width:22px;height:22px;flex:none;perspective:70px}
+.book svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.book-pages path{fill:#F3E7C6;stroke:#9C7A45;stroke-width:.8}
+.book-pages .lines{fill:none;stroke:#B39463;stroke-width:.7}
+.book-cover{transform-origin:15% 50%;transition:transform .45s cubic-bezier(.3,.7,.3,1);backface-visibility:hidden}
+.book-cover .leather{fill:#4A2913;stroke:#F6DE9A;stroke-width:1.1}
+.book-cover .frame{fill:none;stroke:#E2BE6A;stroke-width:.6;stroke-dasharray:1.2 .9}
+.book-cover .orn{fill:#E2BE6A;stroke:#F6DE9A;stroke-width:.5}
+.book-cover .clasp{fill:none;stroke:#E2BE6A;stroke-width:1.2}
+/* al tocco e sulla propria pagina la copertina si apre, mostrando le pagine */
+.navbook:active .book-cover,.navbook[aria-current="page"] .book-cover{transform:rotateY(-155deg)}
+@media (prefers-reduced-motion: reduce){.special{transition:none}.book-cover{transition:none}}
 .nd-ico{width:20px;height:20px;flex:none;overflow:visible;transform-origin:3px 21px}
 .nd-ico .handle{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
 .nd-ico .collar{fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round}
@@ -78,7 +101,7 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
 .nd-short{display:none}
 .navdust:hover .nd-ico{animation:duster-wiggle .7s ease-in-out}
 .nd-web{position:absolute;top:0;right:0;width:26px;height:26px;pointer-events:none}
-@media (prefers-reduced-motion: reduce){.navdust:hover .nd-ico{animation:none}.navdust{transition:none}}
+@media (prefers-reduced-motion: reduce){.navdust:hover .nd-ico{animation:none}}
 .langs{display:inline-flex}
 .langs .btn{padding-inline:6px;min-width:34px;justify-content:center}
 .langs .btn[aria-pressed="true"]{color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:3px}
@@ -567,11 +590,23 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .drop{min-height:72px;padding:12px 16px}
   .search{margin-left:0;width:100%}
   .btn.removecoll,.btn.undo-btn{min-height:44px}
-  .top{flex-wrap:wrap;row-gap:2px}
-  h1{font-size:1.625rem;white-space:nowrap}
-  .nav{font-size:.875rem;flex-wrap:wrap;row-gap:4px;margin-left:0;margin-top:6px}
-  .navdust{min-height:40px}
-  .nav .btn{white-space:nowrap}
+  /* testata su una riga: logo, nome, pulsanti speciali (icona sopra, etichetta breve sotto) e "⋯" */
+  .top{gap:8px}
+  h1{font-size:1.25rem;white-space:nowrap;min-width:0}
+  .home .logo{width:1.35em;height:1.35em}
+  .nav{gap:6px;font-size:.875rem}
+  .specials{gap:6px}
+  .special{flex-direction:column;justify-content:center;gap:1px;height:48px;min-width:56px;padding:0 6px;font-size:.6875rem;line-height:1.1}
+  .special .nd-full{display:none}
+  .special .nd-short{display:inline}
+  .book,.nd-ico{width:22px;height:22px}
+  .nav .navmore{display:inline-flex;align-items:center;justify-content:center;width:40px;height:44px;padding:0;flex:none}
+  .navmore svg{width:20px;height:20px;fill:currentColor}
+  .navextra{display:none;position:absolute;z-index:40;top:calc(100% + 6px);right:0;flex-direction:column;align-items:stretch;gap:4px;min-width:200px;padding:8px;
+    background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-m);box-shadow:0 12px 30px -12px rgba(0,0,0,.45)}
+  .navextra.open{display:flex}
+  .navextra .navlink,.navextra .btn{min-height:44px;display:flex;align-items:center;padding-inline:10px}
+  .navextra .langs .btn{flex:1;justify-content:center}
   .f-field:first-child{flex:1;min-width:0}
   .f-field:first-child select{flex:1;min-width:0;width:100%}
   .filters{gap:8px 12px}
@@ -610,9 +645,8 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .dfilters .f-field{flex:1 1 100%;min-width:0}
   .dfilters .f-field select{flex:1;min-width:0;width:100%;max-width:100%}
 }
-@media (max-width:400px){
-  .nd-full{display:none}
-  .nd-short{display:inline}
+@media (max-width:359px){
+  .home .brand{display:none}
 }
 @media (max-width:640px){
   .cards thead{display:none}

@@ -6,7 +6,7 @@
 import { t, tNodes, type Key } from '../i18n';
 import type { Data } from '../lib/data';
 import { h, svg } from '../lib/dom';
-import { fmtDate } from '../lib/format';
+import { fmtDate, fmtInt } from '../lib/format';
 
 export const SITE_TITLE = 'Pauper Index';
 // Testo esatto richiesto da company.wizards.com/en/legal/fancontentpolicy (verificato il 2026-10-05).
@@ -56,7 +56,7 @@ export function renderAbout(root: HTMLElement, d: Data | null): void {
 
     h('section', null,
       h('h3', null, t('about.data')),
-      h('p', null, m ? t('about.data.text', { date: fmtDate(m.generated_at) }) : t('about.data.textNoDate'))),
+      h('p', null, m ? t('about.data.text', { date: fmtDate(m.generated_at), tournaments: fmtInt(m.tournaments), decks: fmtInt(m.decks), last: fmtDate(m.last_tournament) }) : t('about.data.textNoDate'))),
 
     h('section', null,
       h('h3', null, t('about.faq')),

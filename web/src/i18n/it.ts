@@ -12,12 +12,13 @@ export const it = {
   'nav.dust': 'Carta dimenticata',
   'nav.dustShort': 'Dimenticata',
   'nav.lang': 'Lingua',
+  'nav.more': 'Altro: informazioni, lingua e tema',
   'theme.toDark': 'Tema scuro',
   'theme.toLight': 'Tema chiaro',
 
   'data.loading': 'Caricamento dei dati…',
   'data.error': 'Non riesco a caricare la lista delle carte. Ricarica la pagina tra qualche minuto.',
-  'data.line': 'Tornei fino al {last} · {tournaments} tornei · {decks} mazzi · dati aggiornati il {generated}',
+  'data.line': 'Ultimo torneo: {last} · {decks} mazzi',
   'data.stale': 'La fonte dei tornei non riceve nuovi tornei da {days} giorni: i dati più recenti potrebbero mancare.',
 
   'load.aria': 'Carica la collezione',
@@ -349,7 +350,7 @@ export const it = {
   'about.step3.title': 'Scopri le tue carte',
   'about.step3.text': 'Quali carte giocate in Pauper possiedi e quali ti mancano.',
   'about.data': 'I dati',
-  'about.data.text': 'Decklist dei tornei MTGO e cartacei; dati e immagini delle carte da Scryfall. Si aggiorna ogni giorno: ultimo aggiornamento il {date}.',
+  'about.data.text': 'Decklist di {tournaments} tornei MTGO e cartacei, {decks} mazzi in tutto (ultimo torneo: {last}); dati e immagini delle carte da Scryfall. Si aggiorna ogni giorno (ultimo aggiornamento: {date}).',
   'about.data.textNoDate': 'Decklist dei tornei MTGO e cartacei; dati e immagini delle carte da Scryfall. Si aggiorna ogni giorno.',
   'about.faq': 'Domande frequenti',
   'about.faq.played.q': 'Cosa vuol dire “giocata in Pauper”?',
