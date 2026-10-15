@@ -14,7 +14,7 @@ import { cheapestPrice, ownedPrice, ownedPrintIndex, priceTotals, printPrice, ty
 import { clearAll, idbGet, idbSet, lsDel, lsGet, lsSet } from './lib/store';
 import { parseTextList } from './lib/text';
 import type { Group, Role, Row } from './lib/types';
-import { collectionIndex, collectionSize, type CollectionIndex, type Owned } from './lib/quick';
+import { collectionIndex, collectionSize, ownedFor, type CollectionIndex, type NameEntry, type Owned } from './lib/quick';
 import { buildGroups, displayPrint, iconOf, memberCodes, printsInSets, rarityHere, type SetGroup, type SetRow } from './lib/sets';
 import { setIcon } from './ui/seticon';
 import { restrictToSet, shownNote, visible, type ListFilters, type Seen } from './lib/view';
@@ -26,8 +26,8 @@ import { renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
 import { initDust } from './ui/dust';
 import { initDecks } from './ui/decks';
-import { initQuick } from './ui/quick';
-import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openSheet, recentlyClosed, renderGrid, scheduleClose, setSheetItalian, unblockHover } from './ui/sheet';
+import { initSearch, type SearchApi } from './ui/search';
+import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openNeverSheet, openSheet, recentlyClosed, renderGrid, scheduleClose, setSheetItalian, unblockHover } from './ui/sheet';
 
 // Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa
 // (gli export: tutte le carte che rispettano i filtri attivi, non solo quelle mostrate).
@@ -87,7 +87,9 @@ const S = {
   setHidden: false,
   setOwned: false,
 };
-let quick: { refresh(): void } | null = null;
+let search: SearchApi | null = null;
+/** voce che la nota "nessuna carta" propone di aprire */
+let noteEntry: NameEntry | null = null;
 let dust: { refresh(): void } | null = null;
 let decks: { show(): void; refresh(): void } | null = null;
 let setPicker: { refresh(): void } | null = null;
@@ -376,7 +378,7 @@ function render(): void {
   renderFilters();
   renderResults();
   renderExtra();
-  quick?.refresh();
+  search?.refresh();
   dust?.refresh();
   decks?.refresh();
   setPicker?.refresh();
@@ -740,11 +742,17 @@ function renderRows(): void {
   count.hidden = !rows.length;
   count.textContent = t('res.shown', { n: fmtInt(rows.length), total: fmtInt(S.view.length) });
   if (!rows.length) {
+    // il testo cercato non trova carte nell'elenco: si propone la scheda della carta (anche mai giocata)
+    noteEntry = S.query.trim() ? search?.best(S.query) ?? null : null;
     $('#cardRows').replaceChildren(h('tr', { class: 'nores' }, h('td', { colspan: 6 },
-      S.query || S.seen !== 'all' || cardFiltersOn() ? t('res.noMatch') : S.setCodes ? (S.setOwned ? t('res.noOwned') : t('set.empty'))
-        : coll && !S.showMissing ? t('res.noOwned') : t('res.none'))));
+      noteEntry ? t('search.noneInList', { q: S.query.trim() })
+        : S.query || S.seen !== 'all' || cardFiltersOn() ? t('res.noMatch') : S.setCodes ? (S.setOwned ? t('res.noOwned') : t('set.empty'))
+          : coll && !S.showMissing ? t('res.noOwned') : t('res.none'),
+      noteEntry ? ' ' : '',
+      noteEntry ? h('button', { class: 'linkbtn', type: 'button', id: 'openFromNote' }, t('search.openCard', { name: noteEntry.label })) : '')));
     return;
   }
+  noteEntry = null;
   $('#cardRows').replaceChildren(...rows.map((x) => {
     const c = d.cards.c[x.idx];
     const st = c.s[S.opts.win];
@@ -950,6 +958,27 @@ function openArtworksFor(anchor: HTMLElement, idx: number, owned: Owned | null):
   }, 'click');
 }
 
+/** Scheda della carta scelta nel campo "Cerca una carta": giocata (scheda completa) o mai giocata (ridotta). */
+function openFromSearch(anchor: HTMLElement, e: NameEntry): void {
+  if (!S.d) return;
+  track('controllo-rapido');
+  const coll = hasColl();
+  if (e.card >= 0) {
+    const res: Result | null = coll ? ownedResult(e.card) : null;
+    const approx = !!res && res.prints.length > 0 && res.prints.every((p) => !p.exact);
+    openSheet(anchor, {
+      d: S.d, opts: S.opts, idx: e.card, res, approx, prices: S.prices,
+      itNames: e.its.length ? e.its : sheetItalian(e.card), itForce: e.it, noCollection: !coll,
+      onShowAll: (items, title) => renderGrid($('#gridDialog') as HTMLDialogElement, items, title),
+    }, 'click');
+  } else {
+    openNeverSheet(anchor, {
+      name: e.name, legal: e.legal, itNames: e.its, itForce: e.it,
+      owned: coll && S.cix ? ownedFor(S.cix, e) : null, hasCollection: coll,
+    });
+  }
+}
+
 /* ---------- tema e viste ---------- */
 
 function applyTheme(theme: string | null): void {
@@ -1088,11 +1117,8 @@ function wire(): void {
     refresh();
   });
   $('#search').addEventListener('focus', ensureItalian);
-  $('#search').addEventListener('input', (e) => {
-    ensureItalian();
-    S.query = (e.target as HTMLInputElement).value;
-    S.shown = PAGE;
-    renderResults();
+  $('#cardRows').addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).id === 'openFromNote' && noteEntry) search?.open(noteEntry);
   });
   const seenSel = $('#seenFilter') as HTMLSelectElement;
   seenSel.value = S.seen;
@@ -1306,6 +1332,9 @@ function wire(): void {
     const el = e.target as Node;
     if (extra.classList.contains('open') && !extra.contains(el) && !more.contains(el)) setMore(false);
   });
+  // cambio di pagina (link, "indietro" del browser o il gesto di Android): il pannello si chiude
+  window.addEventListener('hashchange', () => setMore(false));
+  window.addEventListener('popstate', () => setMore(false));
   window.addEventListener('hashchange', route);
   $('#undoBar').addEventListener('click', (e) => {
     if ((e.target as HTMLElement).id === 'undoRemove') undoRemoval();
@@ -1347,8 +1376,18 @@ async function main(): Promise<void> {
   panel = initFilterPanel({
     filters: () => S.cf, types: () => S.types, change: cardFiltersChanged, count: () => S.view.length, loadTexts,
   });
-  quick = initQuick({
-    data: () => S.d, opts: () => S.opts, collection: () => (hasColl() ? S.cix : null), openArtworks: openArtworksFor,
+  search = initSearch({
+    data: () => S.d,
+    query: (q) => {
+      ensureItalian();
+      S.query = q;
+      S.shown = PAGE;
+      renderResults();
+    },
+    open: openFromSearch,
+    ready: () => {
+      if (S.d && S.query.trim() && !S.view.length) renderResults();
+    },
   });
   dust = initDust({
     data: () => S.d, opts: () => S.opts, collection: () => (hasColl() ? S.cix : null), openArtworks: openArtworksFor,

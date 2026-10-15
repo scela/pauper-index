@@ -5,7 +5,7 @@
 // così artista e copyright restano visibili), niente deformazioni, filtri o watermark.
 
 import type { Opts, Result } from '../lib/compare';
-import { getLang, t } from '../i18n';
+import { getLang, t, type Key } from '../i18n';
 import { deckShare, typicalCopies } from '../lib/compare';
 import { imageUrl, type Data } from '../lib/data';
 import { h } from '../lib/dom';
@@ -179,7 +179,9 @@ export interface SheetInput {
   approx: boolean; // printing non indicata (testo senza set/numero)
   focusId?: string; // stampa da mostrare come carta attiva (vista per espansione)
   prices: PricesFile | null; // prezzi indicativi; null se non disponibili ("—")
-  itNames?: string[]; // nomi italiani (mostrati solo con l'interfaccia in italiano)
+  itNames?: string[]; // nomi italiani (mostrati con l'interfaccia in italiano, o sempre con itForce)
+  itForce?: boolean; // la carta è stata cercata con un nome italiano: i nomi italiani si mostrano in ogni lingua
+  noCollection?: boolean; // nessuna collezione caricata: la scheda lo dice (aperta dal campo di ricerca)
   onShowAll: (items: FanItem[], title: string) => void;
 }
 
@@ -285,10 +287,13 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
   }
 
   const owned = res?.prints.length
-    ? h('p', null, res.binders.length
+    ? h('div', null, h('p', null, res.binders.length
       ? t('sheet.ownIn', { n: res.owned, where: res.binders.map(([b, q]) => `${b}: ${q}`).join(', ') })
-      : t('sheet.own', { n: res.owned }))
-    : res ? h('p', null, t('sheet.notOwned')) : null;
+      : t('sheet.own', { n: res.owned })),
+    h('p', { class: 'note' }, res.prints.map((p) => `${fmtPrint(p.row)} ×${p.q}`).join(', ')))
+    : res ? h('p', null, t('sheet.notOwned')) : input.noCollection ? h('p', { class: 'note' }, t('quick.noCollection')) : null;
+  const entry = c.e ? d.cards.sets[c.e] : null;
+  const entryLine = entry && c.e ? h('p', { class: 'note' }, t('quick.entry', { set: entry[0], year: entry[1].slice(0, 4) })) : null;
 
   // prezzo di ogni printing posseduta (foil se è foil), dalla più cara
   const yourPrices = res?.prints.length && input.prices
@@ -303,8 +308,8 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
   el.replaceChildren(
     h('div', { class: 'sheet-head' },
       h('div', { class: 'sheet-titles' },
-        h('h3', { id: 'sheetTitle' }, c.n, c.l === 'b' ? h('span', { class: 'badge banned' }, t('badge.banned')) : null),
-        italianLine(input.itNames)), close),
+        h('h3', { id: 'sheetTitle' }, c.n, legalBadge(c.l)),
+        italianLine(input.itNames, input.itForce)), close),
     fan,
     items.length > FAN_MAX
       ? h('p', { class: 'fan-note' }, t('sheet.someOf', { n: FAN_MAX, total: items.length }),
@@ -314,7 +319,7 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
       cardBox,
       h('div', { class: 'details' }, tag, dl,
         input.approx ? h('p', { class: 'warnbox' }, t('sheet.approx')) : null,
-        owned, yourPrices, stats, seenList)),
+        owned, yourPrices, stats, seenList, entryLine)),
   );
   el.hidden = false;
   el.classList.remove('sheet-in');
@@ -327,10 +332,53 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
   if (mode === 'click') (fan.querySelector<HTMLElement>('.fan-item.active') || close).focus({ preventScroll: true });
 }
 
-/** Nome italiano sotto quello inglese, solo con l'interfaccia in italiano. */
-function italianLine(names: string[] | undefined): HTMLElement {
-  const show = getLang() === 'it' && !!names?.length;
+/** Legalità in Pauper, sempre visibile nel titolo della scheda. */
+function legalBadge(l: 'l' | 'b' | 'n'): HTMLElement {
+  return h('span', { class: `badge q-${l}${l === 'b' ? ' banned' : ''}` }, t(`quick.legal.${l}` as Key));
+}
+
+/** Nome italiano sotto quello inglese: con l'interfaccia in italiano, o sempre se la carta è stata cercata in italiano. */
+function italianLine(names: string[] | undefined, force = false): HTMLElement {
+  const show = (getLang() === 'it' || force) && !!names?.length;
   return h('p', { class: 'itname', id: 'sheetIt', lang: 'it', hidden: !show }, show ? names!.join(' · ') : '');
+}
+
+export interface NeverInput {
+  name: string;
+  legal: 'l' | 'b' | 'n';
+  itNames: string[];
+  itForce: boolean;
+  /** possesso per nome; null senza collezione */
+  owned: { total: number; prints: { row: Parameters<typeof fmtPrint>[0]; q: number }[]; binders: [string, number][] } | null;
+  hasCollection: boolean;
+}
+
+/** Scheda ridotta di una carta mai giocata in Pauper (dal campo di ricerca): legalità, "Mai giocata", possesso. */
+export function openNeverSheet(anchor: HTMLElement, input: NeverInput): void {
+  cancelClose();
+  const el = sheetEl();
+  current = { anchor, idx: -1, mode: 'click' };
+  const close = h('button', { class: 'btn quiet small', type: 'button', 'aria-label': t('sheet.closeAria') }, t('sheet.close'));
+  close.addEventListener('click', () => closeSheet(true));
+  const o = input.owned;
+  const owned = !input.hasCollection ? h('p', { class: 'note' }, t('quick.noCollection'))
+    : o && o.total > 0
+      ? h('div', null, h('p', null, o.binders.length
+        ? t('sheet.ownIn', { n: o.total, where: o.binders.map(([b, q]) => `${b}: ${q}`).join(', ') })
+        : t('sheet.own', { n: o.total })),
+      h('p', { class: 'note' }, o.prints.map((p) => `${fmtPrint(p.row)} ×${p.q}`).join(', ')))
+      : h('p', null, t('sheet.notOwned'));
+  el.replaceChildren(
+    h('div', { class: 'sheet-head' },
+      h('div', { class: 'sheet-titles' },
+        h('h3', { id: 'sheetTitle' }, input.name, legalBadge(input.legal)),
+        italianLine(input.itNames, input.itForce)), close),
+    h('div', { class: 'details never' }, h('p', { class: 'qstat qnever' }, t('quick.never')), owned),
+  );
+  el.hidden = false;
+  el.classList.remove('sheet-in');
+  place(anchor, el);
+  close.focus({ preventScroll: true });
 }
 
 /** Nomi italiani arrivati dopo l'apertura della scheda (il file si scarica al primo uso). */

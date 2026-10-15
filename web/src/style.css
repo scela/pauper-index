@@ -123,8 +123,6 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
 .linkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* controllo rapido */
-.quick{margin:0 0 14px}
-.quick-label{display:block;font-weight:600;font-size:.9375rem;margin-bottom:4px}
 /* Rispolvera una carta: copertura sopra la carta, mai filtri sull'immagine (regole di Scryfall) */
 .dustpage{display:flex;flex-direction:column;align-items:center;text-align:center;padding:4px 0 8px}
 .dustpage h2{font-size:clamp(1.5rem,4vw,2rem);line-height:1.15;letter-spacing:-.02em;margin:10px 0 6px}
@@ -256,8 +254,11 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
   .dust-cover:not(.still){display:none}
 }
 .qbox{position:relative}
-#quickInput{font:inherit;font-size:16px;width:100%;min-height:46px;padding:8px 14px;border:1.5px solid var(--line-strong);border-radius:var(--r-m);background:var(--surface);color:var(--ink)}
-#quickInput:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+/* "Cerca una carta": un solo campo, sopra i filtri (testo a 16 px: niente zoom su iPhone) */
+.searchfield{margin:12px 0 0}
+.searchfield .qbox{position:relative}
+#search{font:inherit;font-size:16px;width:100%;min-height:44px;margin:0;padding:8px 14px;border:1.5px solid var(--line-strong);border-radius:var(--r-m);background:var(--surface);color:var(--ink)}
+#search:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
 .qlist{position:absolute;z-index:25;left:0;right:0;top:calc(100% + 4px);margin:0;padding:4px;list-style:none;background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-m);box-shadow:0 12px 32px -12px rgba(16,24,40,.35);max-height:min(60vh,380px);overflow:auto}
 .qlist li{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;padding:6px 10px;border-radius:var(--r-s);cursor:pointer}
 .qlist li[aria-selected="true"]{background:var(--accent-soft)}
@@ -367,7 +368,6 @@ textarea{font:inherit;font-size:16px;width:100%;min-height:64px;resize:vertical;
 .setwrap.has-set #setInput{padding-left:32px}
 /* filtri per colore, costo, tipo e testo: pulsante "Filtri", pannello ed etichette dei filtri attivi */
 .searchrow{display:flex;align-items:center;gap:8px;margin-left:auto}
-.searchrow .search{margin-left:0}
 .fbtn-open{min-height:34px;padding:4px 12px;font-size:.875rem;white-space:nowrap}
 .fbtn-open.on{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
 .fbtn-open .fico,.fp-x svg,.fchip svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
@@ -412,7 +412,6 @@ textarea{font:inherit;font-size:16px;width:100%;min-height:64px;resize:vertical;
 @media (prefers-reduced-motion: reduce){.fpanel:modal{animation:none}}
 .chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
 .chk input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
-.search{font:inherit;font-size:16px;min-height:34px;width:min(220px,100%);padding:4px 10px;border:1px solid var(--line-strong);border-radius:var(--r-s);background:var(--surface);color:var(--ink);margin-left:auto}
 
 /* risultati */
 .results{padding:16px 0 8px}
@@ -612,7 +611,6 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .removecoll{min-width:44px;justify-content:center;flex:none}
   .removecoll span{display:none}
   .removecoll .rm-ico{width:16px;height:16px}
-  .search{margin-left:0;width:100%}
   .btn.undo-btn{min-height:44px}
   /* testata su una riga: logo, nome, pulsanti speciali (icona sopra, etichetta breve sotto) e "⋯" */
   .top{gap:8px}
@@ -640,7 +638,6 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .setfield .setbox{flex:1;min-width:0}
   #setInput{width:100%}
   .searchrow{width:100%;margin-left:0}
-  .searchrow .search{flex:1;min-width:0}
   .fbtn-open{min-height:40px}
   .fbtn{min-height:44px}
   .fchip{min-height:36px}

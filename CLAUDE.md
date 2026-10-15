@@ -48,7 +48,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] A1: difetti (carte e copie della collezione, valore "almeno" con righe senza printing)
     - [x] A2: testata su una riga, menu compatto, famiglia di pulsanti, libro di Mazzi (ex passo 6 dei Mazzi), riga dei dati corta (vedi "Testata (2026-10-15)")
     - [x] A3: caricamento (frase, due pulsanti, aiuto per l'export di ManaBox, riga della collezione) — **controllo con screenshot dopo A2 e A3**
-    - [ ] A4: campo unico "Cerca una carta" con la scheda arricchita
+    - [x] A4: campo unico "Cerca una carta" con la scheda arricchita (vedi "Cerca una carta")
     - [ ] A5: filtri su una riga ("Ultima apparizione" nel pannello), righe compatte, misure prima/dopo
     - [ ] B: Carta dimenticata, soglia dei mazzi storici (riquadro numerico)
   - [ ] Restyling della sezione Mazzi, piano approvato il 2026-10-15 (vedi "Restyling dei Mazzi"):
@@ -613,6 +613,22 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - **Rigenerare** (solo se cambia il testo del titolo): `web/scripts/title-font.py` con fonttools in un ambiente virtuale temporaneo (fonttools non è una dipendenza del progetto); sorgente `NewRocker-Regular.ttf` dal repository google/fonts. Il testo da coprire è la costante `TEXT`: un carattere nuovo nel titolo non sarebbe coperto.
   - **og-image**: `npm run icons` carica lo stesso file con `FontFace` per disegnare "Pauper Index"; "pauperindex.com" resta nel font di sistema.
 
+## Cerca una carta (2026-10-15, passo A4; sostituisce il controllo rapido)
+
+- **Un solo campo** `#search` (`ui/search.ts`, combobox ARIA con `#searchList`, testo a 16 px, `enterkeyhint="search"`), in una riga sua sopra i filtri, al posto del controllo rapido (`ui/quick.ts` tolto; `lib/quick.ts` resta: indice dei nomi, suggerimenti, possesso) e della ricerca dell'elenco.
+  - Mentre si scrive **filtra l'elenco** (come prima la ricerca: `S.query`, anche con i nomi italiani) e **suggerisce tutte le carte**, anche mai giocate (`cardnames.json` e i nomi italiani, compresi `itnames-other.json`, si scaricano al primo uso del campo). Nessun suggerimento è evidenziato finché non si usano le frecce.
+  - **Invio**: con un suggerimento evidenziato (frecce) o con un **nome esatto** (anche italiano, anche di una faccia) apre la scheda; con un testo parziale chiude suggerimenti e tastiera (`blur`) e lascia l'elenco filtrato. Invio prima che i suggerimenti siano pronti: resta in attesa **solo per il nome esatto** (`pending`).
+  - Scelta di un suggerimento: nel campo resta il nome cercato (italiano se cercato in italiano), che trova la carta nell'elenco.
+  - **Esc**: prima chiude i suggerimenti, poi svuota il campo. Il campo è `type="search"`: senza `preventDefault` Chromium lo svuotava già al primo Esc (difetto trovato dai test).
+  - Su mobile i suggerimenti coprono l'elenco: **toccare fuori** (`pointerdown`) o **scorrere** (`touchmove`, che chiude anche la tastiera) li chiude e l'elenco filtrato resta visibile.
+  - **Difetto corretto** (dal controllo rapido): all'arrivo di tutti i nomi i suggerimenti si ridisegnavano e la scelta fatta con le frecce tornava al primo; ora la voce scelta si ritrova per carta e nome cercato. Test "i nomi che arrivano mentre si sceglie con le frecce non cambiano la scelta" (con `cardnames.json` trattenuto).
+  - Evento GoatCounter `controllo-rapido` (stesso nome, per non spezzare la dashboard): **apertura della scheda dal campo**.
+- **Scheda** (`ui/sheet.ts`): oltre a statistiche, copie tipiche, ultime apparizioni MTGO e cartacea con il link e possesso, ora anche **legalità** sempre nel titolo (`quick.legal.*`), **set d'ingresso**, **printing possedute** ("LEA #161 it ×1"), "Carica la collezione per sapere se la possiedi" quando manca la collezione (`noCollection`), nomi italiani anche con l'interfaccia in inglese se la carta è stata cercata in italiano (`itForce`). **Carte mai giocate**: scheda ridotta (`openNeverSheet`): nome, legalità, nomi italiani, "Mai giocata in Pauper", possesso per nome.
+- **Nota quando l'elenco non trova la carta** con i filtri attivi: "Nessuna carta dell'elenco corrisponde a «…» con i filtri attivi. Apri la scheda di X" (`search.noneInList`, `#openFromNote`; X = nome esatto o primo suggerimento, anche mai giocata). Quando arrivano tutti i nomi la nota si ridisegna (`ready`), così trova anche le carte mai giocate.
+- **Pannello "⋯"**: si chiude anche al cambio di pagina (`hashchange`, `popstate`: link, "indietro" del browser, gesto di Android), con un test.
+- **Test**: i test del controllo rapido sono diventati test del campo unico (stessi casi: carta giocata, mai giocata, bannata, collezione, nomi italiani, Invio in anticipo, nomi che arrivano dopo la scelta) più Invio parziale, Esc in due passi, tocco fuori e la nota; in `analytics.spec.ts` "brainst" + Invio è diventato il nome esatto "Brainstorm" + Invio (con le nuove regole un testo parziale non apre la scheda); `typeSearch` in `smoke.spec.ts` scrive nel campo e chiude i suggerimenti.
+- **Misure dopo A4** (375×667): prima carta a 701 px senza collezione e 555 con la collezione; desktop 470 e 456 (stamattina 548 e 472 con il riepilogo dei prezzi).
+
 ## Testata (2026-10-15, passo A2; sostituisce in parte "Testata" del 2026-10-07)
 
 - **Una riga anche su mobile**: logo, nome, pulsanti speciali, "⋯". Misure (375×667 e 320×568): testata **51 px** (prima 124 su tre righe), nessuno scorrimento orizzontale; desktop 52 px come prima. Sotto 360 px resta solo il logo (il nome resta come nome accessibile del link).
@@ -622,7 +638,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **"⋯"** (`#navMore`, solo sotto 761 px): apre `#navExtra` con Informazioni, IT/EN e tema (righe da 44 px). `aria-expanded`/`aria-controls`; all'apertura il focus va alla prima voce, Esc chiude e riporta il focus su "⋯", toccare fuori o scegliere un link chiude. Su desktop `#navExtra` resta in riga come prima. Stessi elementi e stessi ID in entrambi i casi (cambia solo il CSS).
 - **Riga dei dati** corta: "Ultimo torneo: 11 ott 2026 · 156.550 mazzi" (`data.line`; niente "Dati al 11 ott", che in italiano richiederebbe l'elisione). Numero di tornei, mazzi e data dell'aggiornamento sono nella frase "I dati" di Informazioni (`about.data.text`, ora "ultimo aggiornamento: {date}" invece di "il {date}", che dava "il 11").
 - **Test**: `navClick` in `smoke.spec.ts` apre "⋯" quando Informazioni, lingua o tema non sono visibili (mobile); test nuovi sulla testata e sul libro con `prefers-reduced-motion`.
-- **Difetto noto, da correggere in A4**: nel controllo rapido, se tutti i nomi arrivano mentre si sceglie con le frecce, l'elenco si ridisegna e torna al primo suggerimento (test "controllo rapido: carta giocata senza collezione, tastiera", 1 fallimento su 16 con la macchina carica).
+- **Difetto, corretto in A4** (vedi "Cerca una carta"): nel controllo rapido, se tutti i nomi arrivano mentre si sceglie con le frecce, l'elenco si ridisegna e torna al primo suggerimento (test "controllo rapido: carta giocata senza collezione, tastiera", 1 fallimento su 16 con la macchina carica).
 
 ## Ragnatele (2026-10-07)
 

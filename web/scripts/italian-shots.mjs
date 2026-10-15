@@ -24,10 +24,11 @@ for (const [name, opts] of [
     const base = `${OUT}/italiano-${label}-${name}-${lang}`;
     await page.goto(URL);
     await page.waitForFunction(() => document.querySelector('#cardRows tr'));
-    await page.fill('#quickInput', 'fulm');
-    await page.waitForFunction(() => document.querySelector('#quickList li')?.textContent?.includes('('));
+    await page.fill('#search', 'fulm');
+    await page.waitForFunction(() => document.querySelector('#searchList li')?.textContent?.includes('('));
     await page.screenshot({ path: `${base}-1-suggerimenti.png` });
-    await page.press('#quickInput', 'Enter');
+    await page.press('#search', 'ArrowDown');
+    await page.press('#search', 'Enter');
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${base}-2-risultato.png` });
     await page.fill('#search', 'tempesta');

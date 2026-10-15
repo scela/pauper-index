@@ -46,8 +46,9 @@ for (const [name, opts] of shots) {
   await page.screenshot({ path: `${OUT}/${name}-3-scheda.png` });
   await page.keyboard.press('Escape');
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.fill('#quickInput', 'lightning bo');
-  await page.waitForSelector('#quickList:not([hidden])');
+  await page.fill('#search', 'lightning bo');
+  await page.waitForSelector('#searchList:not([hidden])');
+  await page.press('#search', 'ArrowDown');
   await settle(page);
   await page.screenshot({ path: `${OUT}/${name}-4-controllo-suggerimenti.png` });
   await page.keyboard.press('Enter');

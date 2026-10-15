@@ -30,9 +30,11 @@ async function useEverything(page: Page, lang: Lang): Promise<void> {
   await expect(page.locator('#dataline')).toContainText(translate(lang, 'data.line').split('{')[0]);
   await page.setInputFiles('#files', resolve(FIX, 'collezione-sintetica.csv'));
   await expect(page.locator('#loaded')).toBeVisible();
-  await page.locator('#quickInput').fill('brainst');
-  await page.locator('#quickInput').press('Enter');
-  await expect(page.locator('#quickResult .qtitle')).toContainText('Brainstorm');
+  // "Cerca una carta": Invio su un nome esatto apre la scheda (evento controllo-rapido)
+  await page.locator('#search').fill('Brainstorm');
+  await page.locator('#search').press('Enter');
+  await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
+  await page.keyboard.press('Escape');
   await page.locator('#setInput').click();
   await page.locator('#setInput').fill('ice age');
   await page.locator('#setList [role="option"]', { hasText: 'Ice Age' }).first().click();
@@ -129,9 +131,9 @@ test('sul dominio pubblicato: la pagina e i soli nomi degli eventi, con la CSP d
     await expect.poll(() => dialogs.length).toBe(1);
     expect(dialogs[0]).toContain('DISABLED');
     await page.goto(SITE);
-    await page.locator('#quickInput').fill('brainst');
-    await page.locator('#quickInput').press('Enter');
-    await expect(page.locator('#quickResult .qtitle')).toContainText('Brainstorm');
+    await page.locator('#search').fill('Brainstorm');
+    await page.locator('#search').press('Enter');
+    await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
     await page.waitForTimeout(500);
     expect(hits.length).toBe(before);
   } finally {

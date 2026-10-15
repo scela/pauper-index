@@ -75,17 +75,6 @@
   <main id="contenuto">
   <div id="viewMain">
 
-    <section class="quick" id="quick" aria-labelledby="quickLabel">
-      <label class="quick-label" id="quickLabel" for="quickInput" data-i18n="quick.label">Controllo rapido di una carta</label>
-      <div class="qbox">
-        <input id="quickInput" type="search" role="combobox" aria-expanded="false" aria-controls="quickList" aria-autocomplete="list"
-          autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"
-          data-i18n-ph="quick.placeholder" placeholder="Scrivi il nome di una carta">
-        <ul id="quickList" class="qlist" role="listbox" data-i18n-aria="quick.suggestions" aria-label="Suggerimenti" hidden></ul>
-      </div>
-      <div id="quickResult" aria-live="polite"></div>
-    </section>
-
     <section class="loadsec" id="loadArea" aria-labelledby="loadIntro">
       <div class="drop" id="drop">
         <p class="load-intro" id="loadIntro" data-i18n="load.intro">Scopri quali carte giocate in Pauper possiedi già. Gratis e senza registrazione: la tua collezione resta nel browser.</p>
@@ -118,6 +107,15 @@
 
     <p class="loaded" id="loaded" hidden></p>
 
+    <div class="searchfield" id="searchField">
+      <div class="qbox">
+        <input id="search" class="search" type="search" role="combobox" aria-expanded="false" aria-controls="searchList" aria-autocomplete="list"
+          autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"
+          data-i18n-ph="search.placeholder" data-i18n-aria="search.aria" placeholder="Cerca una carta, in inglese o italiano" aria-label="Cerca una carta">
+        <ul id="searchList" class="qlist" role="listbox" data-i18n-aria="quick.suggestions" aria-label="Suggerimenti" hidden></ul>
+      </div>
+    </div>
+
     <form class="filters" id="filters" role="search" data-i18n-aria="filters.aria" aria-label="Filtri">
       <label class="f-field"><span data-i18n="filters.period">Periodo</span>
         <select id="period"></select>
@@ -138,7 +136,6 @@
         </div>
       </div>
       <div class="searchrow">
-        <input type="search" class="search" id="search" data-i18n-ph="filters.search" data-i18n-aria="filters.search" placeholder="Cerca una carta" aria-label="Cerca una carta">
         <button class="btn fbtn-open" id="filtersBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="fpanel">
           <svg class="fico" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2 4h12M4.5 8h7M7 12h2"/></svg>
           <span id="filtersBtnText" data-i18n="filters.more">Filtri</span>

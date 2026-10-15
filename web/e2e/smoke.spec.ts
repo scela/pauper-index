@@ -40,6 +40,12 @@ async function navClick(page: Page, sel: string): Promise<void> {
   await page.click(sel);
 }
 
+/** Scrive nel campo "Cerca una carta" (filtra l'elenco) e chiude i suggerimenti, che coprono le prime righe. */
+async function typeSearch(page: Page, q: string): Promise<void> {
+  await page.fill('#search', q);
+  if (await page.locator('#searchList').isVisible()) await page.locator('#search').press('Escape');
+}
+
 async function uploadCollection(page: Page): Promise<void> {
   await page.setInputFiles('#files', resolve(FIX, 'collezione-sintetica.csv'));
   await expect(page.locator('#loaded')).toContainText(tr('load.collection').trim());
@@ -59,7 +65,7 @@ test('lingua del browser, testi statici, area di caricamento, filtri e lista, co
   await expect(page).toHaveTitle('Pauper Index');
   await expect(page.locator('#navAbout')).toHaveText(tr('nav.about'));
   await expect(page.locator('#loadIntro')).toHaveText(tr('load.intro'));
-  await expect(page.locator('#search')).toHaveAttribute('placeholder', tr('filters.search'));
+  await expect(page.locator('#search')).toHaveAttribute('placeholder', tr('search.placeholder'));
   await expect(page.locator('#loadArea')).toBeVisible();
   await expect(page.locator('#loaded')).toBeHidden();
   await expect(page.locator('#period option')).toHaveCount(4);
@@ -109,11 +115,11 @@ test('i filtri aggiornano subito i risultati; terre base sempre escluse', async 
   await page.click('#fpDone');
   await page.selectOption('#period', '3');
   for (const q of ['island', 'snow-covered', 'wastes']) {
-    await page.fill('#search', q);
+    await typeSearch(page, q);
     const names = await page.locator('#cardRows .nm').allInnerTexts();
     expect(names.filter((x) => /^(Plains|Island|Swamp|Mountain|Forest|Wastes|Snow-Covered .+)$/.test(x))).toEqual([]);
   }
-  await page.fill('#search', 'zzzz-nessuna');
+  await typeSearch(page, 'zzzz-nessuna');
   await expect(page.locator('#cardRows')).toContainText(tr('res.noMatch'));
 });
 
@@ -132,10 +138,10 @@ test('CSV ManaBox: riga compatta, solo possedute, mancanti, Binder inclusi, expo
   const rows = (await page.locator('#cardRows tr').allInnerTexts()).join('\n');
   expect(rows).not.toContain(tr('badge.missing'));
   expect(rows).not.toContain('Kor Skyfisher'); // nel mazzo: escluso
-  await page.fill('#search', 'brainstorm');
+  await typeSearch(page, 'brainstorm');
   await expect(page.locator('#cardRows tr').first().locator('.c-qty')).toContainText('5');
   await expect(page.locator('#cardRows tr').first().locator('img.thumb.owned')).toHaveCount(2);
-  await page.fill('#search', '');
+  await typeSearch(page, '');
 
   // gruppi inclusi, in fondo
   await expect(page.locator('#grpSummary')).toHaveText(tr('grp.summary', { inc: 2, total: 4 }));
@@ -143,14 +149,17 @@ test('CSV ManaBox: riga compatta, solo possedute, mancanti, Binder inclusi, expo
   await expect(page.locator('#groupRows input[value="skip"]:checked')).toHaveCount(2);
   await expect(page.locator('#groupRows')).toContainText(tr('grp.exclude'));
   await expect(page.locator('#optProxyWrap')).toBeVisible();
-  await page.fill('#search', 'tolarian terror');
-  await expect(page.locator('#cardRows')).toContainText(tr('res.noMatch')); // con la ricerca attiva
+  await typeSearch(page, 'tolarian terror');
+  // con la ricerca attiva la carta non è nell'elenco (solo proxy): la nota propone di aprirne la scheda
+  await expect(page.locator('#cardRows')).toContainText(tr('search.noneInList', { q: 'tolarian terror' }));
+  await expect(page.locator('#openFromNote')).toHaveText(tr('search.openCard', { name: 'Tolarian Terror' }));
   await page.locator('#optProxyWrap').click();
   await expect(page.locator('#cardRows tr').first()).toContainText('Tolarian Terror');
 
   // mostra anche le mancanti
-  await page.fill('#search', 'kor skyfisher');
-  await expect(page.locator('#cardRows')).toContainText(tr('res.noMatch')); // con la ricerca attiva
+  await typeSearch(page, 'kor skyfisher');
+  // con la ricerca attiva la carta non è nell'elenco: la nota propone di aprirne la scheda
+  await expect(page.locator('#cardRows')).toContainText(tr('search.noneInList', { q: 'kor skyfisher' }));
   await page.locator('label:has(#optMissing)').click();
   await expect(page.locator('#cardRows tr').first()).toContainText(tr('badge.missing'));
 
@@ -164,7 +173,7 @@ test('CSV ManaBox: riga compatta, solo possedute, mancanti, Binder inclusi, expo
   await page.click('[data-copy="missing"]');
   // (gli appunti di Windows possono aggiungere spazi in fondo alle righe)
   expect((await page.evaluate(() => navigator.clipboard.readText())).trim()).toBe('1 Kor Skyfisher');
-  await page.fill('#search', '');
+  await typeSearch(page, '');
   await page.click('[data-copy="owned"]');
   const clip = await page.evaluate(() => navigator.clipboard.readText());
   expect(clip).toContain('1 Brainstorm');
@@ -195,7 +204,7 @@ test('Sostituisci e testo incollato: riepilogo nella lingua scelta', async ({ pa
   await expect(sum).toContainText(tr('imp.unrec', { n: 1 }));
   await sum.locator('summary').click();
   await expect(sum).toContainText('Carta Che Non Esiste');
-  await page.fill('#search', 'fire // ice');
+  await typeSearch(page, 'fire // ice');
   await expect(page.locator('#cardRows tr').first()).toContainText(`MH2 #290 ${tr('print.foil')}`);
 });
 
@@ -211,7 +220,7 @@ test('errori nella lingua scelta', async ({ page }) => {
 test('scheda con ventaglio: tastiera, carta attiva visibile, Esc', async ({ page }) => {
   await setup(page);
   await uploadCollection(page);
-  await page.fill('#search', 'brainstorm');
+  await typeSearch(page, 'brainstorm');
   const btn = page.locator('#cardRows .cardbtn').first();
   await btn.focus();
   await page.keyboard.press('Enter');
@@ -343,85 +352,115 @@ test('Novità: mostra le revisioni dall\'indice pubblico', async ({ page }) => {
   await expect(rev).toContainText(`Some Card: ${tr('legal.l')} → ${tr('legal.b')}`);
 });
 
-test('controllo rapido: carta giocata senza collezione, tastiera', async ({ page }) => {
+test('cerca una carta: suggerimenti ed elenco filtrato, Invio parziale, nome esatto, frecce, scheda completa', async ({ page }) => {
   await setup(page);
-  const input = page.locator('#quickInput');
-  await expect(page.locator('#quickLabel')).toHaveText(tr('quick.label'));
-  await expect(input).toHaveAttribute('placeholder', tr('quick.placeholder'));
+  const input = page.locator('#search');
+  const list = page.locator('#searchList');
+  await expect(input).toHaveAttribute('placeholder', tr('search.placeholder'));
+  await expect(input).toHaveAttribute('role', 'combobox');
+  await expect(page.locator('#quickInput, #quickResult')).toHaveCount(0); // un solo campo
   await input.fill('brainst');
-  const list = page.locator('#quickList');
   await expect(list).toBeVisible();
   await expect(input).toHaveAttribute('aria-expanded', 'true');
   await expect(list.locator('[role="option"]').first()).toContainText('Brainstorm');
-  await expect(list.locator('[role="option"]').first()).toHaveAttribute('aria-selected', 'true');
+  await expect(list.locator('[role="option"][aria-selected="true"]')).toHaveCount(0); // nessuno evidenziato
+  await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm'); // l'elenco è già filtrato
+  // Invio con un testo parziale: niente scheda, suggerimenti e tastiera chiusi, elenco filtrato
   await input.press('Enter');
   await expect(list).toBeHidden();
-  await expect(input).toHaveValue('Brainstorm');
-  const res = page.locator('#quickResult');
-  await expect(res.locator('.qtitle')).toContainText('Brainstorm');
-  await expect(res).toContainText(tr('quick.legal.l'));
-  await expect(res).toContainText(tr('periodDesc.1'));
-  await expect(res).toContainText(tr('sheet.lastMtgo').trim());
-  await expect(res).toContainText(tr('quick.noCollection'));
-  await expect(res.locator('.qimg img')).toHaveCount(1);
-  // tutti gli artwork: apre la scheda
-  await res.locator('.qres .btn').click();
-  await expect(page.locator('#sheet')).toBeVisible();
-  await page.keyboard.press('Escape');
+  await expect(input).not.toBeFocused();
   await expect(page.locator('#sheet')).toBeHidden();
-  // frecce ed Esc
+  await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm');
+  // Invio con un nome esatto: la scheda completa (legalità, statistiche, ultime apparizioni, ingresso, possesso)
+  await input.fill('Brainstorm');
+  await input.press('Enter');
+  const sheet = page.locator('#sheet');
+  await expect(sheet).toBeVisible();
+  await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
+  await expect(page.locator('#sheetTitle .badge')).toHaveText(tr('quick.legal.l'));
+  await expect(sheet).toContainText(tr('sheet.lastMtgo').trim());
+  await expect(sheet).toContainText(head('quick.entry'));
+  await expect(sheet).toContainText(tr('quick.noCollection'));
+  await expect(sheet.locator('.fan-item').first()).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  // frecce: la voce evidenziata si apre con Invio
   await input.fill('light');
-  await expect(page.locator('#quickList [role="option"]').first()).toHaveAttribute('aria-selected', 'true');
   await input.press('ArrowDown');
-  await expect(page.locator('#quickList [role="option"]').nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(list.locator('[role="option"]').first()).toHaveAttribute('aria-selected', 'true');
+  await input.press('ArrowDown');
+  const second = list.locator('[role="option"]').nth(1);
+  await expect(second).toHaveAttribute('aria-selected', 'true');
+  await expect(input).toHaveAttribute('aria-activedescendant', 'sopt-1');
+  const name = (await second.locator('.qname').innerText()).trim();
+  await input.press('Enter');
+  await expect(page.locator('#sheetTitle')).toContainText(name);
+  await page.keyboard.press('Escape');
+  // Esc: prima chiude i suggerimenti, poi svuota il campo
+  await input.fill('light');
   await input.press('Escape');
-  await expect(page.locator('#quickList')).toBeHidden();
+  await expect(list).toBeHidden();
+  await expect(input).toHaveValue('light');
+  await input.press('Escape');
+  await expect(input).toHaveValue('');
+  // toccare fuori chiude i suggerimenti; l'elenco filtrato resta visibile
+  await input.fill('counterspe');
+  await expect(list).toBeVisible();
+  await page.locator('#verdict').click();
+  await expect(list).toBeHidden();
+  await expect(page.locator('#cardRows .nm').first()).toHaveText('Counterspell');
 });
 
-test('controllo rapido: carta mai giocata e nome esatto senza scegliere', async ({ page }) => {
+test('cerca una carta: carta mai giocata (scheda ridotta), bannata, nessun risultato', async ({ page }) => {
   await setup(page);
-  const input = page.locator('#quickInput');
-  await input.click();
+  const input = page.locator('#search');
   await input.fill('black lot');
-  const opt = page.locator('#quickList [role="option"]', { hasText: 'Black Lotus' });
+  const opt = page.locator('#searchList [role="option"]', { hasText: 'Black Lotus' });
   await expect(opt).toContainText(tr('quick.tagNever'));
   await opt.click();
-  const res = page.locator('#quickResult');
-  await expect(res.locator('.qtitle')).toContainText('Black Lotus');
-  await expect(res).toContainText(tr('quick.never'));
-  await expect(res).toContainText(tr('quick.legal.n'));
-  await expect(res.locator('.qimg')).toHaveCount(0);
-  // nome esatto: risultato già mentre si scrive
+  const sheet = page.locator('#sheet');
+  await expect(page.locator('#sheetTitle')).toContainText('Black Lotus');
+  await expect(sheet).toContainText(tr('quick.never'));
+  await expect(page.locator('#sheetTitle .badge')).toHaveText(tr('quick.legal.n'));
+  await expect(sheet.locator('.fan-item')).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await input.fill('Gush');
-  await expect(res.locator('.qtitle')).toContainText('Gush');
-  await expect(res).toContainText(tr('quick.legal.b'));
+  await input.press('Enter');
+  await expect(page.locator('#sheetTitle .badge')).toHaveText(tr('quick.legal.b'));
+  await page.keyboard.press('Escape');
   await input.fill('zzqq');
-  await expect(page.locator('#quickList')).toContainText(tr('quick.noResults'));
+  await expect(page.locator('#searchList')).toContainText(tr('quick.noResults'));
 });
 
-test('controllo rapido con la collezione: possesso anche per printing straniere e carte mai giocate', async ({ page }) => {
+test('cerca una carta con la collezione: possesso e printing; la nota propone la scheda se l’elenco non la trova', async ({ page }) => {
   await setup(page);
   await uploadCollection(page);
-  const input = page.locator('#quickInput');
-  const res = page.locator('#quickResult');
+  const input = page.locator('#search');
+  const sheet = page.locator('#sheet');
   await input.fill('Lightning Bolt');
-  await expect(res).toContainText(tr('quick.owned', { n: 1 }));
-  await expect(res).toContainText('LEA #161 it ×1');
-  await expect(res.locator('.qres')).toHaveClass(/is-owned/);
+  await input.press('Enter');
+  await expect(sheet).toContainText('LEA #161 it ×1');
+  await page.keyboard.press('Escape');
   await input.fill('Kor Skyfisher'); // solo nel mazzo, che è escluso
-  await expect(res).toContainText(tr('quick.notOwned'));
-  await input.click();
-  await input.fill('black lotu');
-  await page.locator('#quickList [role="option"]', { hasText: 'Black Lotus' }).click();
-  await expect(res).toContainText(tr('quick.never'));
-  await expect(res).toContainText(tr('quick.owned', { n: 1 }));
-  // cambio di periodo: il risultato si aggiorna
-  await input.fill('Brainstorm');
+  await input.press('Enter');
+  await expect(sheet).toContainText(tr('sheet.notOwned'));
+  await page.keyboard.press('Escape');
+  // Black Lotus: posseduta ma mai giocata, quindi non è nell'elenco: la nota propone la scheda
+  await input.fill('black lotus');
+  await input.press('Escape');
+  await expect(page.locator('#cardRows')).toContainText(tr('search.noneInList', { q: 'black lotus' }));
+  await page.locator('#openFromNote').click();
+  await expect(page.locator('#sheetTitle')).toContainText('Black Lotus');
+  await expect(sheet).toContainText(tr('quick.never'));
+  await page.keyboard.press('Escape');
+  // periodo cambiato: la scheda aperta dopo usa il nuovo periodo
   await page.selectOption('#period', '0');
-  await expect(res).toContainText(tr('periodDesc.0'));
+  await input.fill('Brainstorm');
+  await input.press('Enter');
+  await expect(sheet).toContainText(tr('period.0'));
 });
 
-test('controllo rapido: se tutti i nomi arrivano dopo la scelta, l’elenco non si riapre da solo', async ({ page }) => {
+test('cerca una carta: se tutti i nomi arrivano dopo la scelta, l’elenco non si riapre da solo', async ({ page }) => {
   let release!: () => void;
   const gate = new Promise<void>((r) => { release = r; });
   await page.route('**/data/cardnames.json', async (route) => {
@@ -429,21 +468,48 @@ test('controllo rapido: se tutti i nomi arrivano dopo la scelta, l’elenco non 
     await route.continue();
   });
   await setup(page);
-  const input = page.locator('#quickInput');
+  const input = page.locator('#search');
   await input.fill('brainst');
-  await expect(page.locator('#quickList [role="option"]').first()).toContainText('Brainstorm');
+  await expect(page.locator('#searchList [role="option"]').first()).toContainText('Brainstorm');
+  await input.press('ArrowDown');
   await input.press('Enter');
-  await expect(page.locator('#quickList')).toBeHidden();
+  await expect(page.locator('#searchList')).toBeHidden();
+  await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
   const loaded = page.waitForResponse('**/data/cardnames.json');
   release();
   await loaded;
   await page.waitForTimeout(300);
-  await expect(page.locator('#quickList')).toBeHidden();
+  await expect(page.locator('#searchList')).toBeHidden();
   await expect(input).toHaveValue('Brainstorm');
 });
 
-test('controllo rapido: Invio prima che i suggerimenti siano pronti mostra la carta appena arrivano', async ({ page }) => {
-  // dati delle carte e tutti i nomi trattenuti: "brainst" + Invio arrivano prima di qualsiasi suggerimento
+test('cerca una carta: i nomi che arrivano mentre si sceglie con le frecce non cambiano la scelta', async ({ page }) => {
+  // il difetto del controllo rapido: all'arrivo di tutti i nomi l'elenco si ridisegnava e tornava al primo suggerimento
+  let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  await page.route('**/data/cardnames.json', async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await setup(page);
+  const input = page.locator('#search');
+  await input.fill('light');
+  await input.press('ArrowDown');
+  await input.press('ArrowDown');
+  const chosen = page.locator('#searchList [role="option"][aria-selected="true"]');
+  const name = (await chosen.locator('.qname').innerText()).trim();
+  const loaded = page.waitForResponse('**/data/cardnames.json');
+  release();
+  await loaded;
+  await page.waitForTimeout(300); // i suggerimenti si sono ridisegnati con tutti i nomi
+  await expect(chosen).toHaveCount(1);
+  await expect(chosen.locator('.qname')).toHaveText(name);
+  await input.press('Enter');
+  await expect(page.locator('#sheetTitle')).toContainText(name);
+});
+
+test('cerca una carta: Invio con un nome esatto prima che i suggerimenti siano pronti apre la scheda appena arrivano', async ({ page }) => {
+  // dati delle carte e tutti i nomi trattenuti: il nome e Invio arrivano prima di qualsiasi suggerimento
   let release!: () => void;
   const gate = new Promise<void>((r) => { release = r; });
   for (const f of ['cards', 'cardnames']) {
@@ -454,16 +520,15 @@ test('controllo rapido: Invio prima che i suggerimenti siano pronti mostra la ca
   }
   await page.route('https://cards.scryfall.io/**', (r) => r.fulfill({ contentType: 'image/png', body: PNG }));
   await page.goto('./');
-  const input = page.locator('#quickInput');
-  await input.fill('brainst');
+  const input = page.locator('#search');
+  await input.fill('Brainstorm');
   await input.press('Enter');
-  await expect(page.locator('#quickResult .qtitle')).toHaveCount(0);
+  await expect(page.locator('#sheet')).toBeHidden();
   release();
-  await expect(page.locator('#quickResult .qtitle')).toContainText('Brainstorm');
-  await expect(input).toHaveValue('Brainstorm');
-  await expect(page.locator('#quickList')).toBeHidden();
+  await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
+  await expect(page.locator('#searchList')).toBeHidden();
 
-  // se nel frattempo il campo cambia, l'Invio in attesa non vale più; i suggerimenti arrivano con i dati
+  // un testo parziale non apre nulla (l'attesa vale solo per il nome esatto): resta l'elenco filtrato
   let release2!: () => void;
   const gate2 = new Promise<void>((r) => { release2 = r; });
   await page.unrouteAll({ behavior: 'ignoreErrors' });
@@ -475,10 +540,10 @@ test('controllo rapido: Invio prima che i suggerimenti siano pronti mostra la ca
   await page.reload();
   await input.fill('brainst');
   await input.press('Enter');
-  await input.fill('counterspe');
   release2();
-  await expect(page.locator('#quickList [role="option"]').first()).toContainText('Counterspell');
-  await expect(page.locator('#quickResult .qtitle')).toHaveCount(0);
+  await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm');
+  await page.waitForTimeout(300);
+  await expect(page.locator('#sheet')).toBeHidden();
 });
 
 test('testata: una riga, pannello "⋯" su mobile, pulsanti speciali, libro che si apre senza cambiare dimensioni', async ({ page, isMobile }) => {
@@ -506,6 +571,16 @@ test('testata: una riga, pannello "⋯" su mobile, pulsanti speciali, libro che 
     await expect(more).toBeFocused();
     await more.click();
     await page.locator('#verdict').click();
+    await expect(page.locator('#navAbout')).toBeHidden();
+    await expect(more).toHaveAttribute('aria-expanded', 'false');
+    // cambio di pagina senza toccare il pannello (link, "indietro" del browser o il gesto di Android): si chiude
+    await more.click();
+    await page.evaluate(() => { location.hash = '#mazzi'; });
+    await expect(page.locator('#navAbout')).toBeHidden();
+    await expect(more).toHaveAttribute('aria-expanded', 'false');
+    await more.click();
+    await page.goBack();
+    await expect(page.locator('#viewMain')).toBeVisible();
     await expect(page.locator('#navAbout')).toBeHidden();
     await expect(more).toHaveAttribute('aria-expanded', 'false');
   } else {
@@ -578,7 +653,7 @@ test('logo e nome: link alla pagina principale da ogni sezione, collezione conse
   for (const section of ['#navAbout', '#navDust']) {
     // filtri dell'elenco attivi, poi una sezione, poi il logo
     await page.selectOption('#seenFilter', 'old');
-    await page.fill('#search', 'bolt');
+    await typeSearch(page, 'bolt');
     await navClick(page, section);
     await expect(page.locator('#viewMain')).toBeHidden();
     await page.click('#home');
@@ -611,7 +686,7 @@ test('"Rimuovi collezione": via subito, Annulla per 8 secondi, poi cancellata da
   await expect.poll(saved).toBeGreaterThan(0);
   await page.selectOption('#period', '3'); // preferenza: resta
   await page.selectOption('#seenFilter', 'old'); // filtri dell'elenco: ripartono azzerati
-  await page.fill('#search', 'bolt');
+  await typeSearch(page, 'bolt');
   const rm = page.locator('#removeColl');
   await expect(rm).toHaveAccessibleName(tr('load.remove'));
   expect((await rm.boundingBox())!.height).toBeGreaterThanOrEqual(isMobile ? 44 : 34); // area di tocco
@@ -652,7 +727,7 @@ test('visita successiva: preferenze ricordate (periodo, espansione), filtri che 
   await pickSet(page, 'ice age', 'Ice Age');
   await page.locator('label:has(#setOwned)').click();
   await page.selectOption('#seenFilter', 'old');
-  await page.fill('#search', 'storm');
+  await typeSearch(page, 'storm');
   await page.reload();
   await expect(page.locator('#dataline')).toContainText(head('data.line'));
   // preferenze: collezione, periodo ed espansione restano
@@ -707,7 +782,7 @@ test('espansione: riepilogo, rarità "qui" e set d’ingresso, senza collezione'
   expect(n).toBeGreaterThan(0);
   await expect(page.locator('#verdict')).toHaveText(tr('set.summary', { n }));
   await expect(page.locator('#sub')).toContainText('Masters 25 (2018)');
-  await page.fill('#search', 'lightning bolt');
+  await typeSearch(page, 'lightning bolt');
   const row = page.locator('#cardRows tr').first();
   await expect(row).toContainText('Lightning Bolt');
   await expect(row.locator('.rarity')).toHaveText(tr('set.notCommon', { rarity: tr('rarity.u'), set: 'Limited Edition Alpha', year: '1993' }));
@@ -718,7 +793,7 @@ test('espansione: riepilogo, rarità "qui" e set d’ingresso, senza collezione'
   await row.locator('.cardbtn').click();
   await expect(page.locator('#sheet dl')).toContainText('Masters 25 (2018)');
   await page.keyboard.press('Escape');
-  await page.fill('#search', '');
+  await typeSearch(page, '');
   await expect(page.locator('#cardRows .rarity.is-common').first()).toHaveText(tr('set.common'));
   // togliere il filtro con Esc
   await page.locator('#setInput').click();
@@ -810,11 +885,11 @@ test('riepilogo ed elenco: stesso insieme, e i filtri che nascondono carte sono 
   const withHidden = await counts(page);
   expect(withHidden.list).toBe(withHidden.head);
   expect(withHidden.head).toBeGreaterThanOrEqual(visibleOnly.head);
-  await page.fill('#search', 'a');
+  await typeSearch(page, 'a');
   c = await counts(page);
   expect(c.note).toBe(c.list);
   await expect(page.locator('#filterNote')).toContainText(tr('why.search', { q: 'a' }));
-  await page.fill('#search', '');
+  await typeSearch(page, '');
 
   // vista collezione: il titolo conta le possedute; con le mancanti la nota conta l'elenco intero
   await page.locator('#setInput').click();
@@ -853,7 +928,7 @@ test('"Carica altri": 10 carte alla volta, conteggio, focus sulla prima aggiunta
   await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 10, total: fmt(Number(total)) }));
   expect(await page.locator('#cardRows .nm').nth(0).innerText()).not.toBe(firstByShare);
   // la ricerca filtra la lista completa, non solo le carte visibili
-  await page.fill('#search', 'pyroblast');
+  await typeSearch(page, 'pyroblast');
   await expect(rows).toHaveCount(1);
   await expect(page.locator('#more')).toBeHidden();
   await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 1, total: 1 }));
@@ -1149,11 +1224,11 @@ test('prezzi indicativi: colonna, riepilogo, scheda e Informazioni; "—" se man
   await page.route('**/data/prices.json', (r) => r.fulfill({ contentType: 'application/json', body: syntheticPrices() }));
   const problems = await setup(page);
   // senza collezione: la stampa più economica, "da X €"; riepilogo di una copia di ciascuna
-  await page.fill('#search', 'brainstorm');
+  await typeSearch(page, 'brainstorm');
   const row = page.locator('#cardRows tr').filter({ hasText: 'Brainstorm' }).first();
   await expect(row.locator('.c-price')).toHaveText(tr('price.from', { p: eur(50) }));
   await expect(page.locator('#priceSummary')).toContainText(head('price.list'));
-  await page.fill('#search', '');
+  await typeSearch(page, '');
   await uploadCollection(page);
   // posseduta: la printing di valore più alto (qui la foil)
   await expect(page.locator('#cardRows tr').filter({ hasText: 'Brainstorm' }).first().locator('.c-price')).toHaveText(eur(700));
@@ -1162,7 +1237,7 @@ test('prezzi indicativi: colonna, riepilogo, scheda e Informazioni; "—" se man
   await expect(page.locator('#priceSummary')).toContainText(tr('price.owned', { v: eur(1100) }));
   await expect(page.locator('#priceSummary')).toContainText(head('price.unpriced'));
   // scheda: prezzo sotto ogni printing del ventaglio e dettaglio delle printing possedute
-  await page.fill('#search', 'brainstorm');
+  await typeSearch(page, 'brainstorm');
   await page.locator('#cardRows .cardbtn').first().focus();
   await page.keyboard.press('Enter');
   const sheet = page.locator('#sheet');
@@ -1379,38 +1454,41 @@ test('nomi italiani: controllo rapido, ricerca nell’elenco, scheda; file scari
 
   // ricerca nell'elenco: storico, nome italiano con apostrofo scritto in un altro modo e senza accenti
   await page.selectOption('#period', '3');
-  await expect(page.locator('#search')).toHaveAttribute('placeholder', tr('filters.search'));
-  await page.fill('#search', 'tempesta cerebr');
+  await expect(page.locator('#search')).toHaveAttribute('placeholder', tr('search.placeholder'));
+  await typeSearch(page, 'tempesta cerebr');
   await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm');
-  expect(files).toEqual(['itnames.json']); // solo i nomi delle carte giocate
-  await page.fill('#search', 'SORGENTE D’ICORE');
+  // un solo campo: al primo uso servono anche i nomi delle carte mai giocate, per i suggerimenti
+  await expect.poll(() => [...files].sort()).toEqual(['itnames-other.json', 'itnames.json']);
+  await typeSearch(page, 'SORGENTE D’ICORE');
   await expect(page.locator('#cardRows .nm')).toHaveText(['Ichor Wellspring']);
-  await page.fill('#search', 'sorgente dicore');
+  await typeSearch(page, 'sorgente dicore');
   await expect(page.locator('#cardRows .nm')).toHaveText(['Ichor Wellspring']);
   // carta mai stampata in italiano: si cerca con il nome inglese
-  await page.fill('#search', 'fire // ice');
+  await typeSearch(page, 'fire // ice');
   await expect(page.locator('#cardRows .nm')).toHaveText(['Fire // Ice']);
-  await page.fill('#search', '');
+  await typeSearch(page, '');
 
-  // controllo rapido: "Fulmine (Lightning Bolt)"; anche le carte mai giocate
-  const input = page.locator('#quickInput');
-  await expect(input).toHaveAttribute('placeholder', tr('quick.placeholder'));
+  // suggerimenti: "Fulmine (Lightning Bolt)"; anche le carte mai giocate
+  const input = page.locator('#search');
   await input.fill('fulmine');
-  const first = page.locator('#quickList [role="option"]').first();
+  const first = page.locator('#searchList [role="option"]').first();
   await expect(first).toHaveText('Fulmine (Lightning Bolt)');
   expect(files.sort()).toEqual(['itnames-other.json', 'itnames.json']);
+  await input.press('ArrowDown');
   await input.press('Enter');
-  await expect(input).toHaveValue('Fulmine (Lightning Bolt)');
-  const res = page.locator('#quickResult');
-  await expect(res.locator('.qtitle')).toContainText('Lightning Bolt');
-  await expect(res.locator('.itname')).toHaveText('Fulmine'); // cercata in italiano: anche con l'interfaccia in inglese
-  // nome esatto, accenti e maiuscole non contano
+  await expect(input).toHaveValue('Fulmine'); // nell'elenco resta il nome cercato, che trova la carta
+  await expect(page.locator('#sheetTitle')).toContainText('Lightning Bolt');
+  await expect(page.locator('#sheetIt')).toHaveText('Fulmine'); // cercata in italiano: anche con l'interfaccia in inglese
+  await page.keyboard.press('Escape');
+  // nome esatto italiano: Invio apre la scheda; accenti e maiuscole non contano
   await input.fill('PRESCELTO DELL ANTENATA');
-  await expect(res.locator('.qtitle')).toContainText("Ancestor's Chosen");
-  await expect(res).toContainText(tr('quick.never'));
+  await input.press('Enter');
+  await expect(page.locator('#sheetTitle')).toContainText("Ancestor's Chosen");
+  await expect(page.locator('#sheet')).toContainText(tr('quick.never'));
+  await page.keyboard.press('Escape');
 
   // scheda: il nome italiano sotto quello inglese, solo con l'interfaccia in italiano
-  await page.fill('#search', 'brainstorm');
+  await typeSearch(page, 'brainstorm');
   await page.locator('#cardRows .cardbtn').first().click();
   await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
   if (L === 'it') await expect(page.locator('#sheetIt')).toHaveText('Tempesta Cerebrale');
@@ -1421,12 +1499,13 @@ test('nomi italiani: controllo rapido, ricerca nell’elenco, scheda; file scari
 test('nomi italiani: la scheda in italiano li scarica alla prima apertura; senza file si cerca in inglese', async ({ page }) => {
   await page.route('**/data/itnames*.json', (r) => r.fulfill({ status: 404, body: '' }));
   const problems = await setup(page);
-  await page.fill('#search', 'tempesta');
+  await typeSearch(page, 'tempesta');
   await expect(page.locator('#cardRows')).toContainText(tr('res.noMatch'));
-  await page.fill('#search', 'brainstorm');
+  await typeSearch(page, 'brainstorm');
   await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm');
-  await page.locator('#quickInput').fill('brainst');
-  await expect(page.locator('#quickList [role="option"]').first()).toHaveText('Brainstorm');
+  await page.locator('#search').fill('brainst');
+  await expect(page.locator('#searchList [role="option"]').first()).toHaveText('Brainstorm');
+  await page.locator('#search').press('Escape');
   await page.locator('#cardRows .cardbtn').first().click();
   await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
   await expect(page.locator('#sheetIt')).toBeHidden();
@@ -1436,7 +1515,7 @@ test('nomi italiani: la scheda in italiano li scarica alla prima apertura; senza
 test('nomi italiani: scheda aperta prima di ogni ricerca, interfaccia in italiano', async ({ page }) => {
   await setup(page);
   if (L !== 'it') await navClick(page, '[data-lang="it"]');
-  await page.fill('#search', '');
+  await typeSearch(page, '');
   await page.locator('#cardRows .cardbtn').first().click();
   const name = (await page.locator('#sheetTitle').innerText()).trim();
   expect(name.length).toBeGreaterThan(0);
