@@ -108,22 +108,28 @@ export function readDecks(f: DecksFile): Deck[] {
   }));
 }
 
-/** Copie richieste per carta: il main, più il side se richiesto (stessa carta nei due: si sommano). */
-export function required(deck: Deck, withSide: boolean): Map<number, number> {
-  const need = new Map<number, number>();
-  for (const [idx, n] of withSide ? [...deck.main, ...deck.side] : deck.main) need.set(idx, (need.get(idx) || 0) + n);
-  return need;
-}
-
 /**
  * Completamento: per ogni carta il minimo tra copie possedute e richieste. Le terre base normali sono escluse dal
- * calcolo (sempre disponibili); le Snow-Covered contano come carte normali.
+ * calcolo (sempre disponibili); le Snow-Covered contano come carte normali. La stessa carta in main e side (con il
+ * side) somma le copie.
  */
 export function completion(deck: Deck, owned: (idx: number) => number, withSide: boolean, basics: Set<number>): Completion {
+  // cicli semplici, senza Map né copie: si calcola per migliaia di liste (23.000 in un anno) a ogni cambio di opzione
   let need = 0;
   let have = 0;
   const missing: Missing[] = [];
-  for (const [idx, n] of required(deck, withSide)) {
+  const { main, side } = deck;
+  const ns = withSide ? side.length : 0;
+  for (let k = 0, all = main.length + ns; k < all; k++) {
+    const [idx, c] = k < main.length ? main[k] : side[k - main.length];
+    let n = c;
+    if (k < main.length) {
+      for (let j = 0; j < ns; j++) if (side[j][0] === idx) n += side[j][1]; // stessa carta in main e side: si sommano
+    } else {
+      let dup = false;
+      for (let j = 0; j < main.length && !dup; j++) dup = main[j][0] === idx;
+      if (dup) continue;
+    }
     if (basics.has(idx)) continue;
     const h = Math.min(owned(idx), n);
     need += n;
@@ -142,13 +148,16 @@ export interface DeckFilters {
 
 /** Ordine: con la collezione per completamento, senza per ultima apparizione; poi apparizioni e data. */
 export function sortDecks(decks: Deck[], comp: Map<number, Completion> | null): Deck[] {
-  return [...decks].sort((a, b) => {
-    if (comp) {
-      const d = comp.get(b.i)!.pct - comp.get(a.i)!.pct;
-      if (d) return d;
-    } else if (a.last !== b.last) return b.last.localeCompare(a.last);
-    return b.apps.length - a.apps.length || b.last.localeCompare(a.last) || a.i - b.i;
-  });
+  // chiavi calcolate una volta (niente Map.get nel confronto); le date sono ISO, quindi basta il confronto tra stringhe
+  const desc = (x: string, y: string) => (x < y ? 1 : x > y ? -1 : 0);
+  return decks.map((d) => ({ d, pct: comp ? comp.get(d.i)!.pct : 0 }))
+    .sort(({ d: a, pct: pa }, { d: b, pct: pb }) => {
+      if (comp) {
+        if (pb !== pa) return pb - pa;
+      } else if (a.last !== b.last) return desc(a.last, b.last);
+      return b.apps.length - a.apps.length || desc(a.last, b.last) || a.i - b.i;
+    })
+    .map((x) => x.d);
 }
 
 /** I mazzi che l'elenco mostra (senza ordinamento). */
@@ -185,10 +194,11 @@ export function missingText(cards: CardRow[], missing: Missing[]): string {
 
 /**
  * Decklist in testo importabile in ManaBox (formato di MTG Arena): main "4 Nome", una riga vuota, l'intestazione
- * "Sideboard" e il side. Sempre il mazzo intero, terre base comprese.
+ * "Sideboard" e il side. Sempre il mazzo intero, terre base comprese. Nomi come in MTG Arena: completi per le carte
+ * divise ("Fire // Ice"), solo la prima faccia per le altre con più facce ("Delver of Secrets"), dal campo dn.
  */
 export function deckText(cards: CardRow[], deck: Deck): string {
-  const line = ([idx, n]: [number, number]) => `${n} ${cards[idx].n}`;
+  const line = ([idx, n]: [number, number]) => `${n} ${cards[idx].dn ?? cards[idx].n}`;
   const out = deck.main.map(line);
   if (deck.side.length) out.push('', 'Sideboard', ...deck.side.map(line));
   return out.join('\n') + '\n';

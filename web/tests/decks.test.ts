@@ -83,7 +83,10 @@ describe('mazzi', () => {
     const [deck] = readDecks(file());
     expect(missingText(cards, [{ idx: 1, n: 3 }, { idx: 4, n: 2 }])).toBe('3 Delver of Secrets // Insectile Aberration\n2 Pyroblast\n');
     expect(missingText(cards, [])).toBe('');
-    expect(deckText(cards, deck)).toBe('4 Brainstorm\n4 Delver of Secrets // Insectile Aberration\n52 Island\n\nSideboard\n3 Pyroblast\n');
+    // nomi come in MTG Arena: Delver (transform, con dn) solo con la prima faccia; una split (senza dn) completa
+    expect(deckText(cards, deck)).toBe('4 Brainstorm\n4 Delver of Secrets\n52 Island\n\nSideboard\n3 Pyroblast\n');
+    const split = cards.map((c, i) => (i === 4 ? { ...c, n: 'Fire // Ice' } : c));
+    expect(deckText(split, deck)).toContain('\n3 Fire // Ice\n');
     const [, , solo] = readDecks(file());
     expect(deckText(cards, solo)).toBe('2 Brainstorm\n58 Island\n');
   });

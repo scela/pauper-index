@@ -14,6 +14,9 @@ export interface CardRow {
   m?: number;
   /** riga del tipo, tutte le facce (v3) */
   tl?: string;
+  /** nome nella decklist esportata (formato MTG Arena), solo se diverso da n: prima faccia delle carte con più facce
+   *  non divise (transform, modal_dfc, adventure…); le split come Fire // Ice tengono il nome completo */
+  dn?: string;
   e?: string;
   s: WindowStats[];
   f: string;

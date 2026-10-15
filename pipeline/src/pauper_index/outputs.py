@@ -85,6 +85,9 @@ def build_cards(db: CardDB, stats: dict[str, CardStats], tournaments, entries, s
             row["k"] = c.card_colors
         row["m"] = int(c.mv)
         row["tl"] = c.type_line
+        # nome nella decklist esportata, solo se diverso da n: la prima faccia delle carte con più facce non divise
+        if c.deck_name != c.name:
+            row["dn"] = c.deck_name
         p = entries.get(o)
         if p is not None:
             row["e"] = p.set

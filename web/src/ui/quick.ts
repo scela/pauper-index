@@ -31,6 +31,9 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
   let items: NameEntry[] = [];
   let active = -1;
   let current: NameEntry | null = null;
+  // Invio arrivato prima che i suggerimenti fossero pronti (dati o nomi ancora in arrivo): il testo cercato, per
+  // mostrare la carta appena arrivano, se nel frattempo il campo non è cambiato
+  let pending: string | null = null;
 
   const ensureIndex = () => {
     const d = ctx.data();
@@ -40,27 +43,52 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
     }
   };
 
-  // Tutti i nomi (anche mai giocati) e i nomi italiani: scaricati solo al primo uso del campo.
+  // Tutti i nomi (anche mai giocati) e i nomi italiani: scaricati solo al primo uso del campo. Se i dati delle carte
+  // non sono ancora arrivati, l'indice si costruisce al prossimo tentativo (refresh dopo il caricamento dei dati),
+  // senza scaricare di nuovo i nomi.
+  let allNames: Promise<[string, string][]> | null = null;
   const loadAll = () => {
     if (allLoaded || loading) return loading;
+    allNames ??= fetch('data/cardnames.json').then((r) => (r.ok ? r.json() : [])).catch(() => []);
     const d0 = ctx.data();
-    loading = Promise.all([
-      fetch('data/cardnames.json').then((r) => (r.ok ? r.json() : [])).catch(() => []),
-      d0 ? loadItalian(d0.cards.c.length, true) : Promise.resolve(null),
-    ])
-      .then(([all, it]: [[string, string][], Awaited<ReturnType<typeof loadItalian>>]) => {
+    if (!d0) return null;
+    loading = Promise.all([allNames, loadItalian(d0.cards.c.length, true)])
+      .then(([all, it]) => {
         const d = ctx.data();
         if (d && all.length) {
           entries = buildNameIndex(d, all, it);
           builtFor = d;
           allLoaded = true;
           // aggiorna i suggerimenti solo se sono ancora aperti: dopo una scelta (Invio, clic) l'elenco non si riapre
-          if (document.activeElement === input && input.value.trim() && !list.hidden) update();
-        }
+          if (pending === null && document.activeElement === input && input.value.trim() && !list.hidden) update();
+        } else allNames = null; // nomi non arrivati: si riprova al prossimo uso
       })
-      .catch(() => undefined)
-      .finally(() => { loading = null; });
+      .catch(() => { allNames = null; })
+      .finally(() => {
+        loading = null;
+        retryPending();
+      });
     return loading;
+  };
+
+  // Invio in attesa: sceglie il primo suggerimento appena c'è; se la ricerca non trova nulla nemmeno con tutti i
+  // nomi, lascia l'elenco con "nessun risultato".
+  const retryPending = () => {
+    if (pending === null) return;
+    if (input.value !== pending) {
+      pending = null;
+      return;
+    }
+    if (!ctx.data()) return;
+    ensureIndex();
+    const hit = suggest(entries, pending, LIMIT)[0];
+    if (hit) {
+      pending = null;
+      choose(hit);
+    } else if (allLoaded || !allNames) {
+      pending = null;
+      if (!list.hidden) update();
+    } else void loadAll();
   };
 
   const close = () => {
@@ -190,6 +218,7 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
     window.setTimeout(() => input.select(), 0);
   });
   input.addEventListener('input', () => {
+    pending = null;
     void loadAll();
     update();
   });
@@ -204,7 +233,13 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
       ev.preventDefault();
       const pick = items[active >= 0 ? active : 0];
       if (pick && !list.hidden) choose(pick);
+      else if (!pick && input.value.trim() && (!ctx.data() || !allLoaded)) {
+        // suggerimenti non ancora pronti: la carta si mostra appena arrivano
+        pending = input.value;
+        retryPending();
+      }
     } else if (ev.key === 'Escape') {
+      pending = null;
       if (!list.hidden) close();
       else {
         input.value = '';
@@ -224,5 +259,16 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
     }, 120);
   });
 
-  return { refresh: render };
+  return {
+    refresh: () => {
+      // dati arrivati con l'elenco aperto (scritto prima che fossero pronti): suggerimenti e nomi completi
+      const stale = builtFor !== ctx.data();
+      retryPending();
+      if (stale && pending === null && document.activeElement === input && input.value.trim() && !list.hidden) {
+        void loadAll();
+        update();
+      }
+      render();
+    },
+  };
 }

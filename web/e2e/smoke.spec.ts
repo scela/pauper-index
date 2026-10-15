@@ -433,6 +433,45 @@ test('controllo rapido: se tutti i nomi arrivano dopo la scelta, l’elenco non 
   await expect(input).toHaveValue('Brainstorm');
 });
 
+test('controllo rapido: Invio prima che i suggerimenti siano pronti mostra la carta appena arrivano', async ({ page }) => {
+  // dati delle carte e tutti i nomi trattenuti: "brainst" + Invio arrivano prima di qualsiasi suggerimento
+  let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  for (const f of ['cards', 'cardnames']) {
+    await page.route(`**/data/${f}.json`, async (route) => {
+      await gate;
+      await route.continue();
+    });
+  }
+  await page.route('https://cards.scryfall.io/**', (r) => r.fulfill({ contentType: 'image/png', body: PNG }));
+  await page.goto('./');
+  const input = page.locator('#quickInput');
+  await input.fill('brainst');
+  await input.press('Enter');
+  await expect(page.locator('#quickResult .qtitle')).toHaveCount(0);
+  release();
+  await expect(page.locator('#quickResult .qtitle')).toContainText('Brainstorm');
+  await expect(input).toHaveValue('Brainstorm');
+  await expect(page.locator('#quickList')).toBeHidden();
+
+  // se nel frattempo il campo cambia, l'Invio in attesa non vale più; i suggerimenti arrivano con i dati
+  let release2!: () => void;
+  const gate2 = new Promise<void>((r) => { release2 = r; });
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await page.route('https://cards.scryfall.io/**', (r) => r.fulfill({ contentType: 'image/png', body: PNG }));
+  await page.route('**/data/cards.json', async (route) => {
+    await gate2;
+    await route.continue();
+  });
+  await page.reload();
+  await input.fill('brainst');
+  await input.press('Enter');
+  await input.fill('counterspe');
+  release2();
+  await expect(page.locator('#quickList [role="option"]').first()).toContainText('Counterspell');
+  await expect(page.locator('#quickResult .qtitle')).toHaveCount(0);
+});
+
 test('logo e nome: link alla pagina principale da ogni sezione, collezione conservata, filtri azzerati', async ({ page }) => {
   await setup(page);
   const home = page.locator('#home');
@@ -861,7 +900,7 @@ test('"Carta dimenticata": ragnatele generate e mosse appena; carta in 3D che to
   await expect.poll(transform, { timeout: 3000 }).toBe('none');
 });
 
-test('"Carta dimenticata": passaggio fluido, circa 1 s, carta successiva precaricata, nuova pressione salta alla fine', async ({ page, isMobile }) => {
+test('"Carta dimenticata": passaggio fluido, animazioni entro 1 s, carta successiva precaricata, nuova pressione salta alla fine', async ({ page, isMobile }) => {
   const normal: string[] = [];
   page.on('request', (r) => { if (r.url().startsWith('https://cards.scryfall.io/normal/')) normal.push(r.url()); });
   await setup(page);
@@ -869,12 +908,27 @@ test('"Carta dimenticata": passaggio fluido, circa 1 s, carta successiva precari
   const stage = page.locator('#dustResult .dust-stage');
   const size = async () => { const b = (await stage.boundingBox())!; return [Math.round(b.width), Math.round(b.height), Math.round(b.x)]; };
   const empty = await size();
-  // durata: dalla pressione alla carta interamente visibile (nessuna copertura)
-  const t0 = Date.now();
+  // durata: le animazioni dichiarate (ritardo + durata) stanno entro 1 s e la sequenza arriva alla fine. Niente tempo
+  // a orologio, che dipende dal carico della macchina: la misura reale è in scripts/dust-perf.mjs
+  await page.evaluate(() => {
+    const w = window as unknown as { dustAnims: { name: string; end: number; inf: boolean }[] };
+    w.dustAnims = [];
+    document.addEventListener('animationstart', (ev) => {
+      const el = ev.target as Element;
+      if (!el.closest('#dustResult')) return;
+      const a = el.getAnimations().find((x) => (x as CSSAnimation).animationName === ev.animationName);
+      const tm = a?.effect?.getComputedTiming();
+      if (tm) w.dustAnims.push({ name: ev.animationName, end: Number(tm.endTime), inf: tm.iterations === Infinity });
+    }, true);
+  });
   await page.click('#dustBtn');
   await expect(page.locator('#dustResult img.card-cur')).toHaveCount(1);
-  await expect(page.locator('#dustResult .dust-cover')).toHaveCount(0, { timeout: 4000 });
-  expect(Date.now() - t0).toBeLessThan(1600); // circa 0,9 s, più il margine del test
+  await expect(page.locator('#dustResult .dust-cover')).toHaveCount(0, { timeout: 10_000 });
+  const anims = (await page.evaluate(() => (window as unknown as { dustAnims: { name: string; end: number; inf: boolean }[] }).dustAnims))
+    .filter((a) => !a.inf);
+  const names = new Set(anims.map((a) => a.name));
+  for (const n of ['card-in', 'film-off', 'dust-fly', 'cw-tear']) expect(names, n).toContain(n);
+  for (const a of anims) expect(a.end, a.name).toBeLessThanOrEqual(1000);
   // dimensioni e posizione della cornice fisse: nessun salto tra cornice vuota e carta
   expect(await size()).toEqual(empty);
   // la carta successiva è già scaricata mentre si guarda quella attuale
@@ -894,10 +948,15 @@ test('"Carta dimenticata": passaggio fluido, circa 1 s, carta successiva precari
   // la carta vecchia non sparisce di colpo: per un momento ci sono entrambe, in dissolvenza
   await expect(page.locator('#dustResult img.card-out')).toHaveCount(1);
   await expect(page.locator('#dustResult img.card-in')).toHaveCount(1);
-  // una nuova pressione durante l'animazione salta subito alla fine (nessun accumulo)
-  await page.keyboard.press('Enter');
-  await expect(page.locator('#dustResult .dust-cover')).toHaveCount(0, { timeout: 300 });
-  await expect(page.locator('#dustResult img.card-in, #dustResult img.card-out')).toHaveCount(0);
+  // una nuova pressione durante l'animazione salta subito alla fine (nessun accumulo): verificato nello stesso
+  // momento della pressione, non con un tempo d'attesa
+  const jump = await page.evaluate(() => {
+    const q = (s: string) => document.querySelectorAll(s).length;
+    const before = q('#dustResult .dust-cover');
+    (document.getElementById('dustBtn') as HTMLButtonElement).click();
+    return { before, after: q('#dustResult .dust-cover'), fading: q('#dustResult img.card-in, #dustResult img.card-out') };
+  });
+  expect(jump).toEqual({ before: 1, after: 0, fading: 0 });
   await expect(page.locator('#dustResult img.card-cur')).toHaveCount(1);
   await expect(page.locator('#dustTitle')).not.toHaveText(title);
   // la carta mostrata è quella precaricata
@@ -1324,7 +1383,8 @@ test('mazzi senza collezione: per ultima apparizione, archetipo, Carica altri, d
   await expect(second.locator('.dk-sec h5').first()).toHaveText(`${tr('decks.sec.creature')} (8)`);
   await second.locator('[data-dcopy="deck"]').click();
   const clip = (await page.evaluate(() => navigator.clipboard.readText())).split('\n').map((x) => x.trimEnd());
-  expect(clip.slice(0, 8)).toEqual(['4 Brainstorm', '4 Counterspell', '4 Delver of Secrets // Insectile Aberration', '4 Tolarian Terror',
+  // nomi come in MTG Arena: Delver (transform) solo con la prima faccia, Fire // Ice (split) completa
+  expect(clip.slice(0, 8)).toEqual(['4 Brainstorm', '4 Counterspell', '4 Delver of Secrets', '4 Tolarian Terror',
     '44 Island', '', 'Sideboard', '2 Fire // Ice']);
   const dl = page.waitForEvent('download');
   await second.locator('[data-dsave="deck"]').click();

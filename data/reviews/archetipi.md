@@ -20,14 +20,14 @@
 | 177 | 2.8 | 107 | curato | Bogles | WG |  |
 | 167 | 2.6 | 102 | curato | Gruul Ponza | RG |  |
 | 148 | 2.3 | 115 | curato | Dimir Control | UB |  |
-| 131 | 2.1 | 70 | automatico | Crypt Rats + Troll of Khazad-dûm | B | Refurbished Familiar, Reckoner's Bargain, Crypt Rats, Toxin Analysis, Troll of Khazad-dûm, Snuff Out |
-| 103 | 1.6 | 101 | non classificato | — | UB |  |
+| 134 | 2.1 | 73 | curato | Golgari Gardens | B |  |
+| 100 | 1.6 | 98 | non classificato | — | UB |  |
 | 97 | 1.5 | 77 | curato | Rakdos Madness | BR |  |
 | 95 | 1.5 | 80 | curato | Dimir Terror | UB |  |
 | 89 | 1.4 | 68 | automatico | Search Party Captain + Phyrexian Walker | W | Ramosian Rally, Salt Road Packbeast, Spider-Man, Web-Slinger, Leonardo, Big Brother, Phyrexian Walker, Search Party Captain |
 | 83 | 1.3 | 72 | curato | Gruul Ramp | RG |  |
 | 80 | 1.3 | 66 | curato | Familiars | WU |  |
-| 77 | 1.2 | 58 | curato | Storm | RG |  |
+| 77 | 1.2 | 58 | curato | Ruby Storm | RG |  |
 | 74 | 1.2 | 69 | curato | Snacker Gates | WUBRG |  |
 | 70 | 1.1 | 53 | curato | Izzet Terror | UR |  |
 | 65 | 1.0 | 53 | curato | Mono-Black Sacrifice | B |  |
@@ -85,6 +85,7 @@
 | 3 | 0.0 | 3 | curato | Azorius Affinity | WU |  |
 | 3 | 0.0 | 3 | automatico | Navigator's Compass + Glint Hawk | WBR | Kor Skyfisher, Cryogen Relic, Experimental Synthesizer, Journey to Nowhere, Lightning Bolt, Glint Hawk |
 | 2 | 0.0 | 2 | automatico | Careful Cultivation + Pili-Pala | BRG | Urborg Repossession, Bitter Reunion, Duress, Fanatical Offering, Ichor Wellspring, Temporal Intervention |
+| 2 | 0.0 | 2 | automatico | Crypt Rats + Troll of Khazad-dûm | B | Refurbished Familiar, Reckoner's Bargain, Crypt Rats, Toxin Analysis, Troll of Khazad-dûm, Snuff Out |
 | 2 | 0.0 | 2 | automatico | Dream Stalker + Navigator's Compass | WUB | Refurbished Familiar, Nutrient Block, Cryogen Relic, Fanatical Offering, Grim Bauble, Dream Stalker |
 | 2 | 0.0 | 2 | automatico | Tyrant's Choice + Sovereign's Bite | B | Vampire's Kiss, Sovereign's Bite, Rotten Reunion, Village Rites, Okiba Reckoner Raid // Nezumi Road Captain, Hopeless Nightmare |
 | 2 | 0.0 | 2 | automatico | Dawnbringer Cleric + Glint Hawk | WR | Dawnbringer Cleric, Kor Skyfisher, Experimental Synthesizer, Makeshift Munitions, Journey to Nowhere, Lightning Bolt |
@@ -106,7 +107,6 @@
 | 1 | 0.0 | 1 | automatico | Vendetta + Night's Whisper | BG | Bogwater Lumaret, Urborg Repossession, Snakeskin Veil, Vendetta, Essence Warden, Sagu Wildling // Roost Seek |
 | 1 | 0.0 | 1 | automatico | Circular Logic + Whiteout | WU | Squadron Hawk, Ponder, Brainstorm, Deep Analysis, Tireless Tribe, Inside Out |
 | 1 | 0.0 | 1 | automatico | Cleansing Wildfire + Ichor Wellspring | UBR | Refurbished Familiar, Reckoner's Bargain, Krark-Clan Shaman, Makeshift Munitions, Fanatical Offering, Ichor Wellspring |
-| 1 | 0.0 | 1 | automatico | Defile + Crypt Rats | BRG | Campfire, Reckoner's Bargain, Crypt Rats, Troll of Khazad-dûm, Snuff Out, Fanatical Offering |
 | 1 | 0.0 | 1 | automatico | Mephitic Draught + Gray Merchant of Asphodel | B | Refurbished Familiar, Reckoner's Bargain, Mephitic Draught, Chittering Rats, Gray Merchant of Asphodel, Fanatical Offering |
 | 1 | 0.0 | 1 | automatico | Dream Stalker + Metallic Rebuke | UB | Refurbished Familiar, Cryogen Relic, Cut Down, Baleful Strix, Lórien Revealed, Dream Stalker |
 | 1 | 0.0 | 1 | automatico | Devour Flesh + Daru Spiritualist | WBG | Duress, Balustrade Spy, Fanatical Offering, Devour Flesh, Sheltering Word, Sagu Wildling // Roost Seek |
@@ -119,6 +119,5 @@
 | 1 | 0.0 | 1 | curato | Mono-Blue Affinity | U |  |
 | 1 | 0.0 | 1 | automatico | Cleansing Wildfire + Writhing Chrysalis | UBRG | Refurbished Familiar, Krark-Clan Shaman, Toxin Analysis, Makeshift Munitions, Gixian Infiltrator, Fanatical Offering |
 | 1 | 0.0 | 1 | automatico | Season of Renewal + Aura Gnarlid | WRG | Utopia Sprawl, Armadillo Cloak, Season of Renewal, Jewel Thief, Nyxborn Hydra, Lifelink |
-| 1 | 0.0 | 1 | automatico | Breath Weapon + Skred | BRG | Campfire, Skred, Reckoner's Bargain, Troll of Khazad-dûm, Snuff Out, Fanatical Offering |
 | 1 | 0.0 | 1 | curato | Bant Affinity | WUG |  |
 | 1 | 0.0 | 1 | curato | Azorius Faeries | WU |  |

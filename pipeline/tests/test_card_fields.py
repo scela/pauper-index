@@ -66,3 +66,19 @@ def test_build_texts_follows_cards_order():
     db = CardDB(oracle, [])
     order = [oid("A card"), oid("B card")]
     assert build_texts(db, order) == ["alpha", "beta"]
+
+
+def test_deck_name_follows_layout():
+    """Decklist nel formato di MTG Arena: nome completo per split e aftermath, prima faccia per le altre."""
+    def card(name, layout):
+        return card_from_json(base(name, layout=layout, card_faces=[{"name": n} for n in name.split(" // ")]))
+    assert card("Fire // Ice", "split").deck_name == "Fire // Ice"
+    assert card("Commit // Memory", "aftermath").deck_name == "Commit // Memory"
+    for name, layout in [("Delver of Secrets // Insectile Aberration", "transform"),
+                         ("Bridgeworks Battle // Tanglespan Bridgeworks", "modal_dfc"),
+                         ("Fang Dragon // Forktail Sweep", "adventure"),
+                         ("Budoka Gardener // Dokai, Weaver of Life", "flip"),
+                         ("Elite Interceptor // Rejoinder", "prepare"),
+                         ("Some Omen Creature // Omen Spell", "omen")]:
+        assert card(name, layout).deck_name == name.split(" // ")[0], layout
+    assert card_from_json(base("Lightning Bolt")).deck_name == "Lightning Bolt"

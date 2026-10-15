@@ -12,6 +12,9 @@ NON_PLAYABLE_LAYOUTS = frozenset(
     {"token", "double_faced_token", "art_series", "emblem", "planar", "scheme", "vanguard"}
 )
 NON_PLAYABLE_SET_TYPES = frozenset({"memorabilia", "token"})
+# layout in cui il formato di decklist di MTG Arena usa il nome completo "A // B" (Fire // Ice); per tutte le altre
+# carte con più facce (transform, modal_dfc, flip, adventure, omen, prepare…) si scrive solo la prima faccia
+FULL_NAME_LAYOUTS = frozenset({"split", "aftermath"})
 # Printing che non rendono una carta Pauper-legale: set memorabilia/token, bordo argentato,
 # timbro "acorn" (Unfinity), set non ancora usciti. I set "funny" non sono esclusi in blocco:
 # le common di Unfinity senza acorn e le basi nere di Unglued sono legali.
@@ -37,6 +40,13 @@ class Card:
     card_colors: str = ""  # colori della carta (per le bifronti l'unione delle facce), in ordine WUBRG: filtro del sito
     mv: float = 0.0  # mana value (cmc di Scryfall)
     oracle_text: str = ""  # testo delle regole, facce separate da una riga "//"
+
+    @property
+    def deck_name(self) -> str:
+        """Nome nella decklist esportata (formato MTG Arena), in base al layout e non al " // " nel nome."""
+        if len(self.faces) < 2 or self.layout in FULL_NAME_LAYOUTS:
+            return self.name
+        return self.faces[0]
 
     @property
     def basic(self) -> bool:

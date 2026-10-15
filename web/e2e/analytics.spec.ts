@@ -69,6 +69,8 @@ test('test automatici: nessun conteggio nemmeno sul dominio pubblicato', async (
   await expect(page.locator('#dataline')).not.toHaveText(translate('it', 'data.loading'));
   expect(await page.evaluate(() => navigator.webdriver)).toBe(true);
   expect(reqs.filter(isCounter)).toEqual([]);
+  // la pagina scarica ancora altri file (prezzi…): le richieste servite con route.fetch non devono finire a test chiuso
+  await context.unrouteAll({ behavior: 'ignoreErrors' });
 });
 
 test('sul dominio pubblicato: la pagina e i soli nomi degli eventi, con la CSP della build', async ({ baseURL }, info) => {
