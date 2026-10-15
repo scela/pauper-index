@@ -44,6 +44,14 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] prima del passo 3 (2026-10-08): ricerca anche con i nomi italiani e filtro sul testo anche in italiano (vedi "Nomi italiani")
     - [x] passo 3 (2026-10-08): sezione "Mazzi" nel sito, completamento, export nel formato di MTG Arena (vedi "Sezione Mazzi")
     - [x] passo 4 (2026-10-15): archetipi Golgari Gardens e Ruby Storm, nomi della decklist secondo il layout (formato MTG Arena), Invio in anticipo nel controllo rapido, test della "Carta dimenticata" indipendente dal carico, misure del calcolo dei mazzi (vedi "Funzione 4: rifinitura")
+  - [ ] Restyling della sezione Mazzi, piano approvato il 2026-10-15 (vedi "Restyling dei Mazzi"):
+    - [x] passo 1: Golgari Gardens con le liste Gardens di "Defile + Crypt Rats", mancanti con i nomi della decklist, ridisegno della pagina Mazzi senza perdere focus e decklist aperte
+    - [ ] passo 2: simboli di mana
+    - [ ] passo 3: pipeline (tier, carte simbolo, lista tipica, nomi dei mazzi bianchi) — report
+    - [ ] passo 4: tier list e pagina dell'archetipo
+    - [ ] passo 5: filtri — report con screenshot
+    - [ ] passo 6: testata
+    - [ ] passo 7: rifinitura — report finale
   - [x] 2026-10-10: conteggio anonimo delle visite e degli eventi con GoatCounter, senza cookie (vedi "Conteggio delle visite")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
 - **Test** (2026-10-15, dopo il passo 4 della funzione 4): 116 pytest, 89 Vitest, 163 Playwright (più 9 saltati di proposito: i test col mouse non girano su mobile, il test del conteggio sul dominio pubblicato gira solo su desktop-it) sui quattro progetti desktop/mobile × IT/EN, con @playwright/test 1.64.0, vite 8.3.4, vitest 5.0.4. Nell'ambiente cloud del 2026-10-10 (Chromium preinstallato più vecchio di quello di Playwright) due test fallivano per la formattazione dei numeri in italiano ("3.065" invece di "3065"): dipende dalla versione del browser, non dal codice.
@@ -698,6 +706,14 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Mobile con i dati reali** (iPhone SE e iPhone 13, 61 giorni e un anno, chiaro e scuro): nessuno scorrimento orizzontale; archetipi nuovi nel menu (Golgari Gardens 73 liste, Ruby Storm 58 a 61 giorni); decklist esportata con "4 Delver of Secrets", "1 Sagu Wildling", "2 Tithing Blade". Screenshot: `node scripts/decks-shots.mjs passo4` → `.cache/screenshots/mazzi-passo4-*`.
 - **Test della "Carta dimenticata"**: "passaggio fluido" non misura più il tempo a orologio. Registra ogni animazione CSS finita che parte nella scena (`animationstart`) e verifica che ritardo più durata (`endTime`) stiano entro 1 s e che compaiano le fasi principali (card-in, film-off, dust-fly, cw-tear); poi che la sequenza arrivi alla fine (tempo d'attesa largo, 10 s). Il salto alla fine con una nuova pressione si verifica nello stesso istante del clic (`page.evaluate`), non con un'attesa di 300 ms. La misura reale dei tempi resta in `scripts/dust-perf.mjs`.
 - **Test del conteggio** (`analytics.spec.ts`, "test automatici: nessun conteggio nemmeno sul dominio pubblicato"): alla fine `context.unrouteAll({ behavior: 'ignoreErrors' })`. Il test finiva mentre la pagina scaricava ancora file attraverso `route.fetch`, con errori "route.fetch: Test ended" fuori dai test (difetto del test, presente anche prima).
+
+## Restyling dei Mazzi (piano approvato il 2026-10-15)
+
+- **Piano**: tier list degli archetipi (Tier 1 ≥ 5%, Tier 2 ≥ 2%, Tier 3 ≥ 0,75% dei mazzi a 61 giorni, poi "Altri"; varianti di colore contate come famiglia; banda simmetrica del 15%, cioè si sale sopra soglia × 1,15 e si scende sotto soglia × 0,85, con il tier del giorno prima letto dal `decks-61.json` committato), pagina di ogni archetipo (`#mazzi/<id>`), illustrazione della carta simbolo (art crop con artista e riga del copyright), simboli di mana, filtri (colori, prezzo, tier), testata con i pulsanti speciali come famiglia (Mazzi come libro antico). Report all'utente solo dopo i passi 3, 5 e alla fine; commit e push dopo ogni passo.
+- **Passo 1 (2026-10-15)**:
+  - **Golgari Gardens**: due righe alternative in fondo a `archetypes.csv` (Khalni Garden, Cast Down, Snuff Out, Eviscerator's Insight, Fanatical Offering, tutte e 5; Khalni Garden, Writhing Chrysalis, Skred, Eviscerator's Insight, tutte e 4). Prendono le liste Gardens di "Defile + Crypt Rats" (17 delle 21 senza fog, in un anno) più 9 di "Crypt Rats + Troll" e 3 non classificate o ibride; verificato che **nessuna lista di Jund Wildfire né di "Respite + Tangle" cambia nome**, a 61 giorni e in un anno. La metà con i fog di "Defile + Crypt Rats" (19 mazzi in un anno, 0 a 61 giorni: Moment's Peace, Tangle, porte) è lo stesso mazzo di "Respite + Tangle" e resta fuori: qualsiasi carta chiave che la prende prende anche "Respite + Tangle". Cast Down distingue le Gardens (100%) dalle liste con i fog, ma non basta da sola (alcune liste di "Respite + Tangle" lo giocano).
+  - **Mancanti** con i nomi della decklist (`dn`), come la decklist.
+  - **Difetti corretti** (trovati da test intermittenti): all'arrivo dei prezzi `refresh()` ridisegnava l'elenco, togliendo il focus (per esempio dopo "Carica altri") e chiudendo le decklist aperte; ora `keepPlace` li ritrova per mazzo (`data-key`) e per elemento. Dopo un errore di caricamento `refresh()` riavviava il caricamento e ridisegnava "Riprova" sotto il dito; ora un caricamento in corso o fallito si riprova solo con "Riprova" (`S.pending`, `S.failed`).
 
 ## Riepiloghi ed elenco (2026-10-07)
 

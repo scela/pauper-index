@@ -186,9 +186,9 @@ export function archetypes(decks: Deck[]): ArchetypeCount[] {
   return [...m.values()].sort((a, b) => b.apps - a.apps || Number(a.kind === 'x') - Number(b.kind === 'x') || a.name.localeCompare(b.name, 'en'));
 }
 
-/** Lista acquisti delle carte mancanti: "N Nome", una riga per carta. */
+/** Lista acquisti delle carte mancanti: "N Nome", una riga per carta, con i nomi della decklist (campo dn). */
 export function missingText(cards: CardRow[], missing: Missing[]): string {
-  const lines = missing.map((m) => `${m.n} ${cards[m.idx].n}`);
+  const lines = missing.map((m) => `${m.n} ${cards[m.idx].dn ?? cards[m.idx].n}`);
   return lines.length ? lines.join('\n') + '\n' : '';
 }
 

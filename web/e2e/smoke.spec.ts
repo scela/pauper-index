@@ -1429,7 +1429,8 @@ test('mazzi con la collezione: completamento, mancanti con le copie, solo main, 
   await expect(deck.locator('.dk-mhead b')).toHaveText(tr('decks.missing', { n: 7 }));
   await deck.locator('[data-dcopy="missing"]').click();
   const clip = (await page.evaluate(() => navigator.clipboard.readText())).split('\n').map((x) => x.trimEnd()).filter(Boolean);
-  expect(clip).toEqual(['4 Tolarian Terror', '2 Counterspell', '1 Delver of Secrets // Insectile Aberration']);
+  // stessi nomi della decklist: Delver (transform) solo con la prima faccia
+  expect(clip).toEqual(['4 Tolarian Terror', '2 Counterspell', '1 Delver of Secrets']);
   await deck.locator('.dk-list summary').click();
   await expect(deck.locator('.dk-sec li.miss')).toContainText('Tolarian Terror');
   await expect(deck.locator('.dk-sec li.part', { hasText: 'Counterspell' })).toContainText(tr('decks.missCopies', { n: 2 }));
@@ -1443,6 +1444,52 @@ test('mazzi con la collezione: completamento, mancanti con le copie, solo main, 
   await expect(page.locator('#dSideWrap input[value="main"]')).toBeChecked();
   await expect(page.locator('#dArch')).toHaveValue('');
   expect(problems).toEqual([]);
+});
+
+test('mazzi: i prezzi in arrivo non tolgono il focus, non chiudono le decklist e non ricaricano dopo un errore', async ({ page }) => {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  await page.route('**/data/prices.json', async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.route('**/data/decks-61.json', (r) => r.fulfill({ json: syntheticDecks() }));
+  await setup(page);
+  await page.click('#navDecks');
+  await expect(page.locator('#deckList .dk')).toHaveCount(10);
+  await page.click('#dMore');
+  const name = page.locator('#deckList .dk-name').nth(10);
+  await expect(name).toBeFocused();
+  const second = page.locator('#deckList .dk').nth(1);
+  await second.locator('.dk-list summary').click();
+  await name.focus();
+  const prices = page.waitForResponse('**/data/prices.json');
+  release();
+  await prices;
+  await page.waitForTimeout(300); // il ridisegno all'arrivo dei prezzi
+  await expect(page.locator('#deckList .dk-name').nth(10)).toBeFocused();
+  await expect(page.locator('#deckList .dk').nth(1).locator('details.dk-list')).toHaveAttribute('open', '');
+});
+
+test('mazzi: dopo un errore il messaggio e "Riprova" restano anche quando arrivano i prezzi', async ({ page }) => {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  await page.route('**/data/prices.json', async (route) => {
+    await gate;
+    await route.continue();
+  });
+  let calls = 0;
+  await page.route('**/data/decks-61.json', (r) => { calls++; return r.fulfill({ status: 404, body: '' }); });
+  await setup(page);
+  await page.goto('./#mazzi');
+  await expect(page.locator('#dStatus')).toContainText(tr('decks.error'));
+  const retry = await page.locator('#dRetry').elementHandle();
+  const prices = page.waitForResponse('**/data/prices.json');
+  release();
+  await prices;
+  await page.waitForTimeout(200);
+  expect(await retry!.evaluate((el) => el.isConnected)).toBe(true);
+  expect(calls).toBe(1);
 });
 
 test('mazzi: file non disponibile, messaggio e Riprova', async ({ page }) => {

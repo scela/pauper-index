@@ -79,6 +79,9 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     view: [] as Deck[],
     comp: null as Map<number, Completion> | null,
     token: 0,
+    // caricamento in corso o fallito: un ridisegno (prezzi, lingua, collezione) non lo riavvia, si riprova con "Riprova"
+    pending: false,
+    failed: false,
   };
   const list = $('#deckList');
   const periodSel = $('#dPeriod') as HTMLSelectElement;
@@ -99,9 +102,13 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     if (!S.cur || S.cur.file.days !== S.days) {
       status(t(S.days === 61 ? 'decks.loading' : 'decks.loadingYear'));
       $('#dResults').hidden = true;
+      S.pending = true;
+      S.failed = false;
       const x = await load(S.days, d);
       if (my !== S.token) return;
+      S.pending = false;
       if (!x) {
+        S.failed = true;
         status(t('decks.error'), true);
         return;
       }
@@ -191,6 +198,28 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     if (focusFrom >= 0) list.querySelectorAll<HTMLElement>('.dk-name')[focusFrom]?.focus();
   }
 
+  /**
+   * Ridisegna senza perdere il punto in cui si è (per esempio all'arrivo dei prezzi): le decklist aperte e il focus,
+   * ritrovato per mazzo e per elemento dentro il mazzo.
+   */
+  function keepPlace(draw: () => void): void {
+    const key = (li: Element) => (li as HTMLElement).dataset.key || '';
+    const open = new Set([...list.querySelectorAll<HTMLDetailsElement>('details[open]')]
+      .map((dt) => key(dt.closest('#deckList > li')!) + '/' + [...dt.closest('#deckList > li')!.querySelectorAll('details')].indexOf(dt)));
+    const active = document.activeElement as HTMLElement | null;
+    const li = active && list.contains(active) ? active.closest<HTMLElement>('#deckList > li') : null;
+    const cls = active?.classList[0];
+    const pos = li && cls ? [...li.querySelectorAll(`.${cls}`)].indexOf(active!) : -1;
+    draw();
+    for (const item of list.children) {
+      item.querySelectorAll('details').forEach((dt, k) => { if (open.has(key(item) + '/' + k)) dt.open = true; });
+    }
+    if (li && cls && pos >= 0) {
+      const again = [...list.children].find((x) => key(x) === key(li));
+      again?.querySelectorAll<HTMLElement>(`.${cls}`)[pos]?.focus({ preventScroll: true });
+    }
+  }
+
   function deckItem(x: Deck): HTMLElement {
     const d = deps.data()!;
     const cards = d.cards.c;
@@ -247,7 +276,7 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
         missEl = h('p', { class: 'dk-done' }, t('decks.complete'));
       }
     }
-    return h('li', { class: 'deck' }, h('article', { class: 'dk', 'aria-label': name },
+    return h('li', { class: 'deck', dataset: { key: String(x.i) } }, h('article', { class: 'dk', 'aria-label': name },
       head, compEl, where, missEl, decklist(x, comp !== null)));
   }
 
@@ -357,9 +386,12 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     /** collezione, lingua o prezzi cambiati: ridisegna senza tornare alle prime 10 */
     refresh: () => {
       if ($('#viewDecks').hidden) return;
-      if (!S.cur) return void show();
+      if (!S.cur || S.cur.file.days !== S.days) {
+        if (!S.pending && !S.failed) void show();
+        return;
+      }
       compute();
-      render();
+      keepPlace(render);
     },
   };
 }

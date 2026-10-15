@@ -20,7 +20,7 @@
 | 177 | 2.8 | 107 | curato | Bogles | WG |  |
 | 167 | 2.6 | 102 | curato | Gruul Ponza | RG |  |
 | 148 | 2.3 | 115 | curato | Dimir Control | UB |  |
-| 134 | 2.1 | 73 | curato | Golgari Gardens | B |  |
+| 135 | 2.1 | 74 | curato | Golgari Gardens | B |  |
 | 100 | 1.6 | 98 | non classificato | — | UB |  |
 | 97 | 1.5 | 77 | curato | Rakdos Madness | BR |  |
 | 95 | 1.5 | 80 | curato | Dimir Terror | UB |  |
@@ -85,7 +85,6 @@
 | 3 | 0.0 | 3 | curato | Azorius Affinity | WU |  |
 | 3 | 0.0 | 3 | automatico | Navigator's Compass + Glint Hawk | WBR | Kor Skyfisher, Cryogen Relic, Experimental Synthesizer, Journey to Nowhere, Lightning Bolt, Glint Hawk |
 | 2 | 0.0 | 2 | automatico | Careful Cultivation + Pili-Pala | BRG | Urborg Repossession, Bitter Reunion, Duress, Fanatical Offering, Ichor Wellspring, Temporal Intervention |
-| 2 | 0.0 | 2 | automatico | Crypt Rats + Troll of Khazad-dûm | B | Refurbished Familiar, Reckoner's Bargain, Crypt Rats, Toxin Analysis, Troll of Khazad-dûm, Snuff Out |
 | 2 | 0.0 | 2 | automatico | Dream Stalker + Navigator's Compass | WUB | Refurbished Familiar, Nutrient Block, Cryogen Relic, Fanatical Offering, Grim Bauble, Dream Stalker |
 | 2 | 0.0 | 2 | automatico | Tyrant's Choice + Sovereign's Bite | B | Vampire's Kiss, Sovereign's Bite, Rotten Reunion, Village Rites, Okiba Reckoner Raid // Nezumi Road Captain, Hopeless Nightmare |
 | 2 | 0.0 | 2 | automatico | Dawnbringer Cleric + Glint Hawk | WR | Dawnbringer Cleric, Kor Skyfisher, Experimental Synthesizer, Makeshift Munitions, Journey to Nowhere, Lightning Bolt |
@@ -101,6 +100,7 @@
 | 2 | 0.0 | 2 | automatico | Scatter the Seeds + Loam Dryad | URG | Gene Pollinator, Loam Dryad, Sylvan Ranger, Simian Spirit Guide, Rites of Initiation, Sagu Wildling // Roost Seek |
 | 2 | 0.0 | 2 | automatico | Gather the Townsfolk + Hallow | WR | Mardu Devotee, Ramosian Rally, Faithless Looting, Pursue the Past, Lightning Bolt, Hallow |
 | 2 | 0.0 | 1 | curato | Temur Terror | URG |  |
+| 1 | 0.0 | 1 | automatico | Crypt Rats + Troll of Khazad-dûm | B | Refurbished Familiar, Reckoner's Bargain, Crypt Rats, Toxin Analysis, Troll of Khazad-dûm, Snuff Out |
 | 1 | 0.0 | 1 | automatico | Relic's Roar + Blighted Agent | UG | Snakeskin Veil, Lotus Petal, Distortion Strike, Relic's Roar, Ichorclaw Myr, Vines of Vastwood |
 | 1 | 0.0 | 1 | automatico | Gray Merchant of Asphodel + Cuombajj Witches | B | Chittering Rats, Crypt Rats, Troll of Khazad-dûm, Gray Merchant of Asphodel, Defile, Cuombajj Witches |
 | 1 | 0.0 | 1 | automatico | Embrace the Paradox + Growth Spiral | URG | Muddle the Mixture, Heritage Reclamation, Fog, Growth Spiral, Brainstorm, Weather the Storm |

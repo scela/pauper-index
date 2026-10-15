@@ -81,7 +81,7 @@ describe('mazzi', () => {
 
   it('export: lista acquisti "N Nome" e decklist nel formato di MTG Arena', () => {
     const [deck] = readDecks(file());
-    expect(missingText(cards, [{ idx: 1, n: 3 }, { idx: 4, n: 2 }])).toBe('3 Delver of Secrets // Insectile Aberration\n2 Pyroblast\n');
+    expect(missingText(cards, [{ idx: 1, n: 3 }, { idx: 4, n: 2 }])).toBe('3 Delver of Secrets\n2 Pyroblast\n');
     expect(missingText(cards, [])).toBe('');
     // nomi come in MTG Arena: Delver (transform, con dn) solo con la prima faccia; una split (senza dn) completa
     expect(deckText(cards, deck)).toBe('4 Brainstorm\n4 Delver of Secrets\n52 Island\n\nSideboard\n3 Pyroblast\n');
