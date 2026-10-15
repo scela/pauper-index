@@ -46,7 +46,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] passo 4 (2026-10-15): archetipi Golgari Gardens e Ruby Storm, nomi della decklist secondo il layout (formato MTG Arena), Invio in anticipo nel controllo rapido, test della "Carta dimenticata" indipendente dal carico, misure del calcolo dei mazzi (vedi "Funzione 4: rifinitura")
   - [ ] Restyling della sezione Mazzi, piano approvato il 2026-10-15 (vedi "Restyling dei Mazzi"):
     - [x] passo 1: Golgari Gardens con le liste Gardens di "Defile + Crypt Rats", mancanti con i nomi della decklist, ridisegno della pagina Mazzi senza perdere focus e decklist aperte
-    - [ ] passo 2: simboli di mana
+    - [x] passo 2: simboli di mana (vedi "Simboli di mana")
     - [ ] passo 3: pipeline (tier, carte simbolo, lista tipica, nomi dei mazzi bianchi) — report
     - [ ] passo 4: tier list e pagina dell'archetipo
     - [ ] passo 5: filtri — report con screenshot
@@ -338,6 +338,8 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
 
 **`seticons.svg`** (aggiunto il 2026-10-07): sprite con un `<symbol id="nome" viewBox data-v>` per ogni icona dei set di `sets.json` (vedi "Simboli delle espansioni"). 333 icone, **285 KB grezzi, 102 KB con gzip**; si scarica solo quando si apre il selettore o si sceglie un'espansione.
 
+**`manasymbols.svg`** (2026-10-15): sprite dei simboli di mana (14 simboli, 19 KB grezzi, 7,9 KB gzip), committato; vedi "Simboli di mana".
+
 **`prices.json`** (2026-10-08, **non committato**, in `.gitignore`): `{v, date, p}`, allineato a `printings.json`; `p[i]` = `[eur, eur_foil, …]` in centesimi, una coppia per printing della carta i, 0 = assente. 141 KB grezzi, 46 KB gzip. Vedi "Prezzi indicativi".
 
 **`meta.json`**: generazione, ultimo torneo, totali per finestra, date dei bulk, commit della fonte, stato (`ok`/`ferma`), deduplica, statistiche di risoluzione.
@@ -420,7 +422,8 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
   - i crediti (Scryfall, MTGODecklistCache e i siti di origine);
   - i limiti dei dati (vedi "Cosa contengono i dati MTGO") e la data dell'aggiornamento;
   - come segnalare un errore.
-- **Nessun logo né simbolo** di Wizards (simboli di mana compresi), ManaBox o Scryfall. **Eccezione** (decisa dall'utente il 2026-10-07): i **simboli delle espansioni** sono ammessi solo come piccole icone per identificare i set (selettore "Espansione" e rarità nella vista per espansione). Restano esclusi simboli di mana, logo di Magic, logo di Wizards e retro delle carte; per questo la pipeline non usa le icone `planeswalker` (The List), `default` (la "M" generica di Magic) e `dci` (logo DCI).
+- **Nessun logo né simbolo** di Wizards, ManaBox o Scryfall. **Eccezioni** decise dall'utente: i **simboli delle espansioni** (2026-10-07) e i **simboli di mana** (2026-10-15) sono ammessi solo come piccole icone (selettore "Espansione", rarità nella vista per espansione, colori e costo nella sezione Mazzi e nel pannello "Filtri"). Restano esclusi logo di Magic, logo di Wizards, retro delle carte e simbolo dei planeswalker; per questo la pipeline non usa le icone di set `planeswalker` (The List), `default` (la "M" generica di Magic) e `dci` (logo DCI). Vedi "Simboli di mana".
+- **Illustrazioni ritagliate** (`art_crop`, regola di Scryfall, 2026-10-15): nella stessa schermata devono esserci il nome dell'artista (su ogni immagine) e il copyright, con una riga visibile "Illustrazioni ™ & © Wizards of the Coast" (non solo in Informazioni). Nessun testo, sfumatura o altro livello sopra l'illustrazione; nessuna deformazione, filtro o ricolorazione; proporzione vicina a quella dell'art crop (circa 4:3).
 - **Nota privacy**: nessun account, nessun cookie; la collezione resta nel browser e non viene mai inviata; visite contate in forma anonima con GoatCounter (dal 2026-10-10, **scostamento dalla spec**, che diceva "nessuna analytics": richiesta dell'utente); GitHub Pages può registrare dati tecnici di accesso; le immagini arrivano dai server di Scryfall.
 
 ### Sicurezza
@@ -869,6 +872,17 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 
   Il nome dell'icona è validato (`[a-z0-9_-]`).
 - **Colori di rarità** (variabili `--rar-*`, chiaro / scuro): comune `#18202B` / `#E5E9EF` (colore del testo), non comune `#5C6875` / `#B3BFCC`, rara `#8C6A0E` / `#E3C063`, mitica `#BF4510` / `#F38A4A`, speciale e bonus `#6A3E9E` / `#BC9DEA`. Contrasto di almeno 4,5:1 sullo sfondo delle schede.
+
+## Simboli di mana (2026-10-15, restyling dei Mazzi, passo 2)
+
+- **Sprite** `data/manasymbols.svg` (committato, in `PUBLIC_DATA`), generato da `pauper_index/manasymbols.py` dentro `build`: W, U, B, R, G, C e il mana generico {0}–{6} dalla symbology di Scryfall (`/symbology`, poi `svgs.scryfall.io/card-symbols/*.svg`), più un simbolo **originale** per "Multicolore" (`M`: cinque spicchi con i colori dei cerchi WUBRG e un bordo scuro). Id nello sprite: `W U B R G C N0…N6 M`. 14 simboli, **19 KB grezzi, 7,9 KB gzip**.
+- **Pulizia a elenco chiuso** (`clean_symbol`): solo `svg`, `g`, `path`, `circle`; attributi `fill` (esadecimale o `none`), `fill-rule`, `transform` solo `translate(...)` numerico, `d` (solo caratteri dei tracciati), `cx`/`cy`/`r` numerici. Tutto il resto (id, stili, script, link, immagini) si scarta. I simboli **mantengono i loro colori**: non si ricolorano.
+- **Aggiornamento**: lo sprite si scarica solo se manca o è incompleto (i simboli non cambiano); senza rete resta com'è.
+- **Sito** (`ui/mana.ts`, `manaIcon(sym, label)`): `<svg class="mana"><use href="data/manasymbols.svg#U">`, CSP invariata. Con `label` è un'immagine con testo alternativo, senza è decorativo.
+  - Mazzi: i colori del mazzo (`.pips`, `role="img"` con il nome dei colori) al posto dei pallini.
+  - Pannello "Filtri": colori con il simbolo (decorativo) e il nome scritto accanto; costo con {0}–{5} e {6}+, nome accessibile "Costo 3" / "Costo 6 o più" (`fp.mvBtn`, `fp.mvBtnMore`).
+  - **Stato premuto** dei pulsanti del pannello (colori, costo, tipo): anello di 2 px e una spunta in un cerchietto (`.fcheck`), oltre ad `aria-pressed` e al colore.
+- Tolti i pallini CSS (`.cdot`).
 
 ## Logo (2026-10-06)
 

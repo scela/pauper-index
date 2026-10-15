@@ -348,15 +348,15 @@ textarea{font:inherit;font-size:16px;width:100%;min-height:64px;resize:vertical;
 .fp-btns{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .fbtn{font:inherit;font-size:.875rem;display:inline-flex;align-items:center;gap:6px;min-height:36px;min-width:40px;justify-content:center;padding:4px 12px;border:1px solid var(--line-strong);border-radius:999px;background:var(--surface);color:var(--ink);cursor:pointer}
 .fbtn:hover{border-color:var(--ink)}
-.fbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent);font-weight:600}
-.cdot{flex:none;width:14px;height:14px;border-radius:50%;border:1px solid rgba(0,0,0,.35)}
-.cdot.c-W{background:#F3ECD2}
-.cdot.c-U{background:#2E6FB5}
-.cdot.c-B{background:#2B2B2E;border-color:#8a8f98}
-.cdot.c-R{background:#C8402F}
-.cdot.c-G{background:#2E7D46}
-.cdot.c-M{background:conic-gradient(#F3ECD2 0 20%,#2E6FB5 0 40%,#2B2B2E 0 60%,#C8402F 0 80%,#2E7D46 0)}
-.cdot.c-C{background:#B9BEC6}
+.fbtn{position:relative}
+/* premuto: anello di 2 px e spunta in un cerchietto, non solo il colore */
+.fbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent);font-weight:600}
+.fcheck{display:none;position:absolute;top:-7px;right:-5px;width:16px;height:16px;padding:1px;border-radius:50%;background:var(--accent);fill:none;stroke:var(--accent-ink);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.fbtn[aria-pressed="true"] .fcheck{display:block}
+/* simboli di mana (sprite data/manasymbols.svg): mai ricolorati */
+.mana{flex:none;width:18px;height:18px;display:inline-block;vertical-align:-3px}
+.fbtn .mana{width:20px;height:20px}
+.fbtn-mv{gap:2px;padding:4px 10px}
 .fp-mode{justify-self:start;flex-wrap:wrap}
 #fpText{font:inherit;font-size:16px;width:100%;min-height:40px;padding:6px 10px;border:1px solid var(--line-strong);border-radius:var(--r-s);background:var(--surface);color:var(--ink)}
 #fpText:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
@@ -526,7 +526,7 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 .dk-name:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dk-times{color:var(--muted);font-size:.875rem;white-space:nowrap}
 .pips{display:inline-flex;gap:3px;flex:none}
-.pips .cdot{width:12px;height:12px}
+.pips .mana{width:16px;height:16px}
 .dk-comp{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .dk-bar{flex:1 1 180px;max-width:360px;height:10px;border-radius:999px;background:var(--line);overflow:hidden}
 .dk-fill{display:block;height:100%;background:var(--accent);border-radius:999px}

@@ -63,6 +63,8 @@ export const it = {
   'fp.colorAny': 'Almeno uno dei colori scelti',
   'fp.colorOnly': 'Solo questi colori',
   'fp.mv': 'Costo di mana',
+  'fp.mvBtn': 'Costo {n}',
+  'fp.mvBtnMore': 'Costo {n} o più',
   'fp.type': 'Tipo',
   'fp.text': 'Testo delle regole (inglese o italiano)',
   'fp.textPh': 'es. draw a card · pesca una carta',

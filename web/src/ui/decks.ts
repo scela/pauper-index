@@ -10,6 +10,7 @@ import {
 import { $, h } from '../lib/dom';
 import { lsGet, lsSet } from '../lib/store';
 import { cheapestPrice, type PricesFile } from '../lib/prices';
+import { manaIcon, type ManaSymbol } from './mana';
 
 const PAGE = 10;
 /** Quante carte mancanti si elencano sotto il mazzo (le altre sono segnate nella decklist). */
@@ -55,11 +56,11 @@ const deckName = (x: { name: string }) => x.name || t('decks.unclassified');
 
 const colorNames = (colors: string) => [...colors].map((c) => t(`color.${c}` as Key).toLocaleLowerCase(getLang()));
 
-/** Pallini dei colori (non simboli di mana), con il nome dei colori per chi usa un lettore di schermo. */
+/** Simboli di mana dei colori del mazzo, con il nome dei colori per chi usa un lettore di schermo. */
 function pips(colors: string) {
-  const list = colors ? [...colors] : ['C'];
+  const list = (colors ? [...colors] : ['C']) as ManaSymbol[];
   return h('span', { class: 'pips', role: 'img', 'aria-label': colors ? t('decks.colors', { v: colorNames(colors).join(', ') }) : t('decks.colorless') },
-    ...list.map((c) => h('span', { class: `cdot c-${c}`, 'aria-hidden': 'true' })));
+    ...list.map((c) => manaIcon(c)));
 }
 
 /** Mancanti dalla carta con più copie da trovare, poi per nome: lo stesso ordine nell'elenco e nell'export. */

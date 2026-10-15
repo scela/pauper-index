@@ -5,7 +5,7 @@ import time
 from collections import Counter
 from dataclasses import dataclass
 
-from . import config, decks, italian, outputs, prices, seticons
+from . import config, decks, italian, manasymbols, outputs, prices, seticons
 from .carddb import CardDB
 from .dedup import dedupe
 from .names import clean, norm
@@ -125,6 +125,7 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     set_rows = outputs.build_sets(db, order, ctx.sets_info)
     icons = seticons.build_sprite([r["c"] for r in set_rows], ctx.sets_info, online, config.DATA / "seticons.svg", log)
     outputs.write_json(config.DATA / "sets.json", outputs.with_icons(set_rows, icons))
+    manasymbols.build_sprite(ctx.api, online, config.DATA / "manasymbols.svg", log)
     outputs.write_json(config.DATA / "names.json", outputs.build_names(db, order))
     outputs.write_json(config.DATA / "allnames.json", outputs.build_all_names(db))
     card_names = outputs.build_card_names(db)

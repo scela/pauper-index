@@ -5,6 +5,7 @@
 import { getLang, t, type Key } from '../i18n';
 import { COLORS, MVS, mvLabel, textWords, type CardFilters, type ColorKey } from '../lib/cardfilter';
 import { $, h, svg } from '../lib/dom';
+import { manaIcon } from './mana';
 
 /** Tipi con un nome tradotto; gli altri (improbabili tra le carte giocate) restano in inglese, come nei dati. */
 const KNOWN_TYPES = new Set(['Creature', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Land', 'Kindred', 'Tribal',
@@ -163,12 +164,13 @@ export function initFilterPanel(deps: PanelDeps): { render(): void; close(): voi
     const key = `${getLang()}|${types.join(',')}`;
     if (built !== key) {
       built = key;
+      // simboli di mana (decorativi: il nome del colore è scritto accanto); lo stato premuto si vede anche dalla spunta
       $('#fpColors').replaceChildren(...COLORS.map((c) => h('button', { class: 'fbtn', ...pressed(false), dataset: { f: 'color', v: c } },
-        h('span', { class: `cdot c-${c}`, 'aria-hidden': 'true' }), colorLabel(c))));
-      $('#fpMv').replaceChildren(...MVS.map((m) => h('button', { class: 'fbtn', ...pressed(false), dataset: { f: 'mv', v: String(m) } },
-        m === 6 ? '6+' : String(m))));
+        check(), manaIcon(c), colorLabel(c))));
+      $('#fpMv').replaceChildren(...MVS.map((m) => h('button', { class: 'fbtn fbtn-mv', ...pressed(false), dataset: { f: 'mv', v: String(m) },
+        'aria-label': t(m === 6 ? 'fp.mvBtnMore' : 'fp.mvBtn', { n: m }) }, check(), manaIcon(`N${m}`), m === 6 ? h('span', { 'aria-hidden': 'true' }, '+') : null)));
       $('#fpTypes').replaceChildren(...types.map((x) => h('button', { class: 'fbtn', ...pressed(false), dataset: { f: 'type', v: x } },
-        typeLabel(x))));
+        check(), typeLabel(x))));
     }
     panel.querySelectorAll<HTMLButtonElement>('button[data-f]').forEach((b) => {
       const v = b.dataset.v!;
@@ -182,4 +184,9 @@ export function initFilterPanel(deps: PanelDeps): { render(): void; close(): voi
   }
 
   return { render, close };
+}
+
+/** Spunta dei pulsanti premuti (visibile solo con aria-pressed="true"): lo stato non si riconosce solo dal colore. */
+function check(): Element {
+  return svg('svg', { class: 'fcheck', viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' }, svg('path', { d: 'M3 8.5l3.2 3L13 4.5' }));
 }

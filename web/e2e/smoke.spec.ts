@@ -1082,6 +1082,41 @@ test('prezzi assenti (file mancante): "—" e nessun riepilogo, senza errori', a
 
 const visibleNames = (page: Page) => page.locator('#cardRows .nm').allInnerTexts();
 
+test('simboli di mana: pannello Filtri e Mazzi, dallo sprite del sito, con nome accessibile e spunta', async ({ page }) => {
+  const sprite: number[] = [];
+  page.on('response', (r) => { if (r.url().endsWith('/data/manasymbols.svg')) sprite.push(r.status()); });
+  await setup(page);
+  await page.click('#filtersBtn');
+  // colori: simbolo decorativo e nome scritto accanto
+  const blue = page.locator('#fpColors [data-v="U"]');
+  await expect(blue).toHaveAccessibleName(tr('color.U'));
+  await expect(blue.locator('svg.mana use')).toHaveAttribute('href', 'data/manasymbols.svg#U');
+  await expect(blue.locator('svg.mana')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('#fpColors [data-v="M"] use')).toHaveAttribute('href', 'data/manasymbols.svg#M');
+  // costo: simboli {0}–{6} con il nome accessibile ("Costo 3", "Costo 6 o più")
+  await expect(page.locator('#fpMv [data-v="3"]')).toHaveAccessibleName(tr('fp.mvBtn', { n: 3 }));
+  await expect(page.locator('#fpMv [data-v="6"]')).toHaveAccessibleName(tr('fp.mvBtnMore', { n: 6 }));
+  await expect(page.locator('#fpMv [data-v="0"] use')).toHaveAttribute('href', 'data/manasymbols.svg#N0');
+  // premuto: spunta visibile, oltre ad aria-pressed e al colore
+  await expect(blue.locator('.fcheck')).toBeHidden();
+  await blue.click();
+  await expect(blue).toHaveAttribute('aria-pressed', 'true');
+  await expect(blue.locator('.fcheck')).toBeVisible();
+  await expect(blue).toBeFocused();
+  await blue.click();
+  await expect(blue.locator('.fcheck')).toBeHidden();
+  await page.keyboard.press('Escape');
+  expect(sprite).toContain(200);
+  // Mazzi: simboli dei colori, con il nome dei colori come testo alternativo del gruppo
+  await page.route('**/data/decks-61.json', (r) => r.fulfill({ json: syntheticDecks() }));
+  await page.click('#navDecks');
+  const pips = page.locator('#deckList .pips').first();
+  await expect(pips).toHaveAttribute('role', 'img');
+  await expect(pips).toHaveAttribute('aria-label', /.+/);
+  expect(await pips.locator('svg.mana').count()).toBeGreaterThan(0);
+  await expect(page.locator('#deckList .cdot')).toHaveCount(0);
+});
+
 test('filtri: pannello, etichette rimovibili, nota, conteggio, testo scaricato solo al primo uso', async ({ page }, info) => {
   const problems = await setup(page);
   const texts: string[] = [];

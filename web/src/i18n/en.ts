@@ -61,6 +61,8 @@ export const en: Record<Key, Msg> = {
   'fp.colorAny': 'Any of the chosen colors',
   'fp.colorOnly': 'Only these colors',
   'fp.mv': 'Mana value',
+  'fp.mvBtn': 'Mana value {n}',
+  'fp.mvBtnMore': 'Mana value {n} or more',
   'fp.type': 'Type',
   'fp.text': 'Rules text (English or Italian)',
   'fp.textPh': 'e.g. draw a card',
