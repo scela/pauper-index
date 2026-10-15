@@ -159,8 +159,8 @@ def test_curated_priority_and_unknown_cards(db, paths):
     assert cur[0].symbol == "oid-Lava Dart" and cur[1].symbol == ""
     # titolo della famiglia (colonna facoltativa): per i nomi base troppo generici, come Control
     (paths / "archetypes.csv").write_text("nome,carte,minimo,colori,simbolo,famiglia\n"
-                                          "Control,Guttersnipe,1,1,Lava Dart,Dimir Control\nB,Fireblast,1,,Fireblast,\n",
-                                          "utf-8")
+                                          "Control,Guttersnipe,1,1,Lava Dart,Dimir Control\n"
+                                          "B,Fireblast,1,,Fireblast,\n", "utf-8")
     cur = decks.load_curated(db)
     assert (cur[0].family_name, cur[0].colors, cur[1].family_name) == ("Dimir Control", True, "")
 
