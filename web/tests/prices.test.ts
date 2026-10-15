@@ -50,10 +50,18 @@ describe('prezzi indicativi', () => {
   });
 
   it('riepilogo: tutte le copie possedute e una copia di ogni mancante, con quelle senza prezzo', () => {
-    const res = compute(d, group([row({ n: 'Brainstorm', i: ID(2), q: 3 }), row({ n: 'Gush' })]), { b: 'coll' }, OPTS);
+    const res = compute(d, group([row({ n: 'Brainstorm', i: ID(2), q: 3 }), row({ n: 'Gush', q: 2 })]), { b: 'coll' }, OPTS);
     const tot = priceTotals(d, PRICES, res, (x) => cheapestPrice(PRICES, x.idx));
-    // Brainstorm 3 × 0,20; Gush senza printing nota; mancanti: Delver (nessun prezzo) e Pyroblast 0,30 (Island è una terra base: fuori dalla lista)
-    expect(tot).toEqual({ ownedValue: 60, ownedCards: 2, ownedUnpriced: 1, missingCost: 30, missingCards: 2, missingUnpriced: 1 });
+    // Brainstorm 3 × 0,20; Gush senza printing nota: stima minima con la stampa non foil più economica, 2 × 3,00;
+    // mancanti: Delver (nessun prezzo) e Pyroblast 0,30 (Island è una terra base: fuori dalla lista)
+    expect(tot).toEqual({ ownedValue: 660, ownedCards: 2, ownedUnpriced: 0, ownedEstimated: 1, missingCost: 30, missingCards: 2, missingUnpriced: 1 });
+  });
+
+  it('lista incollata (righe senza printing): mai 0,00 €, ma una stima minima; senza alcun prezzo resta "senza prezzo"', () => {
+    const res = compute(d, group([row({ n: 'Brainstorm', q: 4 }), row({ n: 'Delver of Secrets', q: 2 })]), { b: 'coll' }, OPTS);
+    const tot = priceTotals(d, PRICES, res, (x) => cheapestPrice(PRICES, x.idx));
+    // Brainstorm: la più economica è mmq (0,20 €), non la ice da 1,00 €; Delver non ha prezzi in nessuna printing
+    expect([tot.ownedValue, tot.ownedEstimated, tot.ownedUnpriced]).toEqual([80, 1, 1]);
   });
 
   it('formato in euro per lingua', () => {

@@ -73,6 +73,7 @@ export interface PriceTotals {
   ownedValue: number; // centesimi: tutte le copie possedute
   ownedCards: number; // carte possedute contate
   ownedUnpriced: number; // carte possedute con almeno una copia senza prezzo
+  ownedEstimated: number; // carte possedute con copie senza printing, stimate con la stampa non foil più economica
   missingCost: number; // centesimi: una copia di ogni carta mancante
   missingCards: number;
   missingUnpriced: number; // carte mancanti senza prezzo
@@ -83,16 +84,22 @@ export interface PriceTotals {
  * `missingPrice`: prezzo di una carta mancante (la più economica, o la stampa del set nella vista per espansione).
  */
 export function priceTotals(d: Data, pr: PricesFile | null, rows: Result[], missingPrice: (x: Result) => number): PriceTotals {
-  const t: PriceTotals = { ownedValue: 0, ownedCards: 0, ownedUnpriced: 0, missingCost: 0, missingCards: 0, missingUnpriced: 0 };
+  const t: PriceTotals = { ownedValue: 0, ownedCards: 0, ownedUnpriced: 0, ownedEstimated: 0, missingCost: 0, missingCards: 0, missingUnpriced: 0 };
   for (const x of rows) {
     if (x.owned > 0) {
       t.ownedCards++;
       let gap = false;
+      let est = false;
       for (const o of ownedPrices(d, pr, x)) {
         if (o.cents) t.ownedValue += o.cents * o.op.q;
-        else gap = true;
+        else if (ownedPrintIndex(d, x.idx, o.op) < 0 && cheapestPrice(pr, x.idx)) {
+          // printing sconosciuta (per esempio una lista incollata): stima minima con la stampa non foil più economica
+          t.ownedValue += cheapestPrice(pr, x.idx) * o.op.q;
+          est = true;
+        } else gap = true;
       }
       if (gap) t.ownedUnpriced++;
+      if (est) t.ownedEstimated++;
     } else {
       t.missingCards++;
       const c = missingPrice(x);

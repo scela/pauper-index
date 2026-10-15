@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildNameIndex, collectionIndex, exactEntry, ownedFor, suggest } from '../src/lib/quick';
+import { buildNameIndex, collectionIndex, collectionSize, exactEntry, ownedFor, suggest } from '../src/lib/quick';
 import type { Group, Row } from '../src/lib/types';
 import { ID, makeData } from './helpers';
 
@@ -66,5 +66,11 @@ describe('possesso per il controllo rapido', () => {
 
   it('i gruppi esclusi non contano', () => {
     expect(ownedFor(collectionIndex(d, [g], { b: 'skip' }, false), e('Brainstorm'))).toBeNull();
+  });
+
+  it('dimensione della collezione: carte distinte e copie (non le copie come carte), proxy solo se contano', () => {
+    expect(collectionSize([g], { b: 'coll' }, false)).toEqual({ cards: 2, copies: 4 }); // Brainstorm (3 copie), Black Lotus
+    expect(collectionSize([g], { b: 'coll' }, true)).toEqual({ cards: 3, copies: 5 });
+    expect(collectionSize([g], { b: 'skip' }, true)).toEqual({ cards: 0, copies: 0 });
   });
 });

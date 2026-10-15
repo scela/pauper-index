@@ -138,3 +138,21 @@ export function ownedFor(ix: CollectionIndex, e: NameEntry): Owned | null {
   if (e.card >= 0) return ix.byCard.get(e.card) || null;
   return ix.byName.get(e.key) || null;
 }
+
+/**
+ * Dimensione della collezione (gruppi inclusi, proxy solo se contano): carte distinte per nome e copie. Le printing
+ * diverse della stessa carta sono una carta sola, come in "Possiedi N carte".
+ */
+export function collectionSize(groups: Group[], roles: Record<string, Role>, proxies: boolean): { cards: number; copies: number } {
+  const names = new Set<string>();
+  let copies = 0;
+  for (const g of groups) {
+    if (roles[g.id] !== 'coll') continue;
+    for (const r of g.rows) {
+      if (r.p && !proxies) continue;
+      names.add(norm(splitFaces(r.n)[0]));
+      copies += r.q;
+    }
+  }
+  return { cards: names.size, copies };
+}

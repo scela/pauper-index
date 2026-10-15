@@ -14,7 +14,7 @@ import { cheapestPrice, ownedPrice, priceTotals, printPrice, type PricesFile } f
 import { clearAll, idbGet, idbSet, lsDel, lsGet, lsSet } from './lib/store';
 import { parseTextList } from './lib/text';
 import type { Group, Role, Row } from './lib/types';
-import { collectionIndex, type CollectionIndex, type Owned } from './lib/quick';
+import { collectionIndex, collectionSize, type CollectionIndex, type Owned } from './lib/quick';
 import { buildGroups, displayPrint, iconOf, memberCodes, printsInSets, rarityHere, type SetGroup, type SetRow } from './lib/sets';
 import { setIcon } from './ui/seticon';
 import { restrictToSet, shownNote, visible, type ListFilters, type Seen } from './lib/view';
@@ -427,8 +427,10 @@ function renderDataline(): void {
   }
 }
 
-function collectionCards(): number {
-  return S.groups.filter((g) => S.roles[g.id] === 'coll').reduce((a, g) => a + g.rows.reduce((b, r) => b + r.q, 0), 0);
+/** "8 carte (24 copie)": carte distinte e copie; le copie si omettono se sono una per carta. */
+function collectionText(): string {
+  const { cards, copies } = collectionSize(S.groups, S.roles, S.opts.proxies);
+  return copies > cards ? t('load.cardsCopies', { cards: cardsWord(cards), copies: t('load.copies', { n: copies }) }) : cardsWord(cards);
 }
 
 function renderLoad(): void {
@@ -439,7 +441,7 @@ function renderLoad(): void {
   line.hidden = !loaded || S.replacing;
   if (loaded) {
     line.replaceChildren(
-      h('span', { class: 'loaded-text' }, t('load.collection'), h('b', null, cardsWord(collectionCards())), ' · ',
+      h('span', { class: 'loaded-text' }, t('load.collection'), h('b', null, collectionText()), ' · ',
         h('button', { class: 'linkbtn', type: 'button', id: 'replace' }, t('load.replace'))),
       h('button', { class: 'btn small removecoll', type: 'button', id: 'removeColl' },
         svg('svg', { class: 'rm-ico', viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' },
@@ -540,7 +542,9 @@ function renderPriceSummary(): void {
   const unpriced = (n: number) => (n ? ` (${t('price.unpriced', { n: fmtInt(n) })})` : '');
   const parts: string[] = [];
   if (hasColl()) {
-    parts.push(t('price.owned', { v: fmtEur(tot.ownedValue) }) + unpriced(tot.ownedUnpriced));
+    parts.push(tot.ownedEstimated
+      ? t('price.ownedMin', { v: fmtEur(tot.ownedValue) }) + ` (${t('price.estimated', { n: tot.ownedEstimated })}${tot.ownedUnpriced ? `; ${t('price.unpriced', { n: fmtInt(tot.ownedUnpriced) })}` : ''})`
+      : t('price.owned', { v: fmtEur(tot.ownedValue) }) + unpriced(tot.ownedUnpriced));
     if (tot.missingCards) parts.push(t('price.missing', { v: fmtEur(tot.missingCost) }) + unpriced(tot.missingUnpriced));
   } else {
     parts.push(t('price.list', { v: fmtEur(tot.missingCost) }) + unpriced(tot.missingUnpriced));

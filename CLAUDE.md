@@ -44,6 +44,13 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] prima del passo 3 (2026-10-08): ricerca anche con i nomi italiani e filtro sul testo anche in italiano (vedi "Nomi italiani")
     - [x] passo 3 (2026-10-08): sezione "Mazzi" nel sito, completamento, export nel formato di MTG Arena (vedi "Sezione Mazzi")
     - [x] passo 4 (2026-10-15): archetipi Golgari Gardens e Ruby Storm, nomi della decklist secondo il layout (formato MTG Arena), Invio in anticipo nel controllo rapido, test della "Carta dimenticata" indipendente dal carico, misure del calcolo dei mazzi (vedi "Funzione 4: rifinitura")
+  - [ ] Pagina iniziale su smartphone e Carta dimenticata, piano approvato il 2026-10-15 (vedi "Pagina iniziale e Carta dimenticata"); dopo, i passi 4–5 dei Mazzi:
+    - [x] A1: difetti (carte e copie della collezione, valore "almeno" con righe senza printing)
+    - [ ] A2: testata su una riga, menu compatto, famiglia di pulsanti, libro di Mazzi (ex passo 6 dei Mazzi), riga dei dati corta
+    - [ ] A3: caricamento (frase, due pulsanti, aiuto per l'export di ManaBox, riga della collezione) — **controllo con screenshot dopo A2 e A3**
+    - [ ] A4: campo unico "Cerca una carta" con la scheda arricchita
+    - [ ] A5: filtri su una riga ("Ultima apparizione" nel pannello), righe compatte, misure prima/dopo
+    - [ ] B: Carta dimenticata, soglia dei mazzi storici (riquadro numerico)
   - [ ] Restyling della sezione Mazzi, piano approvato il 2026-10-15 (vedi "Restyling dei Mazzi"):
     - [x] passo 1: Golgari Gardens con le liste Gardens di "Defile + Crypt Rats", mancanti con i nomi della decklist, ridisegno della pagina Mazzi senza perdere focus e decklist aperte
     - [x] passo 2: simboli di mana (vedi "Simboli di mana")
@@ -736,6 +743,21 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Lista tipica** (`typical_list`): la lista della famiglia più vicina alla media, con la somiglianza pesata Σ min / Σ max tra le copie della lista (main e side) e le copie medie per apparizione; a parità più apparizioni, poi la più recente. Sostituisce la "lista più frequente", che spesso compare solo 2 volte.
 - **Report** `data/reviews/archetipi.md`: in fondo la tabella dei tier delle famiglie, con la carta simbolo.
 - **Tier al 2026-10-15** (famiglie): Tier 1: Mono-Red Madness 12,00%, Terror 10,03%, Affinity 8,59%, Tron 8,25%, Faeries 6,81%, Elves 5,35%. Tier 2: Spy Combo 4,04%, Mono-Red Rally 3,97%, Jund Wildfire 3,91%, Jeskai Ephemerate 3,12%, White Aggro 2,85%, Bogles 2,79%, Gruul Ponza 2,63%, Dimir Control 2,33%, Golgari Gardens 2,13%. Tier 3: Rakdos Madness 1,53%, Mono-White Aggro 1,37%, Gruul Ramp 1,31%, Familiars 1,26%, Ruby Storm 1,21%, Snacker Gates 1,17%, Mono-Black Sacrifice 1,03%, Mardu Synthesizer 0,76%.
+
+## Pagina iniziale e Carta dimenticata (piano approvato il 2026-10-15)
+
+- **Misure prima** (sito pubblicato, iPhone SE 375×667; script in `.cache/measure-home.mjs`, diventerà `scripts/home-metrics.mjs`): testata 124 px su tre righe, riga dei dati 39, controllo rapido 73, caricamento 244 (riga della collezione 97), filtri 146; **prima carta a 825 px senza collezione e a 703 con la collezione** (schermo 667); righe dell'elenco 170 px. Desktop 1280×900: prima carta a 548 / 447–472 px, righe 73 px.
+- **Decisioni dell'utente**:
+  - un solo campo "Cerca una carta" al posto del controllo rapido e della ricerca dell'elenco: filtra l'elenco mentre si scrive, suggerisce tutte le carte; **Invio** con un suggerimento evidenziato (frecce) o con un nome esatto (anche italiano) apre la scheda, con un testo parziale chiude suggerimenti e tastiera e lascia l'elenco filtrato; l'attesa di Invio prima dei suggerimenti vale solo per il nome esatto; su mobile toccare fuori o scorrere chiude i suggerimenti;
+  - righe compatte: "12% dei mazzi · di solito 4 copie · vista il 3 ott", con la collezione "ne hai 2"; nessun segno "Tua" nella vista collezione, resta il segno sulle mancanti dove l'elenco le mescola;
+  - frase iniziale: cosa fa il sito, gratis, senza registrazione, la collezione resta nel browser; aiuto "Come si esporta da ManaBox?" con passi presi dalla documentazione ufficiale (mai inventati: se non si trovano, si chiedono all'utente);
+  - "Ultima apparizione" nel pannello "Filtri", con la sua etichetta rimovibile;
+  - su mobile i suggerimenti di "Espansione" larghi quanto lo schermo;
+  - Carta dimenticata: un riquadro numerico "Apparsa in almeno … mazzi" (predefinito 20, mai salvato);
+  - prima di ogni push: ruff e i test della parte toccata.
+- **A1 (2026-10-15)**:
+  - riga della collezione: "Collezione: 8 carte (24 copie)" (`collectionSize` in `lib/quick.ts`: carte distinte per nome normalizzato, copie; proxy solo se contano, come in "Possiedi N carte"). Prima `collectionCards()` sommava le copie (e i proxy) e le chiamava carte;
+  - valore delle copie con righe senza printing (liste incollate): **stima minima** con la stampa non foil più economica, "Valore indicativo delle tue copie: almeno X € (N carte senza printing, stimate con la stampa più economica)" (`ownedEstimated` in `priceTotals`). Prima "0,00 € (8 senza prezzo)".
 
 ## Riepiloghi ed elenco (2026-10-07)
 

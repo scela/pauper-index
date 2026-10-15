@@ -117,7 +117,8 @@ test('CSV ManaBox: riga compatta, solo possedute, mancanti, Binder inclusi, expo
   await uploadCollection(page);
   await expect(page.locator('#loadArea')).toBeHidden();
   await expect(page.locator('#loaded')).toContainText(tr('load.replace'));
-  await expect(page.locator('#loaded')).toContainText(tr('load.cards', { n: 15 }));
+  // carte distinte e copie (prima "15 carte": le copie, proxy compreso, contate come carte)
+  await expect(page.locator('#loaded')).toContainText(tr('load.cardsCopies', { cards: tr('load.cards', { n: 6 }), copies: tr('load.copies', { n: 14 }) }));
   const owned = Number((await page.locator('#verdict').innerText()).match(/\d+/)?.[0]);
   await expect(page.locator('#verdict')).toHaveText(tr('res.owned', { n: owned }));
 
@@ -1034,6 +1035,22 @@ function syntheticPrices(): string {
   }));
   return JSON.stringify({ v: 1, date: '2026-10-07', p });
 }
+
+test('lista incollata: carte e copie nella riga della collezione, valore "almeno" con la stampa più economica', async ({ page }) => {
+  const eur = (c: number) => (c / 100).toLocaleString(L === 'it' ? 'it-IT' : 'en-US', { style: 'currency', currency: 'EUR' });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ contentType: 'application/json', body: syntheticPrices() }));
+  await setup(page);
+  await page.fill('#pasteText', '4 Brainstorm\n2 Counterspell');
+  await page.click('#pasteAdd');
+  await expect(page.locator('#loaded')).toContainText(tr('load.cardsCopies', { cards: tr('load.cards', { n: 2 }), copies: tr('load.copies', { n: 6 }) }));
+  await expect(page.locator('#verdict')).toHaveText(tr('res.owned', { n: 2 }));
+  // Brainstorm senza printing: 4 × 0,50 € (la stampa non foil più economica); Counterspell senza alcun prezzo
+  const sum = page.locator('#priceSummary');
+  await expect(sum).toContainText(tr('price.ownedMin', { v: eur(200) }));
+  await expect(sum).toContainText(tr('price.estimated', { n: 1 }));
+  await expect(sum).toContainText(tr('price.unpriced', { n: 1 }));
+  await expect(sum).not.toContainText(tr('price.owned', { v: eur(0) }));
+});
 
 test('prezzi indicativi: colonna, riepilogo, scheda e Informazioni; "—" se mancano', async ({ page }) => {
   const eur = (c: number) => (c / 100).toLocaleString(L === 'it' ? 'it-IT' : 'en-US', { style: 'currency', currency: 'EUR' });
