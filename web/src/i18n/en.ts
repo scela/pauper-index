@@ -349,7 +349,7 @@ export const en: Record<Key, Msg> = {
   'about.faq.precision.q': 'How accurate are the percentages?',
   'about.faq.precision.a': 'They are indicative: MTGO only publishes 5-0 League lists and the top 32 of Challenges, so the percentages favour winning decks.',
   'about.faq.privacy.q': 'Is my collection safe?',
-  'about.faq.privacy.a': 'Yes: it stays in your browser, with no account, cookies or analytics, and “Delete my data” removes it. Card images come from Scryfall’s servers and the host (GitHub Pages) logs technical access data.',
+  'about.faq.privacy.a': 'Yes: it stays in your browser and is never sent anywhere, with no account or cookies, and “Delete my data” removes it. Visits are counted anonymously with GoatCounter, without cookies: only the page and which features are used are recorded, never your cards. Card images come from Scryfall’s servers and the host (GitHub Pages) logs technical access data.',
   'about.faq.report.q': 'How do I report an error?',
   'about.faq.report.a': 'Write to {email} with the card, what you expected and what you see.',
   'about.faq.support.q': 'How can I support the site?',

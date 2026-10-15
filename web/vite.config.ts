@@ -25,12 +25,16 @@ function publicDataFiles(): string[] {
   return out;
 }
 
-const CSP = [
+// Conteggio delle visite (GoatCounter): count.js è servito dal sito (script-src 'self') e invia i conteggi
+// con navigator.sendBeacon, che ricade sotto connect-src. Si apre solo l'endpoint del contatore, non l'intero dominio.
+export const GC_CONNECT = 'https://albafvcens.goatcounter.com/count';
+
+export const CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self'",
   "img-src 'self' https://cards.scryfall.io data:",
-  "connect-src 'self'",
+  `connect-src 'self' ${GC_CONNECT}`,
   "font-src 'self'",
   "manifest-src 'self'",
   "worker-src 'none'",

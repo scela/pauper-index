@@ -15,7 +15,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
 - User-Agent `PauperIndex/0.1`;
 - variabili d'ambiente `PAUPER_INDEX_*`.
 
-## Stato attuale (2026-10-07)
+## Stato attuale (2026-10-10)
 
 - **Online**: sito https://pauperindex.com (dominio personalizzato; www e il vecchio https://scela.github.io/pauper-index/ reindirizzano lì), repository pubblico https://github.com/scela/pauper-index. Aggiornamento automatico ogni giorno alle 07:23 UTC, più l'avvio manuale (Actions → "Aggiorna e pubblica" → Run workflow).
 - **Fasi**:
@@ -44,8 +44,9 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] prima del passo 3 (2026-10-08): ricerca anche con i nomi italiani e filtro sul testo anche in italiano (vedi "Nomi italiani")
     - [x] passo 3 (2026-10-08): sezione "Mazzi" nel sito, completamento, export nel formato di MTG Arena (vedi "Sezione Mazzi")
     - [ ] passo 4: rifinitura
+  - [x] 2026-10-10: conteggio anonimo delle visite e degli eventi con GoatCounter, senza cookie (vedi "Conteggio delle visite")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (tutti verdi il 2026-10-08, dopo la sezione Mazzi): 115 pytest, 84 Vitest, 150 Playwright (più 6 saltati di proposito: i test col mouse non girano su mobile) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (2026-10-10, dopo il conteggio delle visite): 115 pytest (pipeline invariata), 86 Vitest, 159 Playwright (più 9 saltati di proposito: i test col mouse non girano su mobile, il test del conteggio sul dominio pubblicato gira solo su desktop-it) sui quattro progetti desktop/mobile × IT/EN. Nell'ambiente cloud del 2026-10-10 (Chromium preinstallato più vecchio di quello di Playwright) due test falliscono anche senza le modifiche, per la formattazione dei numeri in italiano ("3.065" invece di "3065"): dipende dalla versione del browser, non dal codice; la CI usa il browser giusto.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi.
 - **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
 
@@ -106,8 +107,8 @@ web/                    frontend (Vite + TypeScript)
 
 **File principali**:
 - Pipeline (`pipeline/src/pauper_index/`): `cli.py` (comandi), `build.py` (orchestrazione), `source.py` (fonte e classificazione), `dedup.py`, `resolve.py` (nomi → carte), `carddb.py` (Scryfall, indice dei nomi, set d'ingresso), `stats.py`, `outputs.py` (JSON per il sito), `sets.py`, `seticons.py` (simboli delle espansioni), `review.py` (revisioni, snapshot, allarme), `decks.py` (mazzi e archetipi), `italian.py` (nomi e testi delle stampe italiane), `prices.py` (prezzi), `scryfall.py` (client con limiti di frequenza), `config.py`.
-- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `prices`, `view` (filtri dell'elenco e nota del riepilogo), `cardfilter` (colore, costo, tipo, testo), `italian` (nomi italiani e ricerca per nome), `decks` (mazzi: completamento, ordine, export), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `filterpanel` pannello "Filtri" ed etichette, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `decks` pagina "Mazzi", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `vite.config.ts` (dati pubblicati e CSP).
-- Test: `pipeline/tests/`, `web/tests/` (Vitest), `web/e2e/smoke.spec.ts` (Playwright).
+- Frontend (`web/src/`): `main.ts` (stato, eventi, rendering), `lib/` (logica pura e testata: `compare`, `prices`, `view` (filtri dell'elenco e nota del riepilogo), `cardfilter` (colore, costo, tipo, testo), `italian` (nomi italiani e ricerca per nome), `decks` (mazzi: completamento, ordine, export), `analytics` (conteggio delle visite con GoatCounter), `data`, `csv`, `text`, `quick`, `sets`, `exports`, `format`, `store`, `norm`, `dom`), `ui/` (`sheet` scheda e ventaglio, `filterpanel` pannello "Filtri" ed etichette, `about` Informazioni, `quick` controllo rapido, `setpicker` espansione, `seticon` simboli dei set, `dust` pagina "Carta dimenticata", `decks` pagina "Mazzi", `cobweb` ragnatele, `tilt` carta in 3D), `i18n/` (`it.ts`, `en.ts`, `index.ts`), `style.css`; `index.html`; `public/count.js` (GoatCounter); `vite.config.ts` (dati pubblicati e CSP).
+- Test: `pipeline/tests/`, `web/tests/` (Vitest), `web/e2e/smoke.spec.ts` e `web/e2e/analytics.spec.ts` (Playwright).
 - Automazione: `.github/workflows/aggiorna.yml`.
 - Documentazione: questo file, `README.md` (avvio manuale, file manuali, comandi locali), `docs/IDEE.md`.
 
@@ -409,13 +410,13 @@ Tutti in UTF-8 con LF. I JSON lunghi hanno una riga per elemento, per avere diff
   - i limiti dei dati (vedi "Cosa contengono i dati MTGO") e la data dell'aggiornamento;
   - come segnalare un errore.
 - **Nessun logo né simbolo** di Wizards (simboli di mana compresi), ManaBox o Scryfall. **Eccezione** (decisa dall'utente il 2026-10-07): i **simboli delle espansioni** sono ammessi solo come piccole icone per identificare i set (selettore "Espansione" e rarità nella vista per espansione). Restano esclusi simboli di mana, logo di Magic, logo di Wizards e retro delle carte; per questo la pipeline non usa le icone `planeswalker` (The List), `default` (la "M" generica di Magic) e `dci` (logo DCI).
-- **Nota privacy**: nessun account, nessun cookie, nessuna analytics; la collezione resta nel browser; GitHub Pages può registrare dati tecnici di accesso; le immagini arrivano dai server di Scryfall.
+- **Nota privacy**: nessun account, nessun cookie; la collezione resta nel browser e non viene mai inviata; visite contate in forma anonima con GoatCounter (dal 2026-10-10, **scostamento dalla spec**, che diceva "nessuna analytics": richiesta dell'utente); GitHub Pages può registrare dati tecnici di accesso; le immagini arrivano dai server di Scryfall.
 
 ### Sicurezza
 - **Mai `innerHTML` con dati esterni** (CSV, nomi, report): si usa `textContent` o un escaping centralizzato. Va aggiunto un test con un CSV malevolo.
 - **CSP con meta tag**:
   - nessuno script esterno;
-  - `connect-src 'self'`;
+  - `connect-src 'self'` più il solo endpoint del contatore di visite (vedi "Conteggio delle visite");
   - `img-src 'self' https://cards.scryfall.io`;
   - font serviti dal sito stesso.
 - Dipendenze npm e Python al minimo, con lockfile.
@@ -473,7 +474,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 
 **Decisioni**:
 - **Font di sistema** al posto di Geist: nessuna richiesta esterna. Unica eccezione (2026-10-07): il nome "Pauper Index" in New Rocker ridotto, servito dal sito (vedi "Testata").
-- **CSP**: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://cards.scryfall.io data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'`. `<meta name="referrer" content="no-referrer">`, così le richieste di immagini a Scryfall non rivelano la pagina.
+- **CSP**: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://cards.scryfall.io data:; connect-src 'self' https://albafvcens.goatcounter.com/count; font-src 'self'; manifest-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'`. `<meta name="referrer" content="no-referrer">`, così le richieste di immagini a Scryfall non rivelano la pagina.
 - **Ruoli dei gruppi**: solo "Inclusa" o "Esclusa" (in "Binder inclusi"). Binder di tipo `deck` o `list` sono esclusi di default; il testo incollato è un gruppo "Testo incollato" che conta come posseduto.
 - **Abbinamento di una riga**:
   1. Scryfall ID (`printings.json`);
@@ -833,6 +834,18 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - `public/icon.svg`: favicon con `prefers-color-scheme` (stessi due colori);
   - `apple-touch-icon.png` (180, quadrato pieno), `icon-192/512.png` (angoli arrotondati), `icon-maskable-512.png` (logo al 56%, dentro l'area sicura), `og-image.png` (1200×630, logo + "Pauper Index" in New Rocker + dominio): tutte su sfondo scuro `#1B2028` con il logo `#C9CFD8`.
 - **Varianti scelte dall'utente**: in tema scuro il logo diventa grigio chiaro senza riquadro; icone della schermata Home su sfondo scuro. Il testo dell'og-image usa il font di sistema della macchina che rigenera (Segoe UI su Windows).
+
+## Conteggio delle visite (2026-10-10)
+
+- **GoatCounter**, account `albafvcens`, dashboard https://albafvcens.goatcounter.com. Nessun cookie, nessun dato della collezione.
+- **Script servito dal sito**: `web/public/count.js`, copia **senza modifiche** del file ufficiale (licenza ISC, intestazione nel file) dal ramo master di github.com/arp242/goatcounter, commit `c031008` (gc.zgo.at non è raggiungibile dall'ambiente di sviluppo; il file è lo stesso). SHA-256 `792b7abd…3fe3f0`, verificato da `tests/analytics.test.ts`: per aggiornarlo si sostituisce il file e si aggiorna l'hash nel test.
+- **CSP**: solo `connect-src … https://albafvcens.goatcounter.com/count` (count.js invia con `navigator.sendBeacon`, che ricade sotto `connect-src`). Il ripiego di count.js con un'immagine resterebbe bloccato da `img-src`: voluto, niente di più del necessario. `CSP` e `GC_CONNECT` sono esportati da `vite.config.ts` per i test.
+- **Quando si conta** (`lib/analytics.ts`, `initAnalytics` all'avvio di `main.ts`): solo se `location.hostname === 'pauperindex.com'` e `navigator.webdriver` è falso. Altrimenti count.js **non viene nemmeno caricato**: in locale (`npm run dev`, `npm run preview`), nella CI e nei test Playwright nessuna richiesta. Lo script si aggiunge con `h('script')` e `data-goatcounter` (endpoint) e `data-goatcounter-settings` `{"no_events": true}` (niente conteggio automatico dei clic con `data-goatcounter-click`).
+- **Cosa parte**: la visita (percorso canonico `/`: gli hash `#mazzi`, `#informazioni`… non sono pagine per count.js; titolo, referrer, larghezza dello schermo, query della URL se c'è) e gli **eventi** di `GC_EVENTS`, con il solo nome (`p` = `t` = nome, referrer vuoto): `collezione-caricata` (file o testo incollato, non il ripristino da IndexedDB), `controllo-rapido` (risultato mostrato), `filtro-espansione` (espansione scelta), `carta-dimenticata` (pressione di "Rispolvera"), `mazzi` (apertura della sezione), `export` (copia o download, anche dai Mazzi), `ko-fi` (clic, anche centrale, su un link a ko-fi.com). Ogni evento **al massimo una volta per pagina caricata**; quelli arrivati prima di count.js partono quando è pronto.
+- **localStorage**: il conteggio non scrive nulla. count.js legge solo `skipgc`, che viene scritto quando si apre `https://pauperindex.com/#toggle-goatcounter` (esclusione delle proprie visite, per browser; la stessa URL la riattiva). "Cancella i miei dati" non tocca `skipgc` (cancella solo le chiavi `pauper-index:`). Aprendo l'URL con l'hash dalla pagina già aperta serve ricaricare: count.js lo legge solo all'avvio.
+- **Informazioni**: la domanda "La mia collezione è al sicuro?" lo dice (IT e EN).
+- **Test**: `tests/analytics.test.ts` (quando si conta, coda e invio una sola volta degli eventi, CSP, hash di count.js); `e2e/analytics.spec.ts`: in anteprima nessuna richiesta né `window.goatcounter` dopo aver usato tutte le funzioni; sul dominio pubblicato simulato (richieste a `pauperindex.com` servite dall'anteprima) con un browser automatizzato nessuna richiesta; con un browser che non si dichiara automatizzato (solo `desktop-it`) la visita e i 7 eventi arrivano all'endpoint attraverso la CSP della build, con i soli parametri attesi, senza nomi di carte né cookie, e `#toggle-goatcounter` ferma il conteggio.
+- **Verifica dal vivo** (non possibile dall'ambiente di sviluppo, che non raggiunge goatcounter.com): dopo il deploy, una visita da un browser normale deve comparire nella dashboard.
 
 ## Donazioni (2026-10-06)
 

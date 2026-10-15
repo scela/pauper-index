@@ -4,6 +4,7 @@
 import { getLang, t, type Key } from '../i18n';
 import { deckShare, typicalCopies, type Opts } from '../lib/compare';
 import { imageUrl, type Data } from '../lib/data';
+import { track } from '../lib/analytics';
 import { h } from '../lib/dom';
 import { fmtDate, fmtInt, fmtPct, fmtPrint, lastSeen } from '../lib/format';
 import { loadItalian } from '../lib/italian';
@@ -106,6 +107,7 @@ export function initQuick(ctx: QuickCtx): { refresh(): void } {
 
   const show = (e: NameEntry, final: boolean) => {
     current = e;
+    track('controllo-rapido');
     render();
     if (final) result.scrollIntoView({ block: 'nearest' });
   };
