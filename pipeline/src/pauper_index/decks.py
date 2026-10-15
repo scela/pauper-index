@@ -14,6 +14,13 @@ Archetipi, in due livelli (vedi CLAUDE.md, "Archetipi"):
 2. automatici, per le liste non coperte: gruppi per somiglianza delle carte del main (senza terre), con
    un'identità salvata nel registro. Il nome si fissa alla creazione (colori + 2 carte caratteristiche) e non si
    ricalcola; ogni giorno le liste si assegnano prima ai gruppi esistenti e solo quelle rimaste formano gruppi nuovi.
+
+Famiglie e tier (restyling dei Mazzi, formato v2): le varianti di colore di un archetipo curato (Affinity, Faeries,
+Terror) formano una famiglia; ogni altro archetipo è una famiglia a sé. Il tier dipende dalla quota dei mazzi della
+famiglia negli ultimi 61 giorni (TIERS), con una banda simmetrica (BAND) rispetto al tier del giorno prima, letto dal
+decks-61.json già scritto: così un archetipo non cambia tier ogni giorno per pochi decimi intorno a una soglia.
+Ogni famiglia ha una carta simbolo (colonna `simbolo` del CSV per i curati; la carta non terra più caratteristica per
+gli automatici) e, in ogni file, una lista tipica (la più vicina alla media della famiglia).
 """
 
 import csv
@@ -37,6 +44,10 @@ NEW = 0.45  # somiglianza per formare un gruppo nuovo tra le liste rimaste
 MIN_GROUP = 6  # apparizioni minime perché un gruppo nuovo venga registrato
 CORE = 0.5  # una carta è nel "nucleo" del gruppo se compare in almeno metà delle sue liste
 
+TIERS = (5.0, 2.0, 0.75)  # quota minima (% dei mazzi a 61 giorni) di Tier 1, 2 e 3; sotto: 4 = "Altri"
+BAND = 0.15  # banda simmetrica: si sale sopra soglia × 1,15 e si scende sotto soglia × 0,85
+TIER_WINDOW = 61
+
 ARCHETYPES_CSV = config.MANUAL / "archetypes.csv"
 REGISTRY = config.REVIEWS / "archetipi-auto.json"
 
@@ -59,6 +70,7 @@ class Curated:
     cards: list[str]  # oracle_id delle carte chiave
     minimum: int
     colors: bool = False  # il nome porta davanti i colori della lista (Affinity, Faeries, Terror)
+    symbol: str = ""  # oracle_id della carta simbolo (solo sulla prima riga con quel nome)
 
 
 def flat(d: dict[int, int]) -> list[int]:
@@ -123,8 +135,18 @@ def load_curated(db: CardDB, path: Path | None = None) -> list[Curated]:
             if missing:
                 raise ValueError(f"archetypes.csv, {row['nome']}: carte sconosciute {missing}")
             oids = list(found.values())
+            sym = (row.get("simbolo") or "").strip()
+            sym_oid = db.lookup(sym)[0] if sym else ""
+            if sym and not sym_oid:
+                raise ValueError(f"archetypes.csv, {row['nome']}: carta simbolo sconosciuta {sym!r}")
             out.append(Curated(row["nome"].strip(), oids, int(row.get("minimo") or min(2, len(oids))),
-                               (row.get("colori") or "").strip() == "1"))
+                               (row.get("colori") or "").strip() == "1", sym_oid or ""))
+    first = {}
+    for c in out:
+        first.setdefault(c.name, c)
+    missing = sorted(n for n, c in first.items() if not c.symbol)
+    if missing:
+        raise ValueError(f"archetypes.csv: manca la carta simbolo sulla prima riga di {missing}")
     return out
 
 
@@ -276,6 +298,105 @@ def archetype(key: str, colors: str, registry: dict, curated: list[Curated]) -> 
     return f"x{colors}", ["", colors, "x"]  # non classificato: il sito mostra solo i colori
 
 
+def family(key: str, curated: list[Curated]) -> str:
+    """Famiglia di un archetipo: c<n> (prima riga del nome nel CSV, per tutte le varianti di colore), a<id>; "" per
+    le liste non classificate."""
+    if key.startswith("c:"):
+        return f"c{next(n for n, c in enumerate(curated, 1) if c.name == key[2:])}"
+    if key.startswith("a:"):
+        return f"a{int(key[2:])}"
+    return ""
+
+
+def tier_for(share: float, prev: int | None = None) -> int:
+    """Tier (1–3, 4 = "Altri") per la quota in percentuale, con la banda rispetto al tier precedente: si sale solo
+    sopra soglia × (1 + BAND), si scende solo sotto soglia × (1 − BAND)."""
+    plain = next((k + 1 for k, s in enumerate(TIERS) if share >= s), 4)
+    if prev is None or plain == prev or not 1 <= prev <= 4:
+        return plain
+    if plain < prev:
+        return next((k + 1 for k, s in enumerate(TIERS) if k + 1 < prev and share >= s * (1 + BAND)), prev)
+    return plain if share < TIERS[prev - 1] * (1 - BAND) else prev
+
+
+def previous_tiers(path: Path) -> dict[str, int]:
+    """Tier del giorno prima dal decks-61.json già scritto (formato v2); vuoto alla prima esecuzione."""
+    try:
+        head = json.loads(path.read_text("utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if head.get("v", 1) < 2:
+        return {}
+    return {k: v[1] for k, v in head.get("f", {}).items()}
+
+
+def typical_list(members: list[tuple[int, DeckList]], tours: list[Tournament]) -> int:
+    """La lista più vicina alla media della famiglia: somiglianza pesata (somma dei minimi sulla somma dei massimi)
+    tra le copie della lista (main e side) e le copie medie per apparizione. A parità più apparizioni, poi la più
+    recente, poi l'indice più basso. Restituisce l'indice della lista nel file."""
+    tot = sum(len(dl.uses) for _, dl in members)
+    avg: Counter = Counter()
+    for _, dl in members:
+        for part in (dl.main, dl.side):
+            for i, q in part.items():
+                avg[i] += q * len(dl.uses)
+    mean = {i: v / tot for i, v in avg.items()}
+
+    def score(dl: DeckList) -> float:
+        cards = Counter(dl.main)
+        cards.update(dl.side)
+        keys = set(cards) | set(mean)
+        lo = sum(min(cards.get(i, 0), mean.get(i, 0)) for i in keys)
+        hi = sum(max(cards.get(i, 0), mean.get(i, 0)) for i in keys)
+        return lo / hi if hi else 0.0
+
+    def last(dl: DeckList) -> int:
+        return max(tours[ti].day for ti, _ in dl.uses)
+
+    return max(members, key=lambda x: (round(score(x[1]), 9), len(x[1].uses), last(x[1]), -x[0]))[0]
+
+
+def family_meta(lists: list[DeckList], tours: list[Tournament], anchor: int, db: CardDB, oids: list[str],
+                curated: list[Curated], registry: dict, prev: dict[str, int]) -> dict[str, list]:
+    """Famiglia -> [nome, tier, quota in centesimi di punto percentuale, carta simbolo (indice in cards.json)]. Quota
+    e tier sono quelli degli ultimi 61 giorni; la carta simbolo degli automatici si calcola sulle liste di un anno."""
+    since = anchor - TIER_WINDOW
+    apps: Counter = Counter()
+    n_fam: Counter = Counter()
+    every: Counter = Counter()
+    inn: dict[str, Counter] = {}
+    for dl in lists:
+        f = family(dl.arch, curated)
+        apps[f] += sum(1 for ti, _ in dl.uses if tours[ti].day > since)
+        w = len(dl.uses)
+        n_fam[f] += w
+        for i in dl.main:
+            every[i] += w
+            if f.startswith("a"):
+                inn.setdefault(f, Counter())[i] += w
+    total = sum(apps.values()) or 1
+    w_all = sum(n_fam.values()) or 1
+    pos = {o: i for i, o in enumerate(oids)}
+    is_land = ["Land" in db.cards[o].type_line if o in db.cards else False for o in oids]
+    groups = {f"a{g['id']}": g for g in registry["groups"]}
+    out: dict[str, list] = {}
+    for f in sorted(n_fam):
+        if not f:
+            continue
+        if f.startswith("c"):
+            c = curated[int(f[1:]) - 1]
+            name, sym = c.name, pos.get(c.symbol, -1)
+        else:
+            # carta caratteristica: frequente nel gruppo e rara fuori, mai una terra
+            name, w = groups[f]["name"], n_fam[f]
+            cand = [(v / w * (v / w - (every[i] - v) / max(1, w_all - w)), -i) for i, v in inn[f].items()
+                    if not is_land[i]]
+            sym = -max(cand)[1] if cand else -1
+        share = 100 * apps[f] / total
+        out[f] = [name, tier_for(share, prev.get(f)), round(share * 100), sym]
+    return out
+
+
 def tournament_ids(tours: list[Tournament]) -> list[int]:
     """Identificativo stabile di un torneo: giorno (AAAAMMGG) * 100 + progressivo nel giorno (ordine per nome e
     Uri). Non dipende dalla finestra, quindi le righe delle liste non cambiano quando un torneo vecchio ne esce."""
@@ -288,13 +409,13 @@ def tournament_ids(tours: list[Tournament]) -> list[int]:
 
 
 def build_window(days: int, tours: list[Tournament], lists: list[DeckList], db: CardDB, oids: list[str],
-                 registry: dict, curated: list[Curated], anchor: int) -> tuple[dict, list]:
+                 registry: dict, curated: list[Curated], anchor: int, fams: dict[str, list]) -> tuple[dict, list]:
     tids = tournament_ids(tours)
     arch: dict[str, list] = {}
 
     def arch_of(key: str, colors: str) -> str:
         k, entry = archetype(key, colors, registry, curated)
-        arch.setdefault(k, entry)
+        arch.setdefault(k, [*entry, family(key, curated)])  # v2: [nome, colori, tipo, famiglia]
         return k
 
     used_t = sorted({ti for dl in lists for ti, _ in dl.uses})
@@ -305,13 +426,20 @@ def build_window(days: int, tours: list[Tournament], lists: list[DeckList], db: 
         rows.append([arch_of(dl.arch, colors), colors, flat(dl.main), flat(dl.side), uses])
     pos = {o: i for i, o in enumerate(oids)}
     head = {
-        "v": 1,
+        "v": 2,
         "days": days,
         "anchor": iso(anchor),
         "basics": sorted(pos[o] for o, c in db.cards.items() if c.name in NORMAL_BASICS and o in pos),
         "t": {str(tids[ti]): [iso(tours[ti].day), tours[ti].name, tours[ti].uri, tours[ti].kind] for ti in used_t},
         "a": dict(sorted(arch.items())),
     }
+    # famiglie presenti nel file: [nome, tier, quota, carta simbolo, lista tipica (indice in l)]
+    members: dict[str, list[tuple[int, DeckList]]] = {}
+    for k, dl in enumerate(lists):
+        f = family(dl.arch, curated)
+        if f:
+            members.setdefault(f, []).append((k, dl))
+    head["f"] = {f: [*fams[f], typical_list(m, tours)] for f, m in sorted(members.items())}
     return head, rows
 
 
@@ -323,7 +451,7 @@ def write_window(path: Path, head: dict, rows: list) -> None:
 
 
 def report(lists: list[DeckList], registry: dict, curated: list[Curated], db: CardDB, oids: list[str],
-           path: Path) -> None:
+           path: Path, fams: dict[str, list] | None = None) -> None:
     by_id = {g["id"]: g for g in registry["groups"]}
     total = sum(len(dl.uses) for dl in lists)
     agg: dict[tuple, list] = {}
@@ -349,6 +477,17 @@ def report(lists: list[DeckList], registry: dict, curated: list[Curated], db: Ca
             kind, name, core = "non classificato", "—", ""
         colors = cols.most_common(1)[0][0] or "C"
         lines.append(f"| {n} | {100 * n / total:.1f} | {nl} | {kind} | {name} | {colors} | {core} |")
+    if fams:
+        label = {1: "Tier 1", 2: "Tier 2", 3: "Tier 3", 4: "Altri"}
+        lines += ["", "## Tier delle famiglie (le varianti di colore contano insieme)", "",
+                  f"Soglie {', '.join(f'{s:g}%' for s in TIERS)} dei mazzi a {TIER_WINDOW} giorni, banda simmetrica "
+                  f"del {round(BAND * 100)}% rispetto al tier del giorno prima. Negli Altri solo dallo 0,3%.", "",
+                  "| Tier | Quota | Famiglia | Carta simbolo |", "|---|---|---|---|"]
+        for name, tier, share, sym in sorted(fams.values(), key=lambda x: (x[1], -x[2], x[0])):
+            if tier == 4 and share < 30:
+                continue
+            card = db.cards[oids[sym]].name if 0 <= sym < len(oids) and oids[sym] in db.cards else "—"
+            lines.append(f"| {label[tier]} | {share / 100:.2f}% | {name} | {card} |")
     path.write_text("\n".join(lines) + "\n", "utf-8", newline="\n")
 
 
@@ -363,6 +502,8 @@ def build_decks(kept: list[Tournament], keymap, key_oids, db: CardDB, order: lis
     REGISTRY.parent.mkdir(parents=True, exist_ok=True)
     REGISTRY.write_text(json.dumps(registry, ensure_ascii=False, indent=1) + "\n", "utf-8", newline="\n")
     info = {"finestra_lunga": stats}
+    fams = family_meta(lists, tours, anchor, db, order, curated, registry,
+                       previous_tiers(out_dir / f"decks-{TIER_WINDOW}.json"))
     for days in WINDOWS:
         since = anchor - days
         sub = [DeckList(dl.main, dl.side, dl.first, [u for u in dl.uses if tours[u[0]].day > since], dl.arch)
@@ -371,10 +512,10 @@ def build_decks(kept: list[Tournament], keymap, key_oids, db: CardDB, order: lis
         for dl in sub:
             dl.first = min(tours[ti].day for ti, _ in dl.uses)
         sub.sort(key=lambda x: (x.first, x.key()))
-        head, rows = build_window(days, tours, sub, db, order, registry, curated, anchor)
+        head, rows = build_window(days, tours, sub, db, order, registry, curated, anchor, fams)
         write_window(out_dir / f"decks-{days}.json", head, rows)
         info[days] = {"tornei": len(head["t"]), "liste": len(rows), "mazzi": sum(len(r[4]) for r in rows)}
         if days == min(WINDOWS):
-            report(sub, registry, curated, db, order, review_dir / "archetipi.md")
+            report(sub, registry, curated, db, order, review_dir / "archetipi.md", fams)
     log(f"mazzi: {info}")
     return info

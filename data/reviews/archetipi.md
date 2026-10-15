@@ -16,7 +16,7 @@
 | 204 | 3.2 | 131 | curato | Mono-Blue Faeries | U |  |
 | 198 | 3.1 | 164 | curato | Jeskai Ephemerate | WUR |  |
 | 185 | 2.9 | 146 | curato | Esper Affinity | WUB |  |
-| 181 | 2.9 | 147 | curato | Mono-White Aggro | W |  |
+| 181 | 2.9 | 147 | curato | White Aggro | W |  |
 | 177 | 2.8 | 107 | curato | Bogles | WG |  |
 | 167 | 2.6 | 102 | curato | Gruul Ponza | RG |  |
 | 148 | 2.3 | 115 | curato | Dimir Control | UB |  |
@@ -24,7 +24,7 @@
 | 100 | 1.6 | 98 | non classificato | — | UB |  |
 | 97 | 1.5 | 77 | curato | Rakdos Madness | BR |  |
 | 95 | 1.5 | 80 | curato | Dimir Terror | UB |  |
-| 89 | 1.4 | 68 | automatico | Search Party Captain + Phyrexian Walker | W | Ramosian Rally, Salt Road Packbeast, Spider-Man, Web-Slinger, Leonardo, Big Brother, Phyrexian Walker, Search Party Captain |
+| 87 | 1.4 | 66 | curato | Mono-White Aggro | W |  |
 | 83 | 1.3 | 72 | curato | Gruul Ramp | RG |  |
 | 80 | 1.3 | 66 | curato | Familiars | WU |  |
 | 77 | 1.2 | 58 | curato | Ruby Storm | RG |  |
@@ -86,6 +86,7 @@
 | 3 | 0.0 | 3 | automatico | Navigator's Compass + Glint Hawk | WBR | Kor Skyfisher, Cryogen Relic, Experimental Synthesizer, Journey to Nowhere, Lightning Bolt, Glint Hawk |
 | 2 | 0.0 | 2 | automatico | Careful Cultivation + Pili-Pala | BRG | Urborg Repossession, Bitter Reunion, Duress, Fanatical Offering, Ichor Wellspring, Temporal Intervention |
 | 2 | 0.0 | 2 | automatico | Dream Stalker + Navigator's Compass | WUB | Refurbished Familiar, Nutrient Block, Cryogen Relic, Fanatical Offering, Grim Bauble, Dream Stalker |
+| 2 | 0.0 | 2 | automatico | Search Party Captain + Phyrexian Walker | W | Ramosian Rally, Salt Road Packbeast, Spider-Man, Web-Slinger, Leonardo, Big Brother, Phyrexian Walker, Search Party Captain |
 | 2 | 0.0 | 2 | automatico | Tyrant's Choice + Sovereign's Bite | B | Vampire's Kiss, Sovereign's Bite, Rotten Reunion, Village Rites, Okiba Reckoner Raid // Nezumi Road Captain, Hopeless Nightmare |
 | 2 | 0.0 | 2 | automatico | Dawnbringer Cleric + Glint Hawk | WR | Dawnbringer Cleric, Kor Skyfisher, Experimental Synthesizer, Makeshift Munitions, Journey to Nowhere, Lightning Bolt |
 | 2 | 0.0 | 2 | automatico | Azure Fleet Admiral + Crimson Fleet Commodore | URG | Ponder, Skred, Lose Focus, Brainstorm, Lightning Bolt, Lórien Revealed |
@@ -121,3 +122,43 @@
 | 1 | 0.0 | 1 | automatico | Season of Renewal + Aura Gnarlid | WRG | Utopia Sprawl, Armadillo Cloak, Season of Renewal, Jewel Thief, Nyxborn Hydra, Lifelink |
 | 1 | 0.0 | 1 | curato | Bant Affinity | WUG |  |
 | 1 | 0.0 | 1 | curato | Azorius Faeries | WU |  |
+
+## Tier delle famiglie (le varianti di colore contano insieme)
+
+Soglie 5%, 2%, 0.75% dei mazzi a 61 giorni, banda simmetrica del 15% rispetto al tier del giorno prima. Negli Altri solo dallo 0,3%.
+
+| Tier | Quota | Famiglia | Carta simbolo |
+|---|---|---|---|
+| Tier 1 | 12.00% | Mono-Red Madness | Guttersnipe |
+| Tier 1 | 10.03% | Terror | Tolarian Terror |
+| Tier 1 | 8.59% | Affinity | Myr Enforcer |
+| Tier 1 | 8.25% | Tron | Urza's Tower |
+| Tier 1 | 6.81% | Faeries | Spellstutter Sprite |
+| Tier 1 | 5.35% | Elves | Priest of Titania |
+| Tier 2 | 4.04% | Spy Combo | Balustrade Spy |
+| Tier 2 | 3.97% | Mono-Red Rally | Rally at the Hornburg |
+| Tier 2 | 3.91% | Jund Wildfire | Cleansing Wildfire |
+| Tier 2 | 3.12% | Jeskai Ephemerate | Ephemerate |
+| Tier 2 | 2.85% | White Aggro | Battle Screech |
+| Tier 2 | 2.79% | Bogles | Slippery Bogle |
+| Tier 2 | 2.63% | Gruul Ponza | Mwonvuli Acid-Moss |
+| Tier 2 | 2.33% | Dimir Control | Murmuring Mystic |
+| Tier 2 | 2.13% | Golgari Gardens | Khalni Garden |
+| Tier 3 | 1.53% | Rakdos Madness | Kitchen Imp |
+| Tier 3 | 1.37% | Mono-White Aggro | Search Party Captain |
+| Tier 3 | 1.31% | Gruul Ramp | Utopia Sprawl |
+| Tier 3 | 1.26% | Familiars | Sunscape Familiar |
+| Tier 3 | 1.21% | Ruby Storm | Seize the Storm |
+| Tier 3 | 1.17% | Snacker Gates | Sneaky Snacker |
+| Tier 3 | 1.03% | Mono-Black Sacrifice | Carrion Feeder |
+| Tier 3 | 0.76% | Mardu Synthesizer | Experimental Synthesizer |
+| Altri | 0.74% | Ragged Short Spear + Soul-Guide Lantern | Ragged Short Spear |
+| Altri | 0.69% | Omen of the Dead + Oroku Saki, Shredder Rising | Glint Hawk |
+| Altri | 0.62% | Sandstorm Eidolon + Aurora Eidolon | Sandstorm Eidolon |
+| Altri | 0.58% | Turbo Fog | Moment's Peace |
+| Altri | 0.55% | Pestilence | Pestilence |
+| Altri | 0.41% | Drannith Stinger + Drannith Healer | Drannith Stinger |
+| Altri | 0.41% | Skyward Spider + Homestead Courage | Lagonna-Band Trailblazer |
+| Altri | 0.36% | Pentad Prism + Infectious Inquiry | Pentad Prism |
+| Altri | 0.35% | Respite + Tangle | Tangle |
+| Altri | 0.32% | Caw-Gates | Squadron Hawk |

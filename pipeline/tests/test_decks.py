@@ -42,7 +42,7 @@ def db():
 def paths(tmp_path, monkeypatch):
     monkeypatch.setattr(decks, "REGISTRY", tmp_path / "registro.json")
     monkeypatch.setattr(decks, "ARCHETYPES_CSV", tmp_path / "archetypes.csv")
-    csv = "nome,carte,minimo\nRed Madness,Guttersnipe;Lava Dart;Fireblast,2\n"
+    csv = "nome,carte,minimo,colori,simbolo\nRed Madness,Guttersnipe;Lava Dart;Fireblast,2,,Guttersnipe\n"
     (tmp_path / "archetypes.csv").write_text(csv, "utf-8")
     return tmp_path
 
@@ -81,7 +81,16 @@ def test_lists_merged_curated_auto_and_privacy(db, paths):
     # liste identiche unite, con tutte le apparizioni; il mazzo incompleto (10 carte) è scartato
     assert len(out["l"]) == 4
     red = next(r for r in out["l"] if r[2][1] == 20)
-    assert red[0] == "c1" and out["a"]["c1"] == ["Red Madness", "", "c"]
+    # v2: ogni archetipo porta la sua famiglia
+    assert out["v"] == 2
+    assert red[0] == "c1" and out["a"]["c1"] == ["Red Madness", "", "c", "c1"]
+    # famiglie: [nome, tier, quota in centesimi di punto, carta simbolo, lista tipica]; 16 mazzi validi in tutto
+    name, tier, share, sym, typ = out["f"]["c1"]
+    assert (name, sym) == ("Red Madness", IDX["Guttersnipe"]) and share == round(3 / 16 * 10000)
+    assert tier == 1 and out["l"][typ][0] == "c1"  # 18,75%: Tier 1
+    blue_fam = out["a"][next(r[0] for r in out["l"] if IDX["Brainstorm"] in r[2][0::2])][3]
+    assert blue_fam.startswith("a") and out["f"][blue_fam][3] >= 0
+    assert "Island" not in [k for k, v in IDX.items() if v == out["f"][blue_fam][3]]  # mai una terra
     assert len(red[4]) == 3 and ["5-0" in str(u) for u in red[4]].count(True) == 1
     assert red[1] == "R"  # Sneaky Snacker non conta: nessuna terra produce blu o nero
     blue = [r for r in out["l"] if IDX["Brainstorm"] in r[2][0::2]]
@@ -124,16 +133,30 @@ def test_names_stay_stable_from_day_to_day(db, paths):
 
 
 def test_curated_priority_and_unknown_cards(db, paths):
-    (paths / "archetypes.csv").write_text("nome,carte,minimo\nA,Guttersnipe;Lava Dart,2\nB,Guttersnipe;Fireblast,1\n",
-                                          "utf-8")
+    (paths / "archetypes.csv").write_text("nome,carte,minimo,colori,simbolo\nA,Guttersnipe;Lava Dart,2,,Lava Dart\n"
+                                          "B,Guttersnipe;Fireblast,1,,Fireblast\n", "utf-8")
     cur = decks.load_curated(db)
     main = {"oid-Guttersnipe", "oid-Lava Dart"}
     assert decks.curated_match(main, cur) == "A"  # 2 su 2 batte 1 su 2
     assert decks.curated_match({"oid-Fireblast"}, cur) == "B"
     assert decks.curated_match({"oid-Brainstorm"}, cur) is None
-    (paths / "archetypes.csv").write_text("nome,carte,minimo\nX,Carta Inesistente,1\n", "utf-8")
+    (paths / "archetypes.csv").write_text("nome,carte,minimo,colori,simbolo\nX,Carta Inesistente,1,,Fireblast\n",
+                                          "utf-8")
     with pytest.raises(ValueError, match="sconosciute"):
         decks.load_curated(db)
+    # carta simbolo: obbligatoria sulla prima riga di ogni nome, e deve esistere
+    (paths / "archetypes.csv").write_text("nome,carte,minimo,colori,simbolo\nA,Guttersnipe,1,,\n", "utf-8")
+    with pytest.raises(ValueError, match="manca la carta simbolo"):
+        decks.load_curated(db)
+    (paths / "archetypes.csv").write_text("nome,carte,minimo,colori,simbolo\nA,Guttersnipe,1,,Carta Inesistente\n",
+                                          "utf-8")
+    with pytest.raises(ValueError, match="simbolo sconosciuta"):
+        decks.load_curated(db)
+    # righe alternative con lo stesso nome: il simbolo basta sulla prima
+    (paths / "archetypes.csv").write_text("nome,carte,minimo,colori,simbolo\nA,Guttersnipe,1,,Lava Dart\n"
+                                          "A,Fireblast,1,,\n", "utf-8")
+    cur = decks.load_curated(db)
+    assert cur[0].symbol == "oid-Lava Dart" and cur[1].symbol == ""
 
 
 def test_tournament_ids_are_stable():
@@ -148,7 +171,7 @@ def test_curated_full_name_beats_face(paths, carddb):
     """Una carta chiave si riconosce come nelle decklist: il nome completo vince sulla faccia di una carta
     "prepare" con lo stesso nome (prima "Tolarian Terror" puntava alla carta sbagliata e non trovava nulla)."""
     real = carddb
-    (paths / "archetypes.csv").write_text("nome,carte,minimo,colori\nT,Brainstorm,1,1\n", "utf-8")
+    (paths / "archetypes.csv").write_text("nome,carte,minimo,colori,simbolo\nT,Brainstorm,1,1,Brainstorm\n", "utf-8")
     cur = decks.load_curated(real)
     oid = real.lookup("Brainstorm")[0]
     assert cur[0].cards == [oid] and real.cards[oid].name == "Brainstorm" and cur[0].colors
@@ -163,3 +186,41 @@ def test_color_prefix_names():
     assert decks.archetype("c:Elves", "G", reg, cur) == ("c2", ["Elves", "", "c"])
     assert decks.color_name("UBRG") == "Four-Color" and decks.color_name("WUBRG") == "Five-Color"
     assert decks.color_name("WBR") == "Mardu" and decks.color_name("URG") == "Temur"
+
+
+def test_tier_thresholds_and_band():
+    # senza tier precedente: soglie pure 5%, 2%, 0,75%
+    assert [decks.tier_for(s) for s in (12, 5, 4.99, 2, 1.99, 0.75, 0.74, 0)] == [1, 1, 2, 2, 3, 3, 4, 4]
+    # banda del 15%: si scende solo sotto soglia × 0,85 …
+    assert decks.tier_for(4.3, prev=1) == 1 and decks.tier_for(4.2, prev=1) == 2
+    assert decks.tier_for(1.71, prev=2) == 2 and decks.tier_for(1.69, prev=2) == 3
+    assert decks.tier_for(0.64, prev=3) == 3 and decks.tier_for(0.63, prev=3) == 4
+    # … e si sale solo sopra soglia × 1,15
+    assert decks.tier_for(5.7, prev=2) == 2 and decks.tier_for(5.76, prev=2) == 1
+    assert decks.tier_for(2.2, prev=3) == 3 and decks.tier_for(2.31, prev=3) == 2
+    assert decks.tier_for(0.87, prev=4) == 3 and decks.tier_for(0.86, prev=4) == 4
+    # un salto di due tier: il più alto con la banda superata
+    assert decks.tier_for(6, prev=3) == 1 and decks.tier_for(5.5, prev=3) == 2
+    # una discesa di due tier: le soglie pure
+    assert decks.tier_for(1, prev=1) == 3
+
+
+def test_previous_tiers_from_written_file(tmp_path):
+    p = tmp_path / "decks-61.json"
+    assert decks.previous_tiers(p) == {}  # prima esecuzione
+    p.write_text('{"v":1,"a":{}}', "utf-8")
+    assert decks.previous_tiers(p) == {}  # formato vecchio
+    p.write_text('{"v":2,"f":{"c1":["Terror",1,1000,5,0],"a7":["X + Y",4,10,9,3]}}', "utf-8")
+    assert decks.previous_tiers(p) == {"c1": 1, "a7": 4}
+
+
+def test_typical_list_is_closest_to_the_mean():
+    t = [tour(739000 + k, f"t{k}", []) for k in range(3)]
+    core = {1: 4, 2: 4, 3: 4}
+    a = decks.DeckList({**core, 4: 4}, {}, 739000, [(0, 1)])
+    b = decks.DeckList({**core, 5: 4}, {}, 739000, [(0, 1), (1, 1), (2, 1)])  # la variante più giocata
+    c = decks.DeckList({9: 4, 8: 4, 7: 4, 6: 4}, {}, 739000, [(1, 1)])  # tutt'altro
+    assert decks.typical_list([(0, a), (1, b), (2, c)], t) == 1
+    # a parità di somiglianza vince chi compare più volte, poi la più recente
+    d = decks.DeckList({**core, 4: 4}, {}, 739000, [(2, 1)])
+    assert decks.typical_list([(0, a), (1, d)], t) == 1
