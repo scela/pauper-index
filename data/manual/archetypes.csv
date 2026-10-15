@@ -1,34 +1,34 @@
-nome,carte,minimo,colori,simbolo
-Rakdos Madness,Alms of the Vein;Kitchen Imp;Vampire's Kiss,2,,Kitchen Imp
-Mono-Red Madness,Guttersnipe;Lava Dart;Fiery Temper;Kessig Flamebreather,2,,Guttersnipe
-Familiars,Sunscape Familiar;God-Pharaoh's Faithful;Meeting of Minds,2,,Sunscape Familiar
-Jeskai Ephemerate,Ephemerate;Union of the Third Path;Ride's End,2,,Ephemerate
-Terror,Tolarian Terror,1,1,Tolarian Terror
-Faeries,Spellstutter Sprite;Ninja of the Deep Hours,2,1,Spellstutter Sprite
-Elves,Timberwatch Elf;Priest of Titania;Birchlore Rangers;Quirion Ranger,2,,Priest of Titania
-Spy Combo,Balustrade Spy;Dread Return;Gatecreeper Vine,2,,Balustrade Spy
-Tron,Urza's Tower;Urza's Mine;Urza's Power Plant,3,,Urza's Tower
-Bogles,Slippery Bogle;Gladecover Scout;Armadillo Cloak,2,,Slippery Bogle
-Gruul Ponza,Mwonvuli Acid-Moss;Thermokarst;Annoyed Altisaur,2,,Mwonvuli Acid-Moss
-Affinity,Thoughtcast;Myr Enforcer,2,1,Myr Enforcer
-White Aggro,Guardians' Pledge;Raffine's Informant;Lunarch Veteran,2,,Battle Screech
-Ruby Storm,Goblin Anarchomancer;Thornscape Familiar;Big Score;Seething Song,2,,Seize the Storm
-Pestilence,Pestilence;Nutrient Block,2,,Pestilence
-Mono-Red Rally,Rally at the Hornburg;Burning-Tree Emissary;Goblin Bushwhacker,2,,Rally at the Hornburg
-Jund Wildfire,Cleansing Wildfire;Krark-Clan Shaman;Writhing Chrysalis;Refurbished Familiar,3,,Cleansing Wildfire
-Gruul Ramp,Jewel Thief;Bannerhide Krushok;Malevolent Rumble;Utopia Sprawl,3,,Utopia Sprawl
-Dimir Control,Thorn of the Black Rose;Baleful Strix;Murmuring Mystic;Suffocating Fumes;Counterspell,3,,Murmuring Mystic
-Caw-Gates,Squadron Hawk;Sea Gate;Basilisk Gate,3,,Squadron Hawk
-Snacker Gates,Basilisk Gate;Citadel Gate;Sacred Cat;Sneaky Snacker,3,,Sneaky Snacker
-Mardu Synthesizer,Experimental Synthesizer;Glint Hawk;Kor Skyfisher,3,,Experimental Synthesizer
-Mono-Black Sacrifice,Carrion Feeder;Mortician Beetle;Nested Shambler;Bloodthrone Vampire,3,,Carrion Feeder
-Burn,Lava Spike;Rift Bolt;Skewer the Critics,2,,Lightning Bolt
-Turbo Fog,Moment's Peace;Weather the Storm;Tangle;Growth Spiral;Arcane Denial,4,,Moment's Peace
-Dredge,Stinkweed Imp;Dread Return;Lotleth Giant;Scrapwork Mutt,3,,Stinkweed Imp
-Faeries,Spellstutter Sprite;Moon-Circuit Hacker;Faerie Seer,3,1,
-Affinity,Thoughtcast;Utrom Monitor,2,1,
-Affinity,Thoughtcast;Frogmite,2,1,
-Golgari Gardens,Khalni Garden;Crypt Rats;Troll of Khazad-dûm;Avenging Hunter,3,,Khalni Garden
-Golgari Gardens,Khalni Garden;Cast Down;Snuff Out;Eviscerator's Insight;Fanatical Offering,5,,
-Golgari Gardens,Khalni Garden;Writhing Chrysalis;Skred;Eviscerator's Insight,4,,
-Mono-White Aggro,Salt Road Packbeast;Search Party Captain;Martyr's Soul;Phyrexian Walker;Ornithopter,3,,Search Party Captain
+nome,carte,minimo,colori,simbolo,famiglia
+Rakdos Madness,Alms of the Vein;Kitchen Imp;Vampire's Kiss,2,,Kitchen Imp,
+Mono-Red Madness,Guttersnipe;Lava Dart;Fiery Temper;Kessig Flamebreather,2,,Guttersnipe,
+Familiars,Sunscape Familiar;God-Pharaoh's Faithful;Meeting of Minds,2,,Sunscape Familiar,
+Ephemerate,Ephemerate;Union of the Third Path;Ride's End,2,1,Ephemerate,
+Terror,Tolarian Terror,1,1,Tolarian Terror,
+Faeries,Spellstutter Sprite;Ninja of the Deep Hours,2,1,Spellstutter Sprite,
+Elves,Timberwatch Elf;Priest of Titania;Birchlore Rangers;Quirion Ranger,2,,Priest of Titania,
+Spy Combo,Balustrade Spy;Dread Return;Gatecreeper Vine,2,,Balustrade Spy,
+Tron,Urza's Tower;Urza's Mine;Urza's Power Plant,3,,Urza's Tower,
+Bogles,Slippery Bogle;Gladecover Scout;Armadillo Cloak,2,,Slippery Bogle,
+Gruul Ponza,Mwonvuli Acid-Moss;Thermokarst;Annoyed Altisaur,2,,Mwonvuli Acid-Moss,
+Affinity,Thoughtcast;Myr Enforcer,2,1,Myr Enforcer,
+White Aggro,Guardians' Pledge;Raffine's Informant;Lunarch Veteran,2,,Battle Screech,
+Ruby Storm,Goblin Anarchomancer;Thornscape Familiar;Big Score;Seething Song,2,,Seize the Storm,
+Food Gardens,Pestilence;Nutrient Block,2,,Pestilence,
+Mono-Red Rally,Rally at the Hornburg;Burning-Tree Emissary;Goblin Bushwhacker,2,,Rally at the Hornburg,
+Jund Wildfire,Cleansing Wildfire;Krark-Clan Shaman;Writhing Chrysalis;Refurbished Familiar,3,,Cleansing Wildfire,
+Gruul Ramp,Jewel Thief;Bannerhide Krushok;Malevolent Rumble;Utopia Sprawl,3,,Utopia Sprawl,
+Control,Thorn of the Black Rose;Baleful Strix;Murmuring Mystic;Suffocating Fumes;Counterspell,3,1,Murmuring Mystic,Dimir Control
+Caw-Gates,Squadron Hawk;Sea Gate;Basilisk Gate,3,,Squadron Hawk,
+Snacker Gates,Basilisk Gate;Citadel Gate;Sacred Cat;Sneaky Snacker,3,,Sneaky Snacker,
+Synthesizer,Experimental Synthesizer;Glint Hawk;Kor Skyfisher,3,1,Experimental Synthesizer,
+Mono-Black Sacrifice,Carrion Feeder;Mortician Beetle;Nested Shambler;Bloodthrone Vampire,3,,Carrion Feeder,
+Burn,Lava Spike;Rift Bolt;Skewer the Critics,2,,Lightning Bolt,
+Turbo Fog,Moment's Peace;Weather the Storm;Tangle;Growth Spiral;Arcane Denial,4,,Moment's Peace,
+Dredge,Stinkweed Imp;Dread Return;Lotleth Giant;Scrapwork Mutt,3,,Stinkweed Imp,
+Faeries,Spellstutter Sprite;Moon-Circuit Hacker;Faerie Seer,3,1,,
+Affinity,Thoughtcast;Utrom Monitor,2,1,,
+Affinity,Thoughtcast;Frogmite,2,1,,
+Golgari Gardens,Khalni Garden;Crypt Rats;Troll of Khazad-dûm;Avenging Hunter,3,,Khalni Garden,
+Golgari Gardens,Khalni Garden;Cast Down;Snuff Out;Eviscerator's Insight;Fanatical Offering,5,,,
+Golgari Gardens,Khalni Garden;Writhing Chrysalis;Skred;Eviscerator's Insight,4,,,
+Mono-White Aggro,Salt Road Packbeast;Search Party Captain;Martyr's Soul;Phyrexian Walker;Ornithopter,3,,Search Party Captain,

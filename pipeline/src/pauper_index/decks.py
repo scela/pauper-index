@@ -71,6 +71,7 @@ class Curated:
     minimum: int
     colors: bool = False  # il nome porta davanti i colori della lista (Affinity, Faeries, Terror)
     symbol: str = ""  # oracle_id della carta simbolo (solo sulla prima riga con quel nome)
+    family_name: str = ""  # titolo della famiglia nella tier list, se diverso dal nome ("Dimir Control" per Control)
 
 
 def flat(d: dict[int, int]) -> list[int]:
@@ -140,7 +141,8 @@ def load_curated(db: CardDB, path: Path | None = None) -> list[Curated]:
             if sym and not sym_oid:
                 raise ValueError(f"archetypes.csv, {row['nome']}: carta simbolo sconosciuta {sym!r}")
             out.append(Curated(row["nome"].strip(), oids, int(row.get("minimo") or min(2, len(oids))),
-                               (row.get("colori") or "").strip() == "1", sym_oid or ""))
+                               (row.get("colori") or "").strip() == "1", sym_oid or "",
+                               (row.get("famiglia") or "").strip()))
     first = {}
     for c in out:
         first.setdefault(c.name, c)
@@ -385,7 +387,7 @@ def family_meta(lists: list[DeckList], tours: list[Tournament], anchor: int, db:
             continue
         if f.startswith("c"):
             c = curated[int(f[1:]) - 1]
-            name, sym = c.name, pos.get(c.symbol, -1)
+            name, sym = c.family_name or c.name, pos.get(c.symbol, -1)
         else:
             # carta caratteristica: frequente nel gruppo e rara fuori, mai una terra
             name, w = groups[f]["name"], n_fam[f]

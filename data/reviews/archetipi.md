@@ -14,13 +14,13 @@
 | 248 | 3.9 | 168 | curato | Jund Wildfire | BRG |  |
 | 220 | 3.5 | 165 | curato | Dimir Faeries | UB |  |
 | 204 | 3.2 | 131 | curato | Mono-Blue Faeries | U |  |
-| 198 | 3.1 | 164 | curato | Jeskai Ephemerate | WUR |  |
 | 185 | 2.9 | 146 | curato | Esper Affinity | WUB |  |
 | 181 | 2.9 | 147 | curato | White Aggro | W |  |
 | 177 | 2.8 | 107 | curato | Bogles | WG |  |
 | 167 | 2.6 | 102 | curato | Gruul Ponza | RG |  |
-| 148 | 2.3 | 115 | curato | Dimir Control | UB |  |
+| 165 | 2.6 | 135 | curato | Jeskai Ephemerate | WUR |  |
 | 135 | 2.1 | 74 | curato | Golgari Gardens | B |  |
+| 118 | 1.9 | 88 | curato | Dimir Control | UB |  |
 | 100 | 1.6 | 98 | non classificato | — | UB |  |
 | 97 | 1.5 | 77 | curato | Rakdos Madness | BR |  |
 | 95 | 1.5 | 80 | curato | Dimir Terror | UB |  |
@@ -31,19 +31,22 @@
 | 74 | 1.2 | 69 | curato | Snacker Gates | WUBRG |  |
 | 70 | 1.1 | 53 | curato | Izzet Terror | UR |  |
 | 65 | 1.0 | 53 | curato | Mono-Black Sacrifice | B |  |
-| 48 | 0.8 | 44 | curato | Mardu Synthesizer | WBR |  |
 | 47 | 0.7 | 43 | automatico | Ragged Short Spear + Soul-Guide Lantern | WBR | Kor Skyfisher, Dispatch, Soul-Guide Lantern, Makeshift Munitions, Pursue the Past, Lightning Bolt |
 | 44 | 0.7 | 41 | automatico | Omen of the Dead + Oroku Saki, Shredder Rising | WB | Refurbished Familiar, Kor Skyfisher, Omen of the Dead, Grim Bauble, Glint Hawk, Thraben Charm |
 | 39 | 0.6 | 36 | automatico | Sandstorm Eidolon + Aurora Eidolon | WR | Loran's Escape, Fling, Spirit Mascot, Faithless Looting, Pursue the Past, Lightning Bolt |
 | 37 | 0.6 | 32 | curato | Turbo Fog | UG |  |
-| 35 | 0.6 | 30 | curato | Pestilence | B |  |
+| 35 | 0.6 | 30 | curato | Food Gardens | B |  |
 | 32 | 0.5 | 19 | curato | Dimir Affinity | UB |  |
+| 31 | 0.5 | 27 | curato | Esper Ephemerate | WUB |  |
 | 26 | 0.4 | 26 | automatico | Skyward Spider + Homestead Courage | W | Lagonna-Band Trailblazer, Sentinel's Eyes, Homestead Courage, Hyena Umbra, Emerge Unscathed, Benevolent Blessing |
 | 26 | 0.4 | 20 | automatico | Drannith Stinger + Drannith Healer | BR | Drannith Healer, Monstrous Carabid, Lotus Petal, Songs of the Damned, Page, Loose Leaf, Dark Ritual |
+| 24 | 0.4 | 22 | curato | Mardu Synthesizer | WBR |  |
+| 24 | 0.4 | 21 | curato | Esper Control | WUB |  |
 | 23 | 0.4 | 15 | automatico | Pentad Prism + Infectious Inquiry | UBRG | Experimental Augury, Contentious Plan, Weather the Storm, Prologue to Phyresis, Infectious Inquiry, Lórien Revealed |
 | 23 | 0.4 | 18 | curato | Four-Color Affinity | WUBR |  |
 | 22 | 0.3 | 17 | automatico | Respite + Tangle | BG | Campfire, Crypt Rats, Toxin Analysis, Weather the Storm, Fanatical Offering, Respite |
 | 20 | 0.3 | 17 | curato | Caw-Gates | WU |  |
+| 20 | 0.3 | 18 | curato | Boros Synthesizer | WR |  |
 | 18 | 0.3 | 15 | automatico | Glistener Seer + Persistent Petitioners | UG | Persistent Petitioners, Masked Vandal, Winding Way, Mothdust Changeling, Pond Prophet, Gnaw to the Bone |
 | 17 | 0.3 | 12 | curato | Dredge | BRG |  |
 | 16 | 0.3 | 14 | automatico | Freed from the Real + Galvanic Alchemist | G | Freed from the Real, Axebane Guardian, Orochi Leafcaller, Valakut Invoker, Beastrider Vanguard, Wall of Roots |
@@ -70,6 +73,7 @@
 | 6 | 0.1 | 6 | automatico | Midnight Guard + Presence of Gond | WRG | Lunarch Veteran // Luminous Phantom, Bitter Reunion, Blessed Hippogriff // Tyr's Blessing, Pursue the Past, Prismatic Strands, Cleansing Wildfire |
 | 6 | 0.1 | 3 | automatico | Arboreal Grazer + Crimson Fleet Commodore | URG | Mulldrifter, Brainstorm, Weather the Storm, Lightning Bolt, Farseek, Lórien Revealed |
 | 6 | 0.1 | 6 | curato | Grixis Terror | UBR |  |
+| 6 | 0.1 | 6 | curato | Grixis Control | UBR |  |
 | 5 | 0.1 | 5 | automatico | Sinew Sliver + Gemhide Sliver | WRG | Muscle Sliver, Sentinel Sliver, Winged Sliver, Gemhide Sliver, Winding Way, Predatory Sliver |
 | 5 | 0.1 | 5 | automatico | Glint Hawk + Black Mage's Rod | WBR | Refurbished Familiar, Kor Skyfisher, Experimental Synthesizer, Makeshift Munitions, Lightning Bolt, Glint Hawk |
 | 4 | 0.1 | 3 | automatico | Devious Cover-Up + Innocent Blood | UB | Campfire, Pristine Talisman, Troll of Khazad-dûm, Go for the Throat, Drown in Sorrow, Bonder's Ornament |
@@ -88,8 +92,10 @@
 | 2 | 0.0 | 2 | automatico | Dream Stalker + Navigator's Compass | WUB | Refurbished Familiar, Nutrient Block, Cryogen Relic, Fanatical Offering, Grim Bauble, Dream Stalker |
 | 2 | 0.0 | 2 | automatico | Search Party Captain + Phyrexian Walker | W | Ramosian Rally, Salt Road Packbeast, Spider-Man, Web-Slinger, Leonardo, Big Brother, Phyrexian Walker, Search Party Captain |
 | 2 | 0.0 | 2 | automatico | Tyrant's Choice + Sovereign's Bite | B | Vampire's Kiss, Sovereign's Bite, Rotten Reunion, Village Rites, Okiba Reckoner Raid // Nezumi Road Captain, Hopeless Nightmare |
+| 2 | 0.0 | 2 | curato | Jeskai Synthesizer | WUR |  |
 | 2 | 0.0 | 2 | automatico | Dawnbringer Cleric + Glint Hawk | WR | Dawnbringer Cleric, Kor Skyfisher, Experimental Synthesizer, Makeshift Munitions, Journey to Nowhere, Lightning Bolt |
 | 2 | 0.0 | 2 | automatico | Azure Fleet Admiral + Crimson Fleet Commodore | URG | Ponder, Skred, Lose Focus, Brainstorm, Lightning Bolt, Lórien Revealed |
+| 2 | 0.0 | 2 | curato | Four-Color Ephemerate | WURG |  |
 | 2 | 0.0 | 2 | automatico | Kick in the Door + Simian Spirit Guide | WRG | Ephemerate, Goliath Paladin, Burning-Tree Emissary, Lotus Petal, Simian Spirit Guide, Seething Song |
 | 2 | 0.0 | 2 | automatico | HYDRA Assault Robot + Black Mage's Rod | BR | Refurbished Familiar, Reckoner's Bargain, Makeshift Munitions, Myr Enforcer, Fanatical Offering, Lightning Bolt |
 | 2 | 0.0 | 2 | automatico | Boots of Speed + Tidewater Minion | URG | Cryogen Relic, Sewer-veillance Cam, Lightning Bolt, Relic of Progenitus, Dispel, Boots of Speed |
@@ -101,6 +107,7 @@
 | 2 | 0.0 | 2 | automatico | Scatter the Seeds + Loam Dryad | URG | Gene Pollinator, Loam Dryad, Sylvan Ranger, Simian Spirit Guide, Rites of Initiation, Sagu Wildling // Roost Seek |
 | 2 | 0.0 | 2 | automatico | Gather the Townsfolk + Hallow | WR | Mardu Devotee, Ramosian Rally, Faithless Looting, Pursue the Past, Lightning Bolt, Hallow |
 | 2 | 0.0 | 1 | curato | Temur Terror | URG |  |
+| 2 | 0.0 | 2 | curato | Four-Color Synthesizer | WUBR |  |
 | 1 | 0.0 | 1 | automatico | Crypt Rats + Troll of Khazad-dûm | B | Refurbished Familiar, Reckoner's Bargain, Crypt Rats, Toxin Analysis, Troll of Khazad-dûm, Snuff Out |
 | 1 | 0.0 | 1 | automatico | Relic's Roar + Blighted Agent | UG | Snakeskin Veil, Lotus Petal, Distortion Strike, Relic's Roar, Ichorclaw Myr, Vines of Vastwood |
 | 1 | 0.0 | 1 | automatico | Gray Merchant of Asphodel + Cuombajj Witches | B | Chittering Rats, Crypt Rats, Troll of Khazad-dûm, Gray Merchant of Asphodel, Defile, Cuombajj Witches |
@@ -138,7 +145,7 @@ Soglie 5%, 2%, 0.75% dei mazzi a 61 giorni, banda simmetrica del 15% rispetto al
 | Tier 2 | 4.04% | Spy Combo | Balustrade Spy |
 | Tier 2 | 3.97% | Mono-Red Rally | Rally at the Hornburg |
 | Tier 2 | 3.91% | Jund Wildfire | Cleansing Wildfire |
-| Tier 2 | 3.12% | Jeskai Ephemerate | Ephemerate |
+| Tier 2 | 3.12% | Ephemerate | Ephemerate |
 | Tier 2 | 2.85% | White Aggro | Battle Screech |
 | Tier 2 | 2.79% | Bogles | Slippery Bogle |
 | Tier 2 | 2.63% | Gruul Ponza | Mwonvuli Acid-Moss |
@@ -151,12 +158,12 @@ Soglie 5%, 2%, 0.75% dei mazzi a 61 giorni, banda simmetrica del 15% rispetto al
 | Tier 3 | 1.21% | Ruby Storm | Seize the Storm |
 | Tier 3 | 1.17% | Snacker Gates | Sneaky Snacker |
 | Tier 3 | 1.03% | Mono-Black Sacrifice | Carrion Feeder |
-| Tier 3 | 0.76% | Mardu Synthesizer | Experimental Synthesizer |
+| Tier 3 | 0.76% | Synthesizer | Experimental Synthesizer |
 | Altri | 0.74% | Ragged Short Spear + Soul-Guide Lantern | Ragged Short Spear |
 | Altri | 0.69% | Omen of the Dead + Oroku Saki, Shredder Rising | Glint Hawk |
 | Altri | 0.62% | Sandstorm Eidolon + Aurora Eidolon | Sandstorm Eidolon |
 | Altri | 0.58% | Turbo Fog | Moment's Peace |
-| Altri | 0.55% | Pestilence | Pestilence |
+| Altri | 0.55% | Food Gardens | Pestilence |
 | Altri | 0.41% | Drannith Stinger + Drannith Healer | Drannith Stinger |
 | Altri | 0.41% | Skyward Spider + Homestead Courage | Lagonna-Band Trailblazer |
 | Altri | 0.36% | Pentad Prism + Infectious Inquiry | Pentad Prism |
