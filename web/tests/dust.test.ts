@@ -36,6 +36,18 @@ describe('rispolvera una carta', () => {
     expect(names(dustPool(d, { minDecks: 20, quietDays: 900 }))).toEqual(['Old Card']);
   });
 
+  it('soglia "apparsa in almeno … mazzi" scelta nella pagina: più alta, meno carte; troppo alta, nessuna', () => {
+    const d = withForgotten();
+    const names = (min: number) => dustPool(d, { minDecks: min, quietDays: DUST_QUIET_DAYS }).map((i) => d.cards.c[i].n);
+    // mazzi nello storico (main+side): Old 120, Edge 20, Few 19
+    expect(names(19)).toEqual(['Old Card', 'Edge Card', 'Few Card']);
+    expect(names(20)).toEqual(['Old Card', 'Edge Card']); // la soglia è inclusa
+    expect(names(21)).toEqual(['Old Card']);
+    expect(names(120)).toEqual(['Old Card']);
+    expect(names(121)).toEqual([]);
+    expect(names(1)).toEqual(['Old Card', 'Edge Card', 'Few Card']); // la terra base resta sempre esclusa
+  });
+
   it('anno di massima diffusione in percentuale dei mazzi dell\'anno, non in numero assoluto', () => {
     const c = { y: [2018, 50, 0, 60] } as CardRow;
     // 2018: 50/500 = 10%; 2020: 60/1200 = 5%

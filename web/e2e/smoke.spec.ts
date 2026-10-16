@@ -983,6 +983,7 @@ test('riepilogo ed elenco: stesso insieme, e i filtri che nascondono carte sono 
 test('"Carica altri": 10 carte alla volta, conteggio, focus sulla prima aggiunta, ripartenza da 10', async ({ page }) => {
   await setup(page);
   const rows = page.locator('#cardRows tr');
+  await expect(page.locator('#verdict')).toHaveText(/\d/); // il titolo si scrive subito dopo la riga dei dati
   const total = (await page.locator('#verdict').innerText()).replace(/[.,]/g, '').match(/\d+/)![0];
   const fmt = (x: number) => x.toLocaleString(L === 'it' ? 'it-IT' : 'en-US');
   await expect(rows).toHaveCount(10);
@@ -1004,6 +1005,65 @@ test('"Carica altri": 10 carte alla volta, conteggio, focus sulla prima aggiunta
   await expect(rows).toHaveCount(1);
   await expect(page.locator('#more')).toBeHidden();
   await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 1, total: 1 }));
+});
+
+test('"Carta dimenticata": soglia dei mazzi storici, conteggio, pulsante disattivato con il motivo, mai salvata', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' }); // pesche immediate
+  await setup(page);
+  await page.click('#navDust');
+  const min = page.locator('#dustMin');
+  const count = page.locator('#dustMinCount');
+  const btn = page.locator('#dustBtn');
+  const num = async () => Number((await count.innerText()).replace(/[.,\s]/g, '').match(/\d+/)![0]);
+  await expect(min).toHaveValue('20');
+  await expect(min).toHaveAccessibleName(new RegExp(tr('dust.minLabel')));
+  await expect(count).toContainText(head('dust.minCount'));
+  const at20 = await num();
+  await min.fill('10');
+  await expect.poll(num).toBeGreaterThan(at20);
+  // soglia troppo alta: nessuna carta, pulsante disattivato con il motivo
+  await min.fill('99999');
+  await expect(count).toHaveText(tr('dust.minNone', { min: (99999).toLocaleString(L === 'it' ? 'it-IT' : 'en-US') }));
+  await expect(btn).toBeDisabled();
+  await expect(page.locator('#dustResult .dust-stage')).toBeDisabled(); // anche la cornice vuota
+  // soglia alta ma possibile: la carta pescata ha almeno quei mazzi nello storico
+  await min.fill('50');
+  await expect(btn).toBeEnabled();
+  const at50 = await num();
+  expect(at50).toBeLessThan(at20);
+  await btn.click();
+  const title = page.locator('#dustTitle');
+  await expect(title).toBeVisible();
+  const first = (await title.innerText()).trim();
+  const decks = Number((await page.locator('#dustResult .dust-info p').first().innerText()).replace(/[.,]/g, '').match(/\d+/)![0]);
+  expect(decks).toBeGreaterThanOrEqual(50);
+  // cambiando soglia la carta già vista non torna (nessuna ripetizione nella sessione)
+  await min.fill('10');
+  const seen = [first];
+  for (let k = 0; k < 4; k++) {
+    await btn.click();
+    const name = (await title.innerText()).trim();
+    expect(seen).not.toContain(name);
+    seen.push(name);
+  }
+  // mai salvata: alla visita successiva riparte da 20
+  await page.reload();
+  await page.click('#navDust');
+  await expect(min).toHaveValue('20');
+});
+
+test('"Carta dimenticata": soglia con la collezione, conteggio delle tue carte e "Pesca tra tutte le carte"', async ({ page }) => {
+  await setup(page);
+  await uploadCollection(page);
+  await page.click('#navDust');
+  const count = page.locator('#dustMinCount');
+  const mine = (await count.innerText()).trim();
+  // la collezione sintetica può non avere carte dimenticate: conteggio delle tue, oppure il motivo
+  const ownedTail = tr('dust.minCountOwned', { n: 2 }).replace(/^2\s*/, ''); // "delle tue carte da pescare"
+  expect(mine.endsWith(ownedTail) || mine === tr('dust.minNoneOwned', { min: 20 })).toBe(true);
+  await page.locator('#dustAll').check();
+  await expect(count).toContainText(head('dust.minCount'));
+  await expect(page.locator('#dustBtn')).toBeEnabled();
 });
 
 test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi sparisce, niente ripetizioni', async ({ page }) => {
@@ -1061,15 +1121,15 @@ test('"Carta dimenticata": pagina dalla testata, scena, animazione che poi spari
   await uploadCollection(page);
   await page.click('#navDust');
   await expect(page.locator('#dustAllWrap')).toBeVisible();
+  if (await page.locator('#dustBtn').isDisabled()) {
+    // nessuna tua carta è dimenticata: pulsante disattivato con il motivo; "Pesca tra tutte le carte" lo riattiva
+    await expect(page.locator('#dustMinCount')).toHaveText(tr('dust.minNoneOwned', { min: 20 }));
+    await page.locator('#dustAllWrap').click();
+    await expect(page.locator('#dustBtn')).toBeEnabled();
+  }
   await page.click('#dustBtn');
   const scene = page.locator('#dustResult .dust-scene');
-  await expect(scene).toBeVisible();
-  await expect(scene.locator('.dust-cover:not(.still)')).toHaveCount(0);
-  if (await scene.locator('img.card-cur').count() === 0) {
-    await expect(scene).toContainText(head('dust.noneOwned'));
-    await page.locator('#dustAllWrap').click();
-    await expect(scene.locator('img.card-cur')).toBeVisible();
-  }
+  await expect(scene.locator('img.card-cur')).toBeVisible();
   expect(problems).toEqual([]);
 });
 

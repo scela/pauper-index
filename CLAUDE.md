@@ -50,7 +50,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] A3: caricamento (frase, due pulsanti, aiuto per l'export di ManaBox, riga della collezione) — **controllo con screenshot dopo A2 e A3**
     - [x] A4: campo unico "Cerca una carta" con la scheda arricchita (vedi "Cerca una carta")
     - [x] A5: filtri su una riga ("Ultima apparizione" nel pannello), righe compatte, misure prima/dopo
-    - [ ] B: Carta dimenticata, soglia dei mazzi storici (riquadro numerico)
+    - [x] B: Carta dimenticata, soglia dei mazzi storici (riquadro numerico; vedi "Carta dimenticata: soglia dei mazzi")
   - [ ] Restyling della sezione Mazzi, piano approvato il 2026-10-15 (vedi "Restyling dei Mazzi"):
     - [x] passo 1: Golgari Gardens con le liste Gardens di "Defile + Crypt Rats", mancanti con i nomi della decklist, ridisegno della pagina Mazzi senza perdere focus e decklist aperte
     - [x] passo 2: simboli di mana (vedi "Simboli di mana")
@@ -595,6 +595,14 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - **Dettagli**: immagine (la printing posseduta, altrimenti quella di riferimento; un clic apre gli artwork), mazzi nello storico tra prima e ultima apparizione, **anno di massima diffusione** in percentuale dei mazzi di quell'anno (`y` / `yt`), ultima apparizione più recente tra MTGO e cartaceo con il link al torneo, possesso. Tolti i pulsanti "Chiudi" e "Rispolverane un'altra" dentro il risultato, perché c'è il pulsante grande.
 - **Animazione** (circa 0,9 s, vedi "Carta dimenticata: fluidità"): la polvere copre la carta vecchia, le due carte si scambiano in dissolvenza, il velo scivola via, i granelli volano e le ragnatele si strappano (in alto a sinistra, poi in basso a sinistra, poi a destra). Solo elementi sovrapposti: l'immagine non ha mai filtri (regole di Scryfall); a fine animazione la copertura viene rimossa. Con `prefers-reduced-motion` nessuna copertura e niente 3D: la carta cambia subito.
 - Fotogrammi di controllo: `npm run dust-frames` (desktop e mobile, 5 istanti più la fine, dalla pagina `#carta-dimenticata`).
+
+## Carta dimenticata: soglia dei mazzi (2026-10-15, passo B)
+
+- Sotto il pulsante "Rispolvera una carta": "Apparsa in almeno [20] mazzi" (`#dustMin`, riquadro numerico, testo a 16 px, almeno 1; nome accessibile dall'etichetta che lo racchiude) con accanto quante carte si possono pescare (`#dustMinCount`, `aria-live`): "198 carte da pescare", con la collezione "N delle tue carte da pescare" (o tutte, con "Pesca tra tutte le carte").
+- **Conteggi verificati sul sito** (dati all'11 ottobre, senza collezione): almeno 10 → 319, 20 → 198, 50 → 97, 100 → 47, 250 → 22, 500 → 13, 1000 → 4.
+- **Nessuna carta** con la soglia scelta: il pulsante e la cornice vuota si disattivano e la riga dice il motivo ("Nessuna carta apparsa in almeno N mazzi è ferma da oltre un anno: prova un numero più basso."; con la collezione "Nessuna delle tue carte…").
+- La soglia è un filtro che nasconde carte: **mai salvata**, a ogni visita riparte da 20 (`DUST_MIN_DECKS`). Al cambio il pool (`dustPool(d, { ...DUST_RULES, minDecks })`) e la carta pescata in anticipo si ricalcolano; l'elenco delle carte già viste nella sessione (`pauper-index:dusted`) resta unico, quindi **nessuna ripetizione anche cambiando soglia**.
+- **Test**: Vitest su `dustPool` con la soglia (inclusa, troppo alta, minima); Playwright: conteggio, pulsante e cornice disattivati con il motivo, carta pescata con almeno quei mazzi, nessuna ripetizione cambiando soglia, valore non salvato; con la collezione conteggio delle tue carte e "Pesca tra tutte le carte". I test che premono "Rispolvera" con la collezione sintetica (che non ha carte dimenticate) attivano prima "Pesca tra tutte le carte".
 
 ## Testata (2026-10-07)
 

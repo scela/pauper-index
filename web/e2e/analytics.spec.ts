@@ -23,6 +23,13 @@ async function servePublished(ctx: BrowserContext, base: string): Promise<void> 
   });
 }
 
+/** "Rispolvera": con la collezione sintetica nessuna carta posseduta è dimenticata e il pulsante è disattivato;
+ *  "Pesca tra tutte le carte" lo riattiva. */
+async function rispolvera(page: Page): Promise<void> {
+  if (await page.locator('#dustBtn').isDisabled()) await page.locator('#dustAll').check();
+  await page.locator('#dustBtn').click();
+}
+
 /** Usa le funzioni principali: collezione, controllo rapido, espansione, export, Carta dimenticata, Mazzi, Ko-fi. */
 async function useEverything(page: Page, lang: Lang): Promise<void> {
   await page.route('https://cards.scryfall.io/**', (r) => r.fulfill({ contentType: 'image/png', body: PNG }));
@@ -44,7 +51,7 @@ async function useEverything(page: Page, lang: Lang): Promise<void> {
   await page.click('[data-save="owned"]');
   await dl;
   await page.click('#navDust');
-  await page.locator('#dustBtn').click();
+  await rispolvera(page);
   await expect(page.locator('#dustResult')).toBeVisible();
   await page.click('#navDecks');
   await expect(page.locator('#viewDecks')).toBeVisible();
@@ -96,7 +103,7 @@ test('sul dominio pubblicato: la pagina e i soli nomi degli eventi, con la CSP d
     await useEverything(page, 'it');
     // ancora una volta le stesse funzioni: ogni evento si conta una volta per pagina caricata
     await page.click('#navDust');
-    await page.locator('#dustBtn').click();
+    await rispolvera(page);
     await expect.poll(() => hits.length).toBe(1 + GC_EVENTS.length);
 
     for (const u of hits) expect(u.pathname).toBe('/count');

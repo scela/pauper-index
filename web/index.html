@@ -293,6 +293,12 @@
           </svg>
           <span id="dustBtnLabel" data-i18n="dust.button">Rispolvera una carta</span>
         </button>
+        <div class="dust-min">
+          <label class="dust-min-field"><span data-i18n="dust.minLabel">Apparsa in almeno</span>
+            <input type="number" id="dustMin" min="1" max="99999" step="1" value="20" inputmode="numeric" aria-describedby="dustMinCount">
+            <span data-i18n="dust.minUnit">mazzi</span></label>
+          <span class="note" id="dustMinCount" aria-live="polite"></span>
+        </div>
         <label class="chk dust-all" id="dustAllWrap" hidden><input type="checkbox" id="dustAll"> <span data-i18n="dust.fromAll">Pesca tra tutte le carte, non solo le tue</span></label>
       </div>
       <div id="dustResult" aria-live="polite"></div>

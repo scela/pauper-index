@@ -12,7 +12,7 @@ import type { Opts } from '../lib/compare';
 import { imageUrl, type Data } from '../lib/data';
 import { track } from '../lib/analytics';
 import { h, svg } from '../lib/dom';
-import { commitCard, dustPool, historyWindow, peakYear, pickCard } from '../lib/dust';
+import { commitCard, DUST_MIN_DECKS, DUST_RULES, dustPool, historyWindow, peakYear, pickCard } from '../lib/dust';
 import { fmtDate, fmtInt, fmtPct, fmtPrint, lastSeen } from '../lib/format';
 import type { CollectionIndex, Owned } from '../lib/quick';
 import { ssGet, ssSet } from '../lib/store';
@@ -53,6 +53,11 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
   const allBox = document.getElementById('dustAll') as HTMLInputElement;
   const seen = new Set<string>((ssGet('dusted') || '').split(',').filter(Boolean));
   let fromAll = false;
+  // "Apparsa in almeno … mazzi": filtro che nasconde carte, quindi mai salvato (a ogni visita riparte da 20)
+  let minDecks = DUST_MIN_DECKS;
+  const minInput = document.getElementById('dustMin') as HTMLInputElement;
+  const minCount = document.getElementById('dustMinCount') as HTMLElement;
+  minInput.value = String(minDecks);
   let drawn = false; // almeno una pesca fatta (anche senza risultato)
   let current = -1;
   let owned: Owned | null = null;
@@ -66,8 +71,8 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
   let regrowTimer: number | undefined;
 
   const fullPool = (d: Data) => {
-    if (poolFor !== d) {
-      pool = dustPool(d);
+    if (poolFor !== d || pool === null) {
+      pool = dustPool(d, { ...DUST_RULES, minDecks });
       poolFor = d;
     }
     return pool!;
@@ -117,10 +122,25 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
     }, 50);
   };
 
+  /** Quante carte si possono pescare con la soglia scelta; con nessuna il pulsante si disattiva, con il motivo. */
+  const renderCount = (d: Data) => {
+    const coll = ctx.collection();
+    const n = poolNow(d).length;
+    const mine = !!coll && !fromAll;
+    minCount.textContent = n
+      ? t(mine ? 'dust.minCountOwned' : 'dust.minCount', { n })
+      : t(mine ? 'dust.minNoneOwned' : 'dust.minNone', { min: fmtInt(minDecks) });
+    minCount.classList.toggle('warn', !n);
+    btn.disabled = !n;
+    // anche la cornice vuota (che si tocca per pescare) non invita a toccare
+    if (stage.classList.contains('dust-empty')) stage.disabled = !n;
+  };
+
   const renderInfo = () => {
     const d = ctx.data();
     const coll = ctx.collection();
     allWrap.hidden = !coll;
+    if (d) renderCount(d);
     allBox.checked = fromAll;
     btnLabel.textContent = drawn && current >= 0 ? t('dust.again') : t('dust.button');
     tap.textContent = t('dust.tap');
@@ -341,9 +361,23 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
   growButtonWebs();
   document.querySelector('#navDust .nd-web')?.replaceChildren(cobwebs(26, 26, [['tr', 0.95]], 0.3));
   btn.addEventListener('click', press);
+  // nuova soglia: carte ammesse e carta pescata in anticipo ricalcolate; le carte già viste restano escluse
+  minInput.addEventListener('input', () => {
+    const v = Math.floor(Number(minInput.value));
+    if (!minInput.value || !Number.isFinite(v) || v < 1) return;
+    minDecks = v;
+    pool = null;
+    next = null;
+    nextCover = null;
+    const d = ctx.data();
+    if (d) renderCount(d);
+    if (!running) prepareNext();
+  });
   allBox.addEventListener('change', () => {
     fromAll = allBox.checked;
     next = null;
+    const d = ctx.data();
+    if (d) renderCount(d);
     if (drawn) press();
     else prepareNext();
   });
