@@ -82,7 +82,7 @@ test('lingua del browser, testi statici, area di caricamento, filtri e lista, co
   await expect(page.locator('#verdict')).toHaveText(tr('res.list', { n }));
   await expect(page.locator('#cardRows tr')).toHaveCount(10);
   await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 10, total: n.toLocaleString(L === 'it' ? 'it-IT' : 'en-US') }));
-  await expect(page.locator('#more')).toHaveText(tr('res.loadMore'));
+  await expect(page.locator('#more')).toHaveText(tr('res.moreN', { n: 100, left: (n - 10).toLocaleString(L === 'it' ? 'it-IT' : 'en-US') }));
   await expect(page.locator('#extraColl')).toBeHidden();
   await expect(page.locator('.box, .tick, #assign, #optBasics')).toHaveCount(0);
   // date nella lingua scelta (data di data/meta.json)
@@ -1040,7 +1040,7 @@ test('riepilogo ed elenco: stesso insieme, e i filtri che nascondono carte sono 
   await expect(page.locator('#filterNote')).toContainText(tr('why.missing'));
 });
 
-test('"Carica altri": 10 carte alla volta, conteggio, focus sulla prima aggiunta, ripartenza da 10', async ({ page }) => {
+test('"Carica altri": si parte da 10, poi 100 alla volta con quelle che restano, focus sulla prima aggiunta, ripartenza da 10', async ({ page }) => {
   await setup(page);
   const rows = page.locator('#cardRows tr');
   await expect(page.locator('#verdict')).toHaveText(/\d/); // il titolo si scrive subito dopo la riga dei dati
@@ -1048,10 +1048,13 @@ test('"Carica altri": 10 carte alla volta, conteggio, focus sulla prima aggiunta
   const fmt = (x: number) => x.toLocaleString(L === 'it' ? 'it-IT' : 'en-US');
   await expect(rows).toHaveCount(10);
   const firstByShare = await page.locator('#cardRows .nm').nth(0).innerText();
+  // "Carica altre 100 · ne restano N"
+  await expect(page.locator('#more')).toHaveText(tr('res.moreN', { n: 100, left: fmt(Number(total) - 10) }));
   await page.locator('#more').focus();
   await page.keyboard.press('Enter');
-  await expect(rows).toHaveCount(20);
-  await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 10 + 10, total: fmt(Number(total)) }));
+  await expect(rows).toHaveCount(110);
+  await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 110, total: fmt(Number(total)) }));
+  await expect(page.locator('#more')).toHaveText(tr('res.moreN', { n: 100, left: fmt(Number(total) - 110) }));
   // il focus è sulla prima carta aggiunta, e la scheda non si apre da sola
   await expect(page.locator('#cardRows .cardbtn').nth(10)).toBeFocused();
   await expect(page.locator('#sheet')).toBeHidden();
@@ -1060,6 +1063,10 @@ test('"Carica altri": 10 carte alla volta, conteggio, focus sulla prima aggiunta
   await expect(rows).toHaveCount(10);
   await expect(page.locator('#shownCount')).toHaveText(tr('res.shown', { n: 10, total: fmt(Number(total)) }));
   expect(await page.locator('#cardRows .nm').nth(0).innerText()).not.toBe(firstByShare);
+  // meno di 100 rimaste: "Carica le ultime N"
+  await typeSearch(page, 'blast');
+  const n = Number((await page.locator('#shownCount').innerText()).replace(/[.,]/g, '').match(/\d+\D+(\d+)/)![1]);
+  if (n > 10 && n <= 110) await expect(page.locator('#more')).toHaveText(n - 10 === 1 ? tr('res.moreOne') : tr('res.moreLast', { n: n - 10 }));
   // la ricerca filtra la lista completa, non solo le carte visibili
   await typeSearch(page, 'pyroblast');
   await expect(rows).toHaveCount(1);
@@ -1777,9 +1784,10 @@ test('mazzi senza collezione: per ultima apparizione, archetipo, Carica altri, d
   await expect(second.locator('.dk-best a')).toHaveAttribute('href', 'https://melee.gg/Tournament/View/1');
   await expect(second.locator('.dk-best b')).toHaveText(first(L, 2));
   await expect(page.locator('#deckList .dk-comp')).toHaveCount(0);
-  // 10 alla volta
+  // si parte da 10, poi 20 alla volta: qui ne restano 5, "Carica gli ultimi 5"
   await expect(page.locator('#deckList .dk')).toHaveCount(10);
   await expect(page.locator('#dShown')).toHaveText(tr('decks.shown', { n: 10, total: 15 }));
+  await expect(page.locator('#dMore')).toHaveText(tr('decks.moreLast', { n: 5 }));
   await page.click('#dMore');
   await expect(page.locator('#deckList .dk')).toHaveCount(15);
   await expect(page.locator('#dMore')).toBeHidden();

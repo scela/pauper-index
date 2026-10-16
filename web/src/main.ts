@@ -32,6 +32,14 @@ import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWa
 // Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa
 // (gli export: tutte le carte che rispettano i filtri attivi, non solo quelle mostrate).
 const PAGE = 10;
+/** "Carica altri": 100 righe alla volta (si parte sempre da PAGE). */
+const STEP = 100;
+
+/** "Carica altre 100 · ne restano 2.972", "Carica le ultime 37", "Carica l'ultima". */
+function moreLabel(left: number, step: number, kind: 'res' | 'decks'): string {
+  if (left > step) return t(`${kind}.moreN` as Key, { n: step, left: fmtInt(left) });
+  return left === 1 ? t(`${kind}.moreOne` as Key) : t(`${kind}.moreLast` as Key, { n: left });
+}
 /** Schermi stretti (stessa soglia delle righe compatte): voci del periodo senza il numero di carte. */
 const NARROW = window.matchMedia('(max-width: 640px)');
 const NEW_DAYS = 60;
@@ -741,12 +749,14 @@ function thumbIds(x: Result): { id: string; owned: boolean }[] {
 }
 
 
-function renderRows(): void {
+/** `from`: "Carica altri" aggiunge solo le righe nuove (da `from`), senza ridisegnare quelle già mostrate. */
+function renderRows(from = 0): void {
   const d = S.d!;
   const coll = hasColl();
-  S.view = filtered();
+  if (!from) S.view = filtered();
   const rows = S.view.slice(0, S.shown);
   $('#more').hidden = S.view.length <= rows.length;
+  $('#more').textContent = moreLabel(S.view.length - rows.length, STEP, 'res');
   const count = $('#shownCount');
   count.hidden = !rows.length;
   count.textContent = t('res.shown', { n: fmtInt(rows.length), total: fmtInt(S.view.length) });
@@ -762,7 +772,7 @@ function renderRows(): void {
     return;
   }
   noteEntry = null;
-  $('#cardRows').replaceChildren(...rows.map((x) => {
+  const build = (x: Result) => {
     const c = d.cards.c[x.idx];
     const st = c.s[S.opts.win];
     const setView = S.setCodes ? setThumb(x) : null;
@@ -809,7 +819,9 @@ function renderRows(): void {
       h('td', { class: 'c-seen', 'data-label': t('mobile.last') }, fmtDate(c.z)),
       h('td', { class: 'c-entry', 'data-label': t('mobile.entry') }, entry && c.e ? `${c.e.toUpperCase()} ${entry[1].slice(0, 4)}` : '—'),
       h('td', { class: 'c-price num', 'data-label': t('mobile.price') }, priceText(x)));
-  }));
+  };
+  if (from > 0) $('#cardRows').append(...rows.slice(from).map(build));
+  else $('#cardRows').replaceChildren(...rows.map(build));
 }
 
 function seg(id: string, val: Role, label: string, role: Role): HTMLLabelElement {
@@ -1183,8 +1195,8 @@ function wire(): void {
   });
   $('#more').addEventListener('click', () => {
     const first = S.shown;
-    S.shown += PAGE;
-    renderRows();
+    S.shown += STEP;
+    renderRows(first);
     // accessibilità: il focus va sulla prima carta aggiunta (senza aprire la scheda)
     const btn = $('#cardRows').querySelectorAll<HTMLElement>('.cardbtn')[first];
     if (btn) {

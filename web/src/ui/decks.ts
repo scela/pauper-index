@@ -13,6 +13,8 @@ import { cheapestPrice, type PricesFile } from '../lib/prices';
 import { manaIcon, type ManaSymbol } from './mana';
 
 const PAGE = 10;
+/** "Carica altri": 20 mazzi alla volta (ogni mazzo è un riquadro grande). */
+const STEP = 20;
 /** Quante carte mancanti si elencano sotto il mazzo (le altre sono segnate nella decklist). */
 const MISSING_SHOWN = 8;
 /** Completamento minimo: valori del menu. */
@@ -188,6 +190,9 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
   function renderList(focusFrom = -1): void {
     const rows = S.view.slice(0, S.shown);
     $('#dMore').hidden = S.view.length <= rows.length;
+    const left = S.view.length - rows.length;
+    $('#dMore').textContent = left > STEP ? t('decks.moreN', { n: STEP, left: fmtInt(left) })
+      : left === 1 ? t('decks.moreOne') : t('decks.moreLast', { n: left });
     const count = $('#dShown');
     count.hidden = !rows.length;
     count.textContent = t('decks.shown', { n: fmtInt(rows.length), total: fmtInt(S.view.length) });
@@ -195,7 +200,9 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
       list.replaceChildren(h('li', { class: 'nores' }, t('decks.none')));
       return;
     }
-    list.replaceChildren(...rows.map(deckItem));
+    // "Carica altri": si aggiungono solo i mazzi nuovi, senza ridisegnare quelli già mostrati
+    if (focusFrom > 0 && list.querySelectorAll('#deckList > li.deck').length === focusFrom) list.append(...rows.slice(focusFrom).map(deckItem));
+    else list.replaceChildren(...rows.map(deckItem));
     if (focusFrom >= 0) list.querySelectorAll<HTMLElement>('.dk-name')[focusFrom]?.focus();
   }
 
@@ -363,7 +370,7 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
   $('#deckFilters').addEventListener('submit', (e) => e.preventDefault());
   $('#dMore').addEventListener('click', () => {
     const first = S.shown;
-    S.shown += PAGE;
+    S.shown += STEP;
     renderList(first);
   });
   $('#viewDecks').addEventListener('click', (e) => {
