@@ -1037,12 +1037,16 @@ function changeLang(l: Lang): void {
     render();
     void renderNews();
   }
-  if (location.hash === '#informazioni') renderAbout($('#viewAbout'), S.d);
+  if (ABOUT_HASHES.includes(location.hash)) renderAbout($('#viewAbout'), S.d);
   showWelcome();
 }
 
+/** "Come funziona" (#informazioni, l'indirizzo di prima, così i link già condivisi funzionano) e le sue
+ *  "Note legali" (#note-legali: la stessa pagina, al blocco legale). */
+const ABOUT_HASHES = ['#informazioni', '#note-legali'];
+
 function route(): void {
-  const about = location.hash === '#informazioni';
+  const about = ABOUT_HASHES.includes(location.hash);
   const forgotten = location.hash === '#carta-dimenticata';
   const decksPage = location.hash === '#mazzi';
   $('#viewMain').hidden = about || forgotten || decksPage;
@@ -1061,7 +1065,11 @@ function route(): void {
     decks?.show();
     track('mazzi');
   }
-  if (about || forgotten || decksPage) window.scrollTo(0, 0);
+  if (location.hash === '#note-legali') {
+    const legal = document.getElementById('legal');
+    legal?.scrollIntoView({ block: 'start' });
+    legal?.focus({ preventScroll: true });
+  } else if (about || forgotten || decksPage) window.scrollTo(0, 0);
 }
 
 /* ---------- eventi ---------- */
@@ -1455,7 +1463,7 @@ async function main(): Promise<void> {
   S.setHidden = lsGet('setHidden') === '1';
   if (savedSet && (await loadSetGroups())?.has(savedSet)) S.setFilter = savedSet;
   refresh(false);
-  if (location.hash === '#informazioni') renderAbout($('#viewAbout'), S.d);
+  if (ABOUT_HASHES.includes(location.hash)) renderAbout($('#viewAbout'), S.d);
   void renderNews();
   // prezzi indicativi: dopo il resto, senza bloccare la pagina
   S.prices = await loadPrices(S.d);

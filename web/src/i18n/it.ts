@@ -7,7 +7,7 @@ export const it = {
   'meta.description': 'Quali carte giocate in Pauper possiedi, in qualunque printing? Confronta la tua collezione ManaBox con la lista aggiornata ogni giorno.',
   'skip': 'Vai al contenuto',
   'nav.aria': 'Navigazione',
-  'nav.about': 'Informazioni',
+  'nav.about': 'Come funziona',
   'nav.home': 'Pauper Index, pagina principale',
   'nav.dust': 'Carta dimenticata',
   'nav.dustShort': 'Dimenticata',
@@ -263,7 +263,7 @@ export const it = {
   'clear.done': 'Dati cancellati da questo dispositivo.',
 
   'foot.line': 'Pauper Index è Fan Content non ufficiale consentito dalla Fan Content Policy, non approvato da Wizards.',
-  'foot.link': 'Informazioni, crediti e privacy',
+  'foot.link': 'Note legali',
   'donate.lead': 'Pauper Index è gratuito. Se ti è utile, puoi',
   'donate.link': 'comprarmi una Counterspell',
 
@@ -359,7 +359,7 @@ export const it = {
   'rarity.s': 'Speciale',
   'rarity.b': 'Bonus',
 
-  'about.title': 'Informazioni',
+  'about.title': 'Come funziona',
   'about.intro': 'Pauper Index ti dice quali carte giocate nei tornei Pauper hai già nella tua collezione, in qualunque stampa.',
   'about.how': 'Come si usa',
   'about.step1.title': 'Carica la collezione',

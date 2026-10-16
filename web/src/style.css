@@ -733,3 +733,5 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .fan{justify-content:flex-start}
   .thumb.big{width:88px}
 }
+/* blocco legale: riceve il focus da "Note legali" (per i lettori di schermo), senza contorno */
+.legal:focus{outline:none}

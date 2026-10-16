@@ -73,7 +73,7 @@ export function renderAbout(root: HTMLElement, d: Data | null): void {
 
     h('p', { class: 'about-back' }, h('a', { href: '#' }, t('about.back'))),
 
-    h('div', { class: 'legal' },
+    h('div', { class: 'legal', id: 'legal', tabindex: '-1' },
       h('p', { lang: 'en', id: 'fcp' }, FCP_NOTICE),
       summary ? h('p', null, summary) : null,
       h('p', null, t('about.legal.affiliation')),

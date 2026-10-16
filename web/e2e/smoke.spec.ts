@@ -289,16 +289,23 @@ test('CSV malevolo: nessuno script eseguito, testo mostrato alla lettera', async
   expect(await page.locator('#groupRows img, #groupRows script, #importSummary img').count()).toBe(0);
 });
 
-test('Informazioni: breve, FAQ chiuse, avviso Fan Content Policy ufficiale una sola volta, sintesi solo in italiano', async ({ page }) => {
+test('Come funziona: breve, FAQ chiuse, avviso Fan Content Policy ufficiale una sola volta, sintesi solo in italiano', async ({ page }) => {
   await setup(page);
   // due righe: avviso breve e donazioni (solo un link semplice, nessun widget)
   await expect(page.locator('footer p')).toHaveCount(2);
   await expect(page.locator('footer')).toContainText(tr('foot.line'));
   await expect(page.locator('footer .donate')).toHaveText(`${tr('donate.lead')} ${tr('donate.link')}`);
   await expect(page.locator('footer a[href="https://ko-fi.com/pauperindex"]')).toHaveText(tr('donate.link'));
-  await page.locator('footer a[href="#informazioni"]').focus();
+  // "Note legali" nel piè di pagina: porta direttamente al blocco legale della pagina "Come funziona"
+  const legalLink = page.locator('footer a[href="#note-legali"]');
+  await expect(legalLink).toHaveText(tr('foot.link'));
+  await legalLink.focus();
   await page.keyboard.press('Enter');
   const about = page.locator('#viewAbout');
+  await expect(about.locator('h2').first()).toHaveText(tr('about.title'));
+  await expect(page.locator('#navAbout')).toHaveAttribute('aria-current', 'page');
+  await expect(about.locator('#legal')).toBeInViewport();
+  await expect(about.locator('#legal')).toBeFocused();
   // testo ufficiale della Fan Content Policy: presente, identico, in inglese, una sola volta
   await expect(page.locator('#fcp')).toHaveText(FCP);
   await expect(page.locator('#fcp')).toHaveAttribute('lang', 'en');

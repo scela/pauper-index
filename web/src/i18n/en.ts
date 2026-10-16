@@ -5,7 +5,7 @@ export const en: Record<Key, Msg> = {
   'meta.description': 'Which cards played in Pauper do you own, in any printing? Compare your ManaBox collection with a list updated every day.',
   'skip': 'Skip to content',
   'nav.aria': 'Navigation',
-  'nav.about': 'About',
+  'nav.about': 'How it works',
   'nav.home': 'Pauper Index, home page',
   'nav.dust': 'Forgotten card',
   'nav.dustShort': 'Forgotten',
@@ -261,7 +261,7 @@ export const en: Record<Key, Msg> = {
   'clear.done': 'Data deleted from this device.',
 
   'foot.line': 'Pauper Index is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards.',
-  'foot.link': 'About, credits and privacy',
+  'foot.link': 'Legal notes',
   'donate.lead': 'Pauper Index is free. If you find it useful, you can',
   'donate.link': 'buy me a Counterspell',
 
@@ -357,7 +357,7 @@ export const en: Record<Key, Msg> = {
   'rarity.s': 'Special',
   'rarity.b': 'Bonus',
 
-  'about.title': 'About',
+  'about.title': 'How it works',
   'about.intro': 'Pauper Index tells you which cards played in Pauper tournaments you already own, in any printing.',
   'about.how': 'How it works',
   'about.step1.title': 'Load your collection',
