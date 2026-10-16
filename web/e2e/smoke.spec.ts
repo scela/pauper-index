@@ -604,6 +604,39 @@ test('testata: una riga, pannello "⋯" su mobile, pulsanti speciali, libro che 
   expect([after.width, after.height].map(Math.round)).toEqual([before.width, before.height].map(Math.round));
 });
 
+test('banner della prima visita: riquadro con i tre passi, X che lo chiude, non ricompare, torna dopo "Cancella i miei dati"', async ({ page }) => {
+  await setup(page);
+  const box = page.locator('#welcome');
+  await expect(box).toBeVisible();
+  await expect(page.locator('#welcome .step')).toHaveCount(3);
+  await expect(page.locator('#welcome .step-ico')).toHaveCount(3);
+  await expect(box).toContainText(tr('welcome.free'));
+  // un riquadro nella pagina, non una finestra sopra il sito
+  expect(await box.evaluate((e) => getComputedStyle(e).position)).toBe('static');
+  expect(await page.locator('dialog[open]').count()).toBe(0);
+  const x = page.locator('#welcomeClose');
+  await expect(x).toHaveAccessibleName(tr('welcome.close'));
+  const b = (await x.boundingBox())!;
+  expect(Math.min(b.width, b.height)).toBeGreaterThanOrEqual(44);
+  await x.click();
+  await expect(box).toBeHidden();
+  await expect(page.locator('#search')).toBeFocused();
+  expect(await page.evaluate(() => localStorage.getItem('pauper-index:welcomeClosed'))).toBe('1');
+  // non ricompare ricaricando
+  await page.reload();
+  await expect(page.locator('#dataline')).toContainText(head('data.line'));
+  await expect(box).toBeHidden();
+  // solo nella pagina principale
+  await page.click('#navDust');
+  await expect(box).toBeHidden();
+  await page.click('#home');
+  // "Cancella i miei dati" cancella anche la scelta: il banner torna
+  await page.locator('#extra').scrollIntoViewIfNeeded();
+  await page.click('#clearData');
+  await page.click('#clearData');
+  await expect(box).toBeVisible();
+});
+
 test('caricamento: frase, due pulsanti, area di testo su richiesta, aiuto per ManaBox, riga della collezione', async ({ page, isMobile }) => {
   await setup(page);
   await expect(page.locator('#loadIntro')).toHaveText(tr('load.intro'));
@@ -649,6 +682,13 @@ test('primo schermo su iPhone SE (375×667): obiettivi senza e con collezione', 
   const allPrices = JSON.stringify({ v: 1, date: '2026-10-07', p: prints.p.map((ps) => ps.flatMap(() => [100, 0])) });
   await page.route('**/data/prices.json', (r) => r.fulfill({ contentType: 'application/json', body: allPrices }));
   await setup(page);
+  // con il banner della prima visita aperto: nel primo schermo il banner e il blocco di caricamento
+  await page.addStyleTag({ content: 'body, body *:not(.brand) { font-family: Arial, "Liberation Sans", sans-serif !important; }' });
+  await expect(page.locator('#welcome')).toBeVisible();
+  expect(await page.locator('#welcome').evaluate((e) => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(667);
+  expect(await page.locator('#loadArea').evaluate((e) => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(667);
+  // gli obiettivi valgono con il banner chiuso
+  await page.click('#welcomeClose');
   await page.addStyleTag({ content: 'body, body *:not(.brand) { font-family: Arial, "Liberation Sans", sans-serif !important; }' });
   // i prezzi arrivano dopo: si misura con il riepilogo visibile (il caso più alto)
   await expect(page.locator('#priceSummary')).toBeVisible();

@@ -22,7 +22,7 @@ import { availableTypes, emptyFilters, haystacks, isActive, mvLabel, textWords, 
 import { clearFilters, colorLabel, initFilterPanel, typeLabel } from './ui/filterpanel';
 import { italianLoaded, loadItalian, nameHays } from './lib/italian';
 import { initAnalytics, track } from './lib/analytics';
-import { renderAbout } from './ui/about';
+import { howSteps, renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
 import { initDust } from './ui/dust';
 import { initDecks } from './ui/decks';
@@ -996,6 +996,14 @@ function openFromSearch(anchor: HTMLElement, e: NameEntry): void {
   }
 }
 
+/** Banner della prima visita (solo nella pagina principale): una volta chiuso non ricompare, finché
+ *  "Cancella i miei dati" non cancella anche questa scelta. */
+function showWelcome(): void {
+  const box = $('#welcome');
+  box.hidden = lsGet('welcomeClosed') === '1';
+  if (!box.hidden) $('#welcomeSteps').replaceChildren(howSteps());
+}
+
 /* ---------- tema e viste ---------- */
 
 function applyTheme(theme: string | null): void {
@@ -1030,6 +1038,7 @@ function changeLang(l: Lang): void {
     void renderNews();
   }
   if (location.hash === '#informazioni') renderAbout($('#viewAbout'), S.d);
+  showWelcome();
 }
 
 function route(): void {
@@ -1316,6 +1325,7 @@ function wire(): void {
     applyStatic();
     if (S.d) renderDataline();
     refresh(false);
+    showWelcome();
     toast(t('clear.done'));
   });
 
@@ -1353,6 +1363,11 @@ function wire(): void {
   window.addEventListener('hashchange', () => setMore(false));
   window.addEventListener('popstate', () => setMore(false));
   NARROW.addEventListener('change', () => { if (S.d) renderFilters(); });
+  $('#welcomeClose').addEventListener('click', () => {
+    lsSet('welcomeClosed', '1');
+    $('#welcome').hidden = true;
+    ($('#search') as HTMLInputElement).focus();
+  });
   window.addEventListener('hashchange', route);
   $('#undoBar').addEventListener('click', (e) => {
     if ((e.target as HTMLElement).id === 'undoRemove') undoRemoval();
@@ -1434,6 +1449,7 @@ async function main(): Promise<void> {
   S.types = availableTypes(S.d.cards.c);
   await restore();
   lsDel('seen'); // salvata dalle versioni precedenti: non più usata
+  showWelcome();
   // espansione scelta nella visita precedente (preferenza): si ripristina dopo aver letto data/sets.json
   const savedSet = lsGet('set');
   S.setHidden = lsGet('setHidden') === '1';

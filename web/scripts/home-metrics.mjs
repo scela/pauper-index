@@ -48,6 +48,8 @@ for (const [name, opts] of [
     for (const lang of ['it', 'en']) {
       const ctx = await browser.newContext({ ...opts, locale: lang === 'it' ? 'it-IT' : 'en-US', colorScheme: scheme, bypassCSP: name === 'mobile' });
       const page = await ctx.newPage();
+      // misure a banner della prima visita chiuso (gli obiettivi valgono così)
+      await page.addInitScript(() => localStorage.setItem('pauper-index:welcomeClosed', '1'));
       await page.route('https://cards.scryfall.io/**', (r) => r.abort());
       await page.goto(URL);
       await page.waitForFunction(() => document.querySelector('#cardRows tr'));

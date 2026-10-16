@@ -75,6 +75,17 @@
   <main id="contenuto">
   <div id="viewMain">
 
+    <section class="welcome" id="welcome" aria-labelledby="welcomeTitle" hidden>
+      <div class="welcome-head">
+        <h2 id="welcomeTitle" data-i18n="about.how">Come si usa</h2>
+        <button class="btn quiet welcome-x" id="welcomeClose" type="button" data-i18n-aria="welcome.close" aria-label="Chiudi">
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        </button>
+      </div>
+      <div id="welcomeSteps"></div>
+      <p class="welcome-free" data-i18n="welcome.free">Gratis e senza registrazione: la collezione resta nel tuo browser.</p>
+    </section>
+
     <section class="loadsec" id="loadArea" aria-labelledby="loadIntro">
       <div class="drop" id="drop">
         <p class="load-intro" id="loadIntro" data-i18n="load.intro">Carica la collezione</p>

@@ -38,21 +38,25 @@ function faq(key: string, answer: (Node | string)[]): HTMLElement {
     h('p', null, ...answer));
 }
 
+/** I tre passi di "Come si usa", con le loro icone: nella pagina e nel banner della prima visita. */
+export function howSteps(): HTMLElement {
+  return h('ol', { class: 'steps' }, ...(['step1', 'step2', 'step3'] as const).map((s, i) => h('li', { class: 'step' },
+    h('span', { class: 'step-badge' }, icon(s), h('span', { class: 'step-n' }, String(i + 1))),
+    h('span', { class: 'step-body' },
+      h('strong', null, t(`about.${s}.title` as Key)),
+      h('span', null, t(`about.${s}.text` as Key))))));
+}
+
 export function renderAbout(root: HTMLElement, d: Data | null): void {
   const m = d?.meta;
   const summary = t('about.legal.summary');
   const mail = h('a', { href: `mailto:${REPORT_EMAIL}?subject=${encodeURIComponent(t('about.report.subject'))}` }, REPORT_EMAIL);
-  const steps = (['step1', 'step2', 'step3'] as const).map((s, i) => h('li', { class: 'step' },
-    h('span', { class: 'step-badge' }, icon(s), h('span', { class: 'step-n' }, String(i + 1))),
-    h('span', { class: 'step-body' },
-      h('strong', null, t(`about.${s}.title` as Key)),
-      h('span', null, t(`about.${s}.text` as Key)))));
 
   root.replaceChildren(h('article', { class: 'about' },
     h('h2', null, t('about.title')),
     h('p', { class: 'about-lead' }, t('about.intro')),
 
-    h('section', null, h('h3', null, t('about.how')), h('ol', { class: 'steps' }, ...steps)),
+    h('section', null, h('h3', null, t('about.how')), howSteps()),
 
     h('section', null,
       h('h3', null, t('about.data')),

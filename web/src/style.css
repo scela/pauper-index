@@ -291,6 +291,18 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
 .qowned{font-weight:600;color:var(--accent)}
 .qnotowned{font-weight:600}
 
+/* banner della prima visita: un riquadro in cima alla pagina (non una finestra sopra il sito) */
+.welcome{margin:10px 0 8px;padding:6px 6px 12px 14px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:var(--r-m);background:var(--accent-soft)}
+.welcome[hidden]{display:none}
+.welcome-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.welcome h2{font-size:1rem;margin:0}
+.welcome-x{min-width:44px;min-height:44px;padding:0;justify-content:center}
+.welcome-x svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.welcome .steps{margin-right:8px;gap:8px}
+.welcome .step{padding:8px 10px;gap:8px;font-size:.875rem}
+.welcome .step-badge{width:36px;height:36px}
+.welcome .step-ico{width:20px;height:20px}
+.welcome-free{margin:8px 8px 0 0;font-weight:600;font-size:.875rem}
 /* caricamento */
 /* un solo blocco: frase, "File CSV di ManaBox", "Incolla una lista" (area di testo su richiesta), aiuto per l'export;
    su desktop tutto il blocco accetta anche i file trascinati */
