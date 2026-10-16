@@ -1941,6 +1941,8 @@ test('tier list: filtri per colore, tier e prezzo, nota coerente, prezzi in arri
 test('mazzi con la collezione: lista più vicina nella tier list, completamento, mancanti, solo main, minimo, già completo', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await mockDecks(page);
+  // in CI data/prices.json non esiste (si genera alla pubblicazione): senza prezzi il filtro del prezzo resta disattivato
+  await page.route('**/data/prices.json', (r) => r.fulfill({ contentType: 'application/json', body: syntheticPrices() }));
   const problems = await setup(page);
   await uploadCollection(page);
   await page.click('#navDecks');
@@ -1949,6 +1951,7 @@ test('mazzi con la collezione: lista più vicina nella tier list, completamento,
   await expect(page.locator('.fam-card .fam-comp')).toBeVisible();
   await expect(page.locator('#tfPriceLabel')).toHaveText(tr('tier.priceMissing'));
   await expect(page.locator('#tfMinWrap')).not.toHaveAttribute('hidden'); // su mobile il riquadro dei filtri è chiuso
+  await expect(page.locator('#tfPrice')).toBeEnabled();
   await page.goto('./#mazzi/c1');
   await expect(page.locator('#dSub')).toContainText(tr('decks.sortComp'));
   await expect(page.locator('#dSub')).toContainText(tr('decks.fullN', { n: 1 }));

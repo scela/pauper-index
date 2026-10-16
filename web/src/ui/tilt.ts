@@ -96,7 +96,11 @@ export function enableTilt(stage: HTMLElement): Tilt {
     start = [e.clientX, e.clientY];
     delete stage.dataset.dragged;
     rect = stage.getBoundingClientRect();
-    stage.setPointerCapture?.(e.pointerId);
+    try {
+      stage.setPointerCapture?.(e.pointerId);
+    } catch {
+      // il dito è già stato sollevato (o il puntatore non è più attivo): niente cattura, l'inclinazione funziona lo stesso
+    }
     aim(e.clientX, e.clientY);
   });
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) {
