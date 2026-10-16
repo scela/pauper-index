@@ -589,6 +589,60 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 .dk-times{color:var(--muted);font-size:.875rem;white-space:nowrap}
 .pips{display:inline-flex;gap:3px;flex:none}
 .pips .mana{width:16px;height:16px}
+.pips.big{gap:4px}
+.pips.big .mana{width:20px;height:20px}
+/* tier list (#mazzi) e pagina dell'archetipo (#mazzi/<famiglia>) */
+.tier-lead{margin:4px 0 12px;color:var(--muted)}
+.tf-box{margin:0 0 16px}
+.tf-box > summary{display:inline-flex;align-items:center;gap:8px;min-height:40px;margin:0 0 8px;padding:4px 14px;border:1px solid var(--line-strong);border-radius:999px;background:var(--surface);font-weight:600;cursor:pointer;list-style:none}
+.tf-box > summary::-webkit-details-marker{display:none}
+.tf-box > summary::before{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+.tf-box[open] > summary::before{transform:rotate(45deg)}
+.tf-box > summary:hover{border-color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.tf-box > summary::before{transition:none}}
+.tfilters{display:flex;flex-direction:column;gap:10px;margin:0;padding:12px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface)}
+.tf-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.tf-label{font-weight:600;min-width:4.5em}
+.tf-selects .f-field{flex-wrap:wrap}
+.tf-selects select:disabled{opacity:.6;cursor:not-allowed}
+.tier-sec{margin:22px 0 0;padding:14px 0 0;border-top:3px solid var(--line-strong)}
+.tier-sec.t1{border-top-color:var(--rar-m)}
+.tier-sec.t2{border-top-color:var(--rar-r)}
+.tier-sec.t3{border-top-color:var(--accent)}
+.tier-head{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;font-size:1.25rem}
+.tier-count{font-size:.875rem;font-weight:400;color:var(--muted)}
+.tier-badge{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--ink);color:var(--surface);font-weight:700;font-size:.95rem;letter-spacing:.02em}
+.tier-badge.t1{background:var(--rar-m)}
+.tier-badge.t2{background:var(--rar-r)}
+.tier-badge.t3{background:var(--accent);color:var(--accent-ink)}
+.tier-badge.t4{background:var(--muted)}
+.fam-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.fam-card{display:flex;flex-direction:column;height:100%;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;overflow:hidden}
+.fam-card:hover{border-color:var(--ink)}
+.fam-card:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.fam-art{margin:0}
+.fam-art img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;background:var(--line)}
+.fam-artist{padding:3px 10px 0;font-size:.75rem;color:var(--muted)}
+.fam-body{display:flex;flex-direction:column;gap:4px;padding:6px 12px 12px}
+.fam-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;font-size:1.05rem}
+.fam-name{font-weight:700}
+.fam-stats,.fam-vars,.fam-price{margin:0;font-size:.875rem;color:var(--muted)}
+.fam-comp{display:flex;align-items:center;gap:8px;margin:2px 0 0;font-size:.875rem}
+.fam-comp .dk-bar{flex:1 1 auto}
+.fam-rows{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px}
+.fam-row a{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 8px;min-height:44px;padding:4px 10px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--surface);color:var(--ink);text-decoration:none}
+.fam-row a:hover{border-color:var(--ink)}
+.fam-row .muted{grid-column:1/-1;font-size:.8125rem}
+.fam-unclassified{margin:18px 0 0}
+.artcredit{margin:16px 0 0;font-size:.8125rem;color:var(--muted)}
+.arch-back{display:inline-flex;align-items:center;min-height:44px;font-weight:600}
+.arch-head{display:flex;gap:18px;align-items:flex-start;margin:4px 0 16px}
+.arch-head .fam-art{flex:0 0 340px;border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden;background:var(--surface)}
+.arch-head .fam-artist{padding:3px 10px 4px}
+.arch-info{flex:1;min-width:0}
+.arch-name{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 6px;font-size:1.5rem}
+.arch-line,.arch-price{margin:0 0 6px}
+.arch-head .artcredit{margin-top:8px}
 .dk-comp{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .dk-bar{flex:1 1 180px;max-width:360px;height:10px;border-radius:999px;background:var(--line);overflow:hidden}
 .dk-fill{display:block;height:100%;background:var(--accent);border-radius:999px}
@@ -693,6 +747,12 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .home .brand{display:none}
 }
 @media (max-width:640px){
+  .arch-head{flex-direction:column;gap:10px}
+  .arch-head .fam-art{flex:none;width:100%;max-width:300px}
+  .arch-name{font-size:1.3rem}
+  .fam-grid,.fam-rows{grid-template-columns:1fr}
+  .tf-selects .f-field{width:100%}
+  .tf-selects select{flex:1;min-width:0;min-height:40px}
   .cards thead{display:none}
   /* intestazione dei risultati: titolo su tutta la riga, "Ordina" accanto al sottotitolo e al riepilogo dei prezzi */
   .res-head{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;row-gap:4px;align-items:start}

@@ -1060,7 +1060,7 @@ const ABOUT_HASHES = ['#informazioni', '#note-legali'];
 function route(): void {
   const about = ABOUT_HASHES.includes(location.hash);
   const forgotten = location.hash === '#carta-dimenticata';
-  const decksPage = location.hash === '#mazzi';
+  const decksPage = location.hash === '#mazzi' || location.hash.startsWith('#mazzi/');
   $('#viewMain').hidden = about || forgotten || decksPage;
   $('#viewAbout').hidden = !about;
   $('#viewDust').hidden = !forgotten;

@@ -1,4 +1,4 @@
-// Pagina "Mazzi": senza e con collezione, decklist aperta, desktop e mobile, chiaro e scuro
+// Pagina "Mazzi": tier list e pagina dell'archetipo, senza e con collezione, decklist aperta, desktop e mobile, chiaro e scuro
 // -> ../.cache/screenshots/mazzi-<etichetta>-*.png (cartella ignorata da git).
 // La collezione è sintetica: le carte delle liste più frequenti, con alcune copie tolte (nessun dato personale).
 // Richiede il sito in esecuzione: npm run build; npm run preview  (in un'altra finestra)
@@ -27,6 +27,9 @@ top.slice(0, 3).forEach((l, k) => { add(l[2], (n, i) => (k === 2 && i % 6 === 0 
 top.slice(3, 23).forEach((l) => add(l[2], (n, i) => (i % 4 === 0 ? n : 0)));
 const text = [...owned].filter(([, n]) => n > 0).map(([i, n]) => `${n} ${cards[i].n}`).join('\n');
 
+// famiglia del primo archetipo di Tier 1 (per la pagina dell'archetipo)
+const fam = Object.entries(decks.f).sort((a, b) => a[1][1] - b[1][1] || b[1][2] - a[1][2])[0][0];
+
 const browser = await chromium.launch();
 for (const [name, opts] of [
   ['desktop', { viewport: { width: 1280, height: 900 } }],
@@ -34,11 +37,19 @@ for (const [name, opts] of [
 ]) {
   for (const scheme of ['light', 'dark']) {
     const ctx = await browser.newContext({ ...opts, locale: lang === 'it' ? 'it-IT' : 'en-US', colorScheme: scheme });
+    await ctx.addInitScript(() => localStorage.setItem('pauper-index:welcomeClosed', '1'));
     const page = await ctx.newPage();
     const base = `${OUT}/mazzi-${label}-${name}-${scheme}`;
+    const art = () => page.waitForFunction(() => [...document.querySelectorAll('.fam-art img')].slice(0, 3).every((i) => i.complete));
     await page.goto(URL + '#mazzi');
+    await page.waitForFunction(() => document.querySelectorAll('#tierSections .fam-card').length > 0);
+    await art();
+    await page.screenshot({ path: `${base}-1-tier.png` });
+    await page.screenshot({ path: `${base}-2-tier-pagina.png`, fullPage: true });
+    await page.goto(URL + `#mazzi/${fam}`);
     await page.waitForFunction(() => document.querySelectorAll('#deckList .dk').length > 0);
-    await page.screenshot({ path: `${base}-1-senza.png` });
+    await art();
+    await page.screenshot({ path: `${base}-3-archetipo.png` });
     await page.goto(URL);
     await page.waitForFunction(() => document.querySelector('#cardRows tr'));
     await page.click('#pasteToggle');
@@ -46,15 +57,24 @@ for (const [name, opts] of [
     await page.click('#pasteAdd');
     await page.waitForSelector('#loaded:not([hidden])');
     await page.click('#navDecks');
+    await page.waitForFunction(() => document.querySelector('#tierSections .fam-comp'));
+    await art();
+    await page.screenshot({ path: `${base}-4-tier-collezione.png` });
+    await page.click(`a.fam-card[href="#mazzi/${fam}"]`);
     await page.waitForFunction(() => document.querySelector('#deckList .dk-comp'));
-    await page.screenshot({ path: `${base}-2-collezione.png` });
-    await page.screenshot({ path: `${base}-3-pagina.png`, fullPage: true });
+    await art();
+    await page.screenshot({ path: `${base}-5-archetipo-collezione.png` });
     // la prima lista non completa: decklist aperta
     const deck = page.locator('#deckList .dk:has(.dk-missing)').first();
-    await deck.locator('.dk-list summary').click();
-    await deck.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(200);
-    await deck.screenshot({ path: `${base}-4-decklist.png` });
+    if (await deck.count()) {
+      await deck.locator('.dk-list summary').click();
+      await deck.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(200);
+      await deck.screenshot({ path: `${base}-6-decklist.png` });
+    }
+    await page.goto(URL + '#mazzi/x');
+    await page.waitForFunction(() => document.querySelectorAll('#deckList .dk').length > 0);
+    await page.screenshot({ path: `${base}-7-non-classificate.png` });
     await ctx.close();
     console.log(`${name} ${scheme}: ok`);
   }

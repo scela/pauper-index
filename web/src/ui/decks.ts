@@ -4,13 +4,14 @@
 import { fmtDate, fmtEur, fmtInt, fmtPct, fmtResult, getLang, t, type Key } from '../i18n';
 import type { Data } from '../lib/data';
 import {
-  archetypes, completion, deckText, missingText, readDecks, SECTIONS, sectionOf, sortDecks, validDecks, visibleDecks,
+  archetypes, completion, deckText, listPrice, missingCost, missingText, readDecks, SECTIONS, sectionOf, sortDecks, validDecks, visibleDecks,
   type Completion, type Deck, type DeckFilters, type DecksFile, type Section,
 } from '../lib/decks';
 import { $, h } from '../lib/dom';
 import { lsGet, lsSet } from '../lib/store';
 import { cheapestPrice, type PricesFile } from '../lib/prices';
 import { manaIcon, type ManaSymbol } from './mana';
+import { familyArt, initTier, manaPips, PRICE_LIST, PRICE_MISSING } from './tierlist';
 
 const PAGE = 10;
 /** "Carica altri": 20 mazzi alla volta (ogni mazzo è un riquadro grande). */
@@ -58,10 +59,10 @@ const deckName = (x: { name: string }) => x.name || t('decks.unclassified');
 
 const colorNames = (colors: string) => [...colors].map((c) => t(`color.${c}` as Key).toLocaleLowerCase(getLang()));
 
-/** Simboli di mana dei colori del mazzo, con il nome dei colori per chi usa un lettore di schermo. */
+/** Simboli di mana dei colori del mazzo (almeno 18 px), con il nome dei colori per chi usa un lettore di schermo. */
 function pips(colors: string) {
   const list = (colors ? [...colors] : ['C']) as ManaSymbol[];
-  return h('span', { class: 'pips', role: 'img', 'aria-label': colors ? t('decks.colors', { v: colorNames(colors).join(', ') }) : t('decks.colorless') },
+  return h('span', { class: 'pips big', role: 'img', 'aria-label': colors ? t('decks.colors', { v: colorNames(colors).join(', ') }) : t('decks.colorless') },
     ...list.map((c) => manaIcon(c)));
 }
 
@@ -76,7 +77,13 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     days: 61,
     side: lsGet('deckSide') !== 'main',
     // filtri che nascondono mazzi: mai salvati
-    f: { arch: '', min: 0 } as DeckFilters,
+    f: { arch: '', min: 0, fam: '' } as DeckFilters,
+    /** prezzo massimo delle liste (centesimi): della lista senza collezione, del costo per completare con la collezione */
+    maxPrice: null as number | null,
+    /** vista: tier list (null) o pagina di una famiglia (id, "x" per le non classificate) */
+    fam: null as string | null,
+    tier61: null as Loaded | null,
+    comp61: null as Map<number, Completion> | null,
     shown: PAGE,
     cur: null as Loaded | null,
     view: [] as Deck[],
@@ -90,6 +97,35 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
   const periodSel = $('#dPeriod') as HTMLSelectElement;
   const archSel = $('#dArch') as HTMLSelectElement;
   const minSel = $('#dMin') as HTMLSelectElement;
+  const priceSel = $('#dPrice') as HTMLSelectElement;
+  const priceOf = (idx: number) => cheapestPrice(deps.prices(), idx);
+
+  const tier = initTier({
+    data: deps.data,
+    loaded: () => S.tier61,
+    owned: deps.owned,
+    prices: deps.prices,
+    comp: () => S.comp61,
+    side: () => S.side,
+    setSide: (v) => {
+      S.side = v;
+      lsSet('deckSide', v ? 'side' : 'main');
+      computeTier();
+    },
+  });
+
+  /** Completamento delle liste dei 61 giorni (tier list), con main/side scelti. */
+  function computeTier(): void {
+    const owned = deps.owned();
+    const L = S.tier61;
+    S.comp61 = owned && L ? new Map(L.decks.map((x) => [x.i, completion(x, owned, S.side, L.basics)])) : null;
+  }
+
+  /** Vista dall'indirizzo: #mazzi = tier list, #mazzi/<famiglia> = pagina dell'archetipo. */
+  function routeFam(): string | null {
+    const m = /^#mazzi\/([a-z0-9]+)$/i.exec(location.hash);
+    return m ? m[1] : null;
+  }
 
   function status(msg: string, retry = false): void {
     const el = $('#dStatus');
@@ -101,7 +137,48 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     const d = deps.data();
     if (!d) return;
     const my = ++S.token;
+    const fam = routeFam();
+    if (fam !== S.fam) {
+      // nuova vista: i filtri della pagina dell'archetipo ripartono azzerati
+      S.fam = fam;
+      S.f = { arch: '', min: 0, fam: fam || '' };
+      S.maxPrice = null;
+      S.shown = PAGE;
+    }
+    $('#dTier').hidden = true;
+    $('#dArchHead').hidden = true;
+    $('#deckFilters').hidden = fam === null;
+    if (fam === null) {
+      // tier list: sempre sui 61 giorni
+      $('#dResults').hidden = true;
+      if (!S.tier61) {
+        status(t('decks.loading'));
+        S.pending = true;
+        S.failed = false;
+        const x = await load(61, d);
+        if (my !== S.token) return;
+        S.pending = false;
+        if (!x) {
+          S.failed = true;
+          status(t('decks.error'), true);
+          return;
+        }
+        S.tier61 = x;
+      }
+      status('');
+      computeTier();
+      $('#dNoColl').hidden = !!deps.owned();
+      $('#dTier').hidden = false;
+      tier.render();
+      return;
+    }
     renderControls();
+    // l'intestazione (tier, quota, lista tipica) viene sempre dai 61 giorni, come la tier list
+    if (!S.tier61) {
+      const x = await load(61, d);
+      if (my !== S.token) return;
+      if (x) S.tier61 = x;
+    }
     if (!S.cur || S.cur.file.days !== S.days) {
       status(t(S.days === 61 ? 'decks.loading' : 'decks.loadingYear'));
       $('#dResults').hidden = true;
@@ -120,7 +197,45 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     status('');
     $('#dResults').hidden = false;
     compute();
+    renderHead();
     render();
+  }
+
+  /** Intestazione della pagina dell'archetipo: illustrazione con l'artista, nome, colori, tier, quota, prezzo. */
+  function renderHead(): void {
+    const d = deps.data()!;
+    const cur = S.cur!;
+    const el = $('#dArchHead');
+    el.hidden = false;
+    const back = h('a', { class: 'arch-back', href: '#mazzi' }, t('arch.back'));
+    if (S.fam === 'x') {
+      el.replaceChildren(back, h('div', { class: 'arch-head' }, h('div', { class: 'arch-info' },
+        h('h3', { class: 'arch-name' }, t('arch.unclassified')), h('p', { class: 'note' }, t('arch.unclassifiedLead')))));
+      return;
+    }
+    const src = S.tier61?.file.f?.[S.fam!] ? S.tier61 : cur;
+    const meta = src.file.f?.[S.fam!];
+    if (!meta) {
+      el.replaceChildren(back, h('p', { class: 'note' }, t('arch.notFound')));
+      return;
+    }
+    const [name, tierN, share, symbol, typicalIdx] = meta;
+    const decks = src.decks.filter((x) => x.fam === S.fam);
+    const apps = new Map<string, number>();
+    for (const x of decks) apps.set(x.colors, (apps.get(x.colors) || 0) + x.apps.length);
+    const colors = [...apps.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    const typical = src.decks.find((x) => x.i === typicalIdx);
+    const pr = deps.prices();
+    const price = pr && typical ? listPrice(typical, priceOf, src.basics, true).cents : null;
+    el.replaceChildren(back, h('div', { class: 'arch-head' },
+      symbol >= 0 ? familyArt(d, symbol, true) : null,
+      h('div', { class: 'arch-info' },
+        h('h3', { class: 'arch-name' }, h('span', null, name), manaPips(colors)),
+        h('p', { class: 'arch-line' }, h('span', { class: `tier-badge t${tierN}` }, tierN === 4 ? t('tier.others') : t('tier.n', { n: tierN })), ' ',
+          t('arch.line', { tier: '', pct: fmtPct(share / 10000), lists: fmtInt(decks.length) }).replace(/^ · /, '')),
+        price !== null ? h('p', { class: 'arch-price' }, t('arch.typical', { v: fmtEur(price) })) : null,
+        h('p', { class: 'note' }, t('tier.lead'), ' ', h('a', { href: '#informazioni' }, t('tier.leadLink'))),
+        h('p', { class: 'artcredit' }, t('tier.copyright')))));
   }
 
   /** Completamento di ogni mazzo (con la collezione). */
@@ -141,13 +256,36 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     for (const r of document.querySelectorAll<HTMLInputElement>('input[name="dSide"]')) r.checked = (r.value === 'side') === S.side;
   }
 
+  /** Varianti della famiglia (o colori delle liste non classificate); nascosto se c'è una sola variante. */
   function renderArchetypes(): void {
-    const arch = archetypes(S.cur!.decks);
+    const own = S.cur!.decks.filter((x) => (S.fam === 'x' ? x.kind === 'x' : x.fam === S.fam));
+    const arch = archetypes(own);
     if (S.f.arch && !arch.some((a) => a.id === S.f.arch)) S.f.arch = '';
-    archSel.replaceChildren(h('option', { value: '' }, t('decks.archAll', { n: fmtInt(arch.length) })),
+    const x = S.fam === 'x';
+    $('#dArchLabel').textContent = x ? t('decks.colorsLabel') : t('decks.variant');
+    $('#dArchWrap').hidden = arch.length < 2;
+    archSel.replaceChildren(h('option', { value: '' }, t(x ? 'decks.colorsAll' : 'decks.variantAll', { n: fmtInt(arch.length) })),
       ...arch.map((a) => h('option', { value: a.id, selected: a.id === S.f.arch },
-        t('decks.archOption', { name: a.kind === 'x' ? `${t('decks.unclassified')}${a.colors ? ` (${colorNames(a.colors).join(', ')})` : ''}` : a.name, n: fmtInt(a.lists) }))));
+        t('decks.archOption', { name: a.kind === 'x' ? (a.colors ? colorNames(a.colors).join(', ') : t('decks.colorless')) : a.name, n: fmtInt(a.lists) }))));
     archSel.value = S.f.arch;
+  }
+
+  /** Prezzo filtrato di una lista: senza collezione il prezzo della lista, con la collezione il costo per completarla. */
+  function priceFor(x: Deck): number | null {
+    if (!deps.prices()) return null;
+    const comp = S.comp?.get(x.i);
+    return comp ? missingCost(comp, priceOf) : listPrice(x, priceOf, S.cur!.basics, S.side).cents;
+  }
+
+  function renderPriceSel(): void {
+    const coll = !!deps.owned();
+    const pr = !!deps.prices();
+    $('#dPriceLabel').textContent = coll ? t('tier.priceMissingOne') : t('tier.priceListOne');
+    const steps = coll ? PRICE_MISSING : PRICE_LIST;
+    priceSel.replaceChildren(h('option', { value: '' }, pr ? t('tier.priceAny') : t('tier.pricePending')),
+      ...steps.map((e) => h('option', { value: String(e) }, coll && e === 0 ? t('tier.priceDone') : t('tier.priceUpTo', { v: fmtEur(e * 100) }))));
+    priceSel.disabled = !pr;
+    priceSel.value = S.maxPrice === null ? '' : String(S.maxPrice / 100);
   }
 
   function render(): void {
@@ -155,21 +293,29 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     const all = cur.decks;
     renderArchetypes();
     renderControls();
+    renderPriceSel();
     const comp = S.comp;
-    S.view = sortDecks(visibleDecks(all, S.f, comp), comp);
-    // riepilogo: tutti i mazzi del periodo (l'insieme del titolo); la nota dice se i filtri ne mostrano meno
-    const apps = all.reduce((a, x) => a + x.apps.length, 0);
-    const tours = Object.keys(cur.file.t).length;
-    $('#dVerdict').textContent = t('decks.verdict', { n: all.length });
+    // riepilogo: tutte le liste della famiglia nel periodo (l'insieme del titolo); la nota dice se i filtri ne mostrano meno
+    const famDecks = visibleDecks(all, { arch: '', min: 0, fam: S.f.fam }, null);
+    const max = S.maxPrice;
+    S.view = sortDecks(visibleDecks(all, S.f, comp).filter((x) => {
+      if (max === null) return true;
+      if (max === 0 && comp) return comp.get(x.i)!.pct >= 1;
+      const p = priceFor(x);
+      return p !== null && p <= max;
+    }), comp);
+    const apps = famDecks.reduce((a, x) => a + x.apps.length, 0);
+    const tours = new Set(famDecks.flatMap((x) => x.apps.map((ap) => ap.tour?.[0] + (ap.tour?.[1] || '')))).size;
+    $('#dVerdict').textContent = t('decks.verdict', { n: famDecks.length });
     const sub = [t(S.days === 61 ? 'decks.sub61' : 'decks.sub365', { date: fmtDate(cur.file.anchor), apps: fmtInt(apps), tours: fmtInt(tours) })];
     if (comp) {
-      const full = all.filter((x) => comp.get(x.i)!.pct >= 1).length;
-      const most = all.filter((x) => comp.get(x.i)!.pct >= 0.75).length;
+      const full = famDecks.filter((x) => comp.get(x.i)!.pct >= 1).length;
+      const most = famDecks.filter((x) => comp.get(x.i)!.pct >= 0.75).length;
       sub.push(t('decks.subColl', { full: t('decks.fullN', { n: full }), most: fmtInt(most) }));
     }
     sub.push(t(comp ? 'decks.sortComp' : 'decks.sortLast'));
     $('#dSub').textContent = sub.join(' ');
-    renderNote(all.length);
+    renderNote(famDecks.length);
     renderList();
   }
 
@@ -178,9 +324,13 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     const why: string[] = [];
     if (S.f.arch) {
       const a = archetypes(S.cur!.decks).find((x) => x.id === S.f.arch);
-      why.push(t('decks.whyArch', { v: a ? (a.kind === 'x' ? t('decks.unclassified') : a.name) : S.f.arch }));
+      why.push(t('decks.whyVariant', { v: a ? (a.kind === 'x' ? colorNames(a.colors).join(', ') : a.name) : S.f.arch }));
     }
     if (S.comp && S.f.min) why.push(S.f.min >= 1 ? t('decks.whyFull') : t('decks.whyMin', { p: fmtPct(S.f.min) }));
+    if (S.maxPrice !== null) {
+      why.push(S.comp ? (S.maxPrice === 0 ? t('tier.whyDone') : t('decks.whyMissingPrice', { v: fmtEur(S.maxPrice) }))
+        : t('decks.whyPrice', { v: fmtEur(S.maxPrice) }));
+    }
     el.hidden = S.view.length === total && !why.length;
     if (el.hidden) return el.replaceChildren();
     el.replaceChildren(t('decks.filtered', { n: fmtInt(S.view.length), why: why.join(', ') }), ' · ',
@@ -358,6 +508,11 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     S.shown = PAGE;
     if (S.cur) render();
   });
+  priceSel.addEventListener('change', () => {
+    S.maxPrice = priceSel.value === '' ? null : Number(priceSel.value) * 100;
+    S.shown = PAGE;
+    if (S.cur) render();
+  });
   $('#dSideWrap').addEventListener('change', (e) => {
     S.side = (e.target as HTMLInputElement).value === 'side';
     lsSet('deckSide', S.side ? 'side' : 'main');
@@ -377,7 +532,8 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     const el = e.target as HTMLElement;
     if (el.id === 'dRetry') return void show();
     if (el.id === 'dClear') {
-      S.f = { arch: '', min: 0 };
+      S.f = { arch: '', min: 0, fam: S.f.fam };
+      S.maxPrice = null;
       S.shown = PAGE;
       return render();
     }
@@ -394,11 +550,22 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
     /** collezione, lingua o prezzi cambiati: ridisegna senza tornare alle prime 10 */
     refresh: () => {
       if ($('#viewDecks').hidden) return;
+      if (S.fam === null) {
+        if (!S.tier61) {
+          if (!S.pending && !S.failed) void show();
+          return;
+        }
+        computeTier();
+        $('#dNoColl').hidden = !!deps.owned();
+        tier.render();
+        return;
+      }
       if (!S.cur || S.cur.file.days !== S.days) {
         if (!S.pending && !S.failed) void show();
         return;
       }
       compute();
+      renderHead();
       keepPlace(render);
     },
   };

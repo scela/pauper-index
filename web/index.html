@@ -321,6 +321,46 @@
       <h2 id="decksHeading" data-i18n="decks.title">Mazzi</h2>
       <p class="decks-lead" data-i18n="decks.lead">Le liste giocate di recente nei tornei Pauper, con quanto ti manca per costruirle.</p>
       <p class="note decks-nocoll" id="dNoColl" hidden><span data-i18n="decks.noColl">Carica la tua collezione nella pagina principale per vedere quali mazzi puoi costruire.</span> <a href="/" data-i18n="decks.noCollLink">Vai al caricamento</a></p>
+      <div id="dTier" hidden>
+        <p class="tier-lead"><span data-i18n="tier.lead">Il tier dice quanto un archetipo compare nei tornei registrati negli ultimi 61 giorni, non quanto è forte.</span> <a href="#informazioni" data-i18n="tier.leadLink">Cosa vuol dire</a></p>
+        <details class="tf-box" id="tfBox" open><summary><span data-i18n="fp.title">Filtri</span><span id="tfCount"></span></summary>
+        <form class="tfilters" id="tierFilters" role="search" data-i18n-aria="tier.filters" aria-label="Filtri della tier list">
+          <div class="tf-row">
+            <span class="tf-label" id="tfColorsLabel" data-i18n="fp.color">Colore</span>
+            <div class="fp-btns" id="tfColors" role="group" aria-labelledby="tfColorsLabel"></div>
+            <div class="seg fp-mode" role="radiogroup" data-i18n-aria="fp.colorMode" aria-label="Come usare i colori scelti">
+              <label><input type="radio" name="tColorMode" value="any" checked><span data-i18n="fp.colorAny">Almeno uno dei colori scelti</span></label>
+              <label><input type="radio" name="tColorMode" value="only"><span data-i18n="fp.colorOnly">Solo questi colori</span></label>
+            </div>
+          </div>
+          <div class="tf-row">
+            <span class="tf-label" id="tfTiersLabel" data-i18n="tier.tier">Tier</span>
+            <div class="fp-btns" id="tfTiers" role="group" aria-labelledby="tfTiersLabel"></div>
+          </div>
+          <div class="tf-row tf-selects">
+            <label class="f-field"><span id="tfPriceLabel" data-i18n="tier.priceList">Prezzo della lista tipica</span><select id="tfPrice"></select></label>
+            <label class="f-field" id="tfMinWrap" hidden><span data-i18n="tier.minClosest">Completamento della lista più vicina</span><select id="tfMin"></select></label>
+            <div class="f-field" id="tfSideWrap" hidden>
+              <span id="tfSideLabel" data-i18n="decks.count">Carte da contare</span>
+              <div class="seg" role="radiogroup" aria-labelledby="tfSideLabel">
+                <label><input type="radio" name="tSide" value="main"><span data-i18n="decks.mainOnly">Solo main</span></label>
+                <label><input type="radio" name="tSide" value="side" checked><span data-i18n="decks.mainSide">Main e side</span></label>
+              </div>
+            </div>
+            <label class="f-field"><span data-i18n="tier.goto">Vai all'archetipo</span><select id="tfGoto"></select></label>
+          </div>
+        </form></details>
+        <div class="res-head">
+          <div>
+            <h3 class="verdict" id="tVerdict"></h3>
+            <p class="sub" id="tSub"></p>
+            <p class="filternote" id="tNote" aria-live="polite" hidden></p>
+          </div>
+        </div>
+        <div id="tierSections"></div>
+        <p class="artcredit" data-i18n="tier.copyright">Illustrazioni ™ &amp; © Wizards of the Coast</p>
+      </div>
+      <div id="dArchHead" hidden></div>
       <form class="filters dfilters" id="deckFilters" role="search" data-i18n-aria="decks.filters" aria-label="Filtri dei mazzi">
         <label class="f-field"><span data-i18n="filters.period">Periodo</span>
           <select id="dPeriod">
@@ -328,8 +368,11 @@
             <option value="365" data-i18n="decks.p365">Ultimo anno (circa 0,8 MB da scaricare)</option>
           </select>
         </label>
-        <label class="f-field"><span data-i18n="decks.arch">Archetipo</span>
+        <label class="f-field" id="dArchWrap"><span id="dArchLabel" data-i18n="decks.variant">Variante</span>
           <select id="dArch"></select>
+        </label>
+        <label class="f-field" id="dPriceWrap"><span id="dPriceLabel" data-i18n="tier.priceListOne">Prezzo della lista</span>
+          <select id="dPrice"></select>
         </label>
         <label class="f-field" id="dMinWrap" hidden><span data-i18n="decks.min">Completamento minimo</span>
           <select id="dMin"></select>

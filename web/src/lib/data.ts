@@ -74,7 +74,7 @@ export function cardByName(d: Data, name: string): number {
   return -1;
 }
 
-export function imageUrl(id: string, size: 'small' | 'normal' | 'large' = 'small', face: 'front' | 'back' = 'front'): string {
+export function imageUrl(id: string, size: 'small' | 'normal' | 'large' | 'art_crop' = 'small', face: 'front' | 'back' = 'front'): string {
   const safe = /^[0-9a-f-]{36}$/.test(id) ? id : '00000000-0000-0000-0000-000000000000';
   return `https://cards.scryfall.io/${size}/${face}/${safe[0]}/${safe[1]}/${safe}.jpg`;
 }

@@ -1,6 +1,7 @@
 // Mazzi recenti (data/decks-61.json e data/decks-365.json, vedi CLAUDE.md "Funzione 4: mazzi"): completamento con
 // la collezione, ordinamento, migliore piazzamento ed export. Logica pura, senza DOM.
 
+import { matchColors, type ColorKey } from './cardfilter';
 import type { CardRow } from './types';
 
 /** [data, nome, Tournament.Uri, "m" | "p"] */
@@ -16,8 +17,10 @@ export interface DecksFile {
   /** indici delle terre base normali: sempre disponibili, escluse dal completamento */
   basics: number[];
   t: Record<string, DeckTournament>;
-  /** archetipo -> [nome ("" se non classificato), colori, tipo c|a|x] */
-  a: Record<string, [string, string, string]>;
+  /** archetipo -> [nome ("" se non classificato), colori, tipo c|a|x, famiglia (v2)] */
+  a: Record<string, [string, string, string] | [string, string, string, string]>;
+  /** (v2) famiglia -> [nome, tier 1–4, quota a 61 giorni in centesimi di punto, carta simbolo, lista tipica (indice in l)] */
+  f?: Record<string, [string, number, number, number, number]>;
   l: DeckList[];
 }
 
@@ -34,6 +37,8 @@ export interface Deck {
   /** colori della lista (WUBRG) */
   colors: string;
   kind: 'c' | 'a' | 'x';
+  /** famiglia (v2): c<n> o a<id>; "" per le liste non classificate o con un file v1 */
+  fam: string;
   main: [number, number][];
   side: [number, number][];
   apps: Appearance[];
@@ -102,7 +107,7 @@ export function readDecks(f: DecksFile): Deck[] {
       return d < 0 || (d === 0 && (ap.tour?.[0] || '') > (b.tour?.[0] || '')) ? ap : b;
     }, apps[0] || { tour: null, result: null });
     return {
-      i, arch, name: a[0], colors: colors || a[1] || '', kind: (a[2] as Deck['kind']) || 'x',
+      i, arch, name: a[0], colors: colors || a[1] || '', kind: (a[2] as Deck['kind']) || 'x', fam: a[3] || '',
       main: pairs(main), side: pairs(side), apps, last, best,
     };
   }));
@@ -140,10 +145,12 @@ export function completion(deck: Deck, owned: (idx: number) => number, withSide:
 }
 
 export interface DeckFilters {
-  /** archetipo scelto ("" = tutti) */
+  /** archetipo (variante) scelto ("" = tutti) */
   arch: string;
   /** completamento minimo, 0–1 (0 = nessun limite) */
   min: number;
+  /** famiglia della pagina dell'archetipo ("" = tutte, "x" = liste non classificate) */
+  fam?: string;
 }
 
 /** Ordine: con la collezione per completamento, senza per ultima apparizione; poi apparizioni e data. */
@@ -162,7 +169,8 @@ export function sortDecks(decks: Deck[], comp: Map<number, Completion> | null): 
 
 /** I mazzi che l'elenco mostra (senza ordinamento). */
 export function visibleDecks(decks: Deck[], f: DeckFilters, comp: Map<number, Completion> | null): Deck[] {
-  return decks.filter((x) => (!f.arch || x.arch === f.arch) && (!comp || !f.min || comp.get(x.i)!.pct >= f.min - 1e-9));
+  return decks.filter((x) => (!f.fam || (f.fam === 'x' ? x.kind === 'x' : x.fam === f.fam))
+    && (!f.arch || x.arch === f.arch) && (!comp || !f.min || comp.get(x.i)!.pct >= f.min - 1e-9));
 }
 
 export interface ArchetypeCount {
@@ -215,4 +223,140 @@ export function sectionOf(c: CardRow): Section {
     if (new RegExp(`\\b${s}\\b`).test(tl)) return s;
   }
   return 'other';
+}
+
+/* ---------- tier list: famiglie di archetipi (restyling dei Mazzi) ---------- */
+
+export interface Variant {
+  arch: string;
+  name: string;
+  colors: string;
+  lists: number;
+  apps: number;
+}
+
+export interface Family {
+  id: string;
+  name: string;
+  /** 1–3, 4 = "Altri" (calcolato nella pipeline, con la banda) */
+  tier: number;
+  /** quota dei mazzi a 61 giorni, tra 0 e 1 */
+  share: number;
+  /** carta simbolo (indice in cards.json), -1 se manca */
+  symbol: number;
+  /** colori della variante più giocata */
+  colors: string;
+  /** varianti di colore, dalla più giocata */
+  variants: Variant[];
+  lists: number;
+  apps: number;
+  decks: Deck[];
+  /** lista tipica (la più vicina alla media della famiglia, scelta dalla pipeline) */
+  typical: Deck | null;
+}
+
+/** Famiglie del file (v2), con le liste e le varianti; le liste non classificate restano fuori. */
+export function families(f: DecksFile, decks: Deck[]): Family[] {
+  const meta = f.f || {};
+  const out = new Map<string, Family>();
+  const byIndex = new Map(decks.map((x) => [x.i, x]));
+  for (const x of decks) {
+    if (!x.fam || !meta[x.fam]) continue;
+    let fam = out.get(x.fam);
+    if (!fam) {
+      const [name, tier, share, symbol, typical] = meta[x.fam];
+      fam = { id: x.fam, name, tier, share: share / 10000, symbol, colors: '', variants: [], lists: 0, apps: 0, decks: [], typical: byIndex.get(typical) || null };
+      out.set(x.fam, fam);
+    }
+    fam.decks.push(x);
+    fam.lists++;
+    fam.apps += x.apps.length;
+    let v = fam.variants.find((y) => y.arch === x.arch);
+    if (!v) fam.variants.push(v = { arch: x.arch, name: x.name, colors: f.a[x.arch]?.[1] || x.colors, lists: 0, apps: 0 });
+    v.lists++;
+    v.apps += x.apps.length;
+  }
+  for (const fam of out.values()) {
+    fam.variants.sort((a, b) => b.apps - a.apps || a.name.localeCompare(b.name, 'en'));
+    fam.colors = fam.variants[0]?.colors || '';
+  }
+  return [...out.values()].sort((a, b) => a.tier - b.tier || b.share - a.share || b.apps - a.apps || a.name.localeCompare(b.name, 'en'));
+}
+
+/** Prezzo di una lista: per ogni carta (non terra base) la stampa non foil più economica × copie; main e side. */
+export function listPrice(deck: Deck, priceOf: (idx: number) => number, basics: Set<number>, withSide = true): { cents: number; unpriced: number } {
+  let cents = 0;
+  let unpriced = 0;
+  for (const [idx, n] of withSide ? [...deck.main, ...deck.side] : deck.main) {
+    if (basics.has(idx)) continue;
+    const c = priceOf(idx);
+    if (c) cents += c * n;
+    else unpriced++;
+  }
+  return { cents, unpriced };
+}
+
+/** Costo per completare: le copie mancanti × la stampa non foil più economica. */
+export function missingCost(comp: Completion, priceOf: (idx: number) => number): number {
+  return comp.missing.reduce((a, m) => a + (priceOf(m.idx) || 0) * m.n, 0);
+}
+
+/** La lista della famiglia più vicina a essere completa: completamento più alto, a parità costo più basso. */
+export function closestDeck(fam: Family, comp: Map<number, Completion>, priceOf: (idx: number) => number): { deck: Deck; pct: number; cost: number } | null {
+  let best: { deck: Deck; pct: number; cost: number } | null = null;
+  for (const x of fam.decks) {
+    const c = comp.get(x.i);
+    if (!c) continue;
+    const cost = missingCost(c, priceOf);
+    if (!best || c.pct > best.pct || (c.pct === best.pct && cost < best.cost)) best = { deck: x, pct: c.pct, cost };
+  }
+  return best;
+}
+
+export interface TierFilters {
+  colors: ColorKey[];
+  colorMode: 'any' | 'only';
+  /** tier scelti (1–4); vuoto = tutti */
+  tiers: number[];
+  /** prezzo massimo in centesimi: della lista tipica senza collezione, del costo per completare con la collezione;
+   *  null = qualsiasi, 0 = solo già completi (con la collezione) */
+  maxPrice: number | null;
+  /** completamento minimo della lista più vicina (con la collezione), 0 = nessun limite */
+  min: number;
+}
+
+export const emptyTierFilters = (): TierFilters => ({ colors: [], colorMode: 'any', tiers: [], maxPrice: null, min: 0 });
+
+export interface FamilyScore {
+  /** prezzo filtrato: lista tipica (senza collezione) o costo per completare la lista più vicina (con la collezione) */
+  price: number | null;
+  /** completamento della lista più vicina (con la collezione) */
+  pct: number | null;
+}
+
+/**
+ * Famiglie che passano i filtri. I colori valgono per le varianti: una famiglia resta se almeno una variante passa.
+ * Il prezzo si filtra solo quando è noto (prezzi arrivati); senza prezzo la famiglia resta fuori dal filtro di prezzo.
+ */
+export function visibleFamilies(fams: Family[], f: TierFilters, score: (fam: Family) => FamilyScore): Family[] {
+  const cf = { colors: f.colors, colorMode: f.colorMode, mv: [], types: [], text: '' };
+  return fams.filter((fam) => {
+    if (f.tiers.length && !f.tiers.includes(fam.tier)) return false;
+    if (f.colors.length && !fam.variants.some((v) => matchColors(v.colors, cf))) return false;
+    const s = score(fam);
+    if (f.maxPrice !== null && (s.price === null || s.price > f.maxPrice)) return false;
+    // "già completo" vuol dire completo, non "costo zero": le carte mancanti senza prezzo costerebbero 0
+    if (f.maxPrice === 0 && (s.pct === null || s.pct < 1)) return false;
+    if (f.min && (s.pct === null || s.pct < f.min - 1e-9)) return false;
+    return true;
+  });
+}
+
+/** Nomi brevi delle varianti: senza le parole finali comuni a tutte ("Mono-Blue Terror" -> "Mono-Blue"). */
+export function variantLabels(names: string[]): string[] {
+  if (names.length < 2) return names;
+  const words = names.map((n) => n.split(' '));
+  let k = 0;
+  while (words.every((w) => w.length > k + 1 && w[w.length - 1 - k] === words[0][words[0].length - 1 - k])) k++;
+  return words.map((w) => (k ? w.slice(0, w.length - k).join(' ') : w.join(' ')));
 }

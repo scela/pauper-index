@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  archetypes, completion, deckText, missingText, placementScore, readDecks, sectionOf, sortDecks, validDecks, visibleDecks,
+  archetypes, closestDeck, completion, emptyTierFilters, families, listPrice, missingCost, variantLabels, visibleFamilies, deckText, missingText, placementScore, readDecks, sectionOf, sortDecks, validDecks, visibleDecks,
   type DecksFile,
 } from '../src/lib/decks';
 import { makeData } from './helpers';
@@ -99,5 +99,84 @@ describe('mazzi', () => {
     expect(sectionOf(c('Basic Snow Land — Island'))).toBe('land');
     expect(sectionOf(c('Instant'))).toBe('instant');
     expect(sectionOf(c('Kindred Enchantment — Faerie'))).toBe('enchantment');
+  });
+});
+
+describe('tier list', () => {
+  // due famiglie: Terror (due varianti di colore) e Gush; una lista non classificata
+  const tfile = (): DecksFile => ({
+    v: 2, days: 61, anchor: '2026-10-04', basics: [3],
+    t: { '2026100400': ['2026-10-04', 'Pauper Challenge 32', 'https://www.mtgo.com/decklist/a', 'm'] },
+    a: {
+      c1U: ['Mono-Blue Terror', 'U', 'c', 'f1'], c1UR: ['Izzet Terror', 'UR', 'c', 'f1'],
+      a7: ['Gush + Pyroblast', 'R', 'a', 'a7'], xU: ['', 'U', 'x'],
+    },
+    f: { f1: ['Terror', 1, 812, 1, 0], a7: ['Gush + Pyroblast', 4, 40, 2, 2] },
+    l: [
+      ['c1U', 'U', [0, 4, 1, 4, 3, 52], [], [[2026100400, 1], [2026100400, 2]]],
+      ['c1UR', 'UR', [0, 4, 1, 4, 4, 4, 3, 48], [], [[2026100400, 3]]],
+      ['a7', 'R', [2, 4, 4, 4, 3, 52], [], [[2026100400, 4]]],
+      ['xU', 'U', [0, 2, 3, 58], [], [[2026100400, 9]]],
+    ],
+  });
+
+  it('raggruppa le liste per famiglia, con varianti, quota, lista tipica; le non classificate restano fuori', () => {
+    const f = tfile();
+    const fams = families(f, readDecks(f));
+    expect(fams.map((x) => x.id)).toEqual(['f1', 'a7']);
+    expect(fams[0]).toMatchObject({ name: 'Terror', tier: 1, share: 0.0812, symbol: 1, colors: 'U', lists: 2, apps: 3 });
+    expect(fams[0].variants.map((v) => [v.name, v.apps])).toEqual([['Mono-Blue Terror', 2], ['Izzet Terror', 1]]);
+    expect(fams[0].typical?.i).toBe(0);
+  });
+
+  it('etichette delle varianti senza le parole finali comuni', () => {
+    expect(variantLabels(['Mono-Blue Terror', 'Izzet Terror'])).toEqual(['Mono-Blue', 'Izzet']);
+    expect(variantLabels(['Dimir Faeries', 'Mono-Blue Faeries'])).toEqual(['Dimir', 'Mono-Blue']);
+    expect(variantLabels(['Faeries', 'Dimir Faeries'])).toEqual(['Faeries', 'Dimir Faeries']);
+    expect(variantLabels(['Terror'])).toEqual(['Terror']);
+  });
+
+  it('prezzo della lista (terre base escluse), costo per completare e lista più vicina', () => {
+    const f = tfile();
+    const decks = readDecks(f);
+    const priceOf = (idx: number) => ({ 0: 100, 1: 50, 4: 0 } as Record<number, number>)[idx] || 0;
+    expect(listPrice(decks[0], priceOf, new Set([3]))).toEqual({ cents: 600, unpriced: 0 });
+    expect(listPrice(decks[1], priceOf, new Set([3]))).toEqual({ cents: 600, unpriced: 1 });
+    const owned = (idx: number) => ({ 0: 4, 1: 2 } as Record<number, number>)[idx] || 0;
+    const comp = new Map(decks.map((x) => [x.i, completion(x, owned, true, new Set([3]))]));
+    expect(missingCost(comp.get(0)!, priceOf)).toBe(100);
+    const fam = families(f, decks)[0];
+    // Mono-Blue: 6 di 8; Izzet: 6 di 12 -> la più vicina è Mono-Blue
+    expect(closestDeck(fam, comp, priceOf)).toMatchObject({ pct: 0.75, cost: 100 });
+    expect(closestDeck(fam, comp, priceOf)!.deck.i).toBe(0);
+  });
+
+  it('filtri: colori sulle varianti, tier, prezzo noto, completamento della lista più vicina', () => {
+    const f = tfile();
+    const fams = families(f, readDecks(f));
+    const ids = (x: typeof fams) => x.map((y) => y.id);
+    const score = (p: Record<string, number | null>, c: Record<string, number | null> = {}) =>
+      (fam: (typeof fams)[number]) => ({ price: p[fam.id] ?? null, pct: c[fam.id] ?? null });
+    const none = score({});
+    expect(ids(visibleFamilies(fams, emptyTierFilters(), none))).toEqual(['f1', 'a7']);
+    // Terror passa con il rosso grazie alla variante Izzet; con "solo blu" grazie a Mono-Blue
+    expect(ids(visibleFamilies(fams, { ...emptyTierFilters(), colors: ['R'] }, none))).toEqual(['f1', 'a7']);
+    expect(ids(visibleFamilies(fams, { ...emptyTierFilters(), colors: ['U'], colorMode: 'only' }, none))).toEqual(['f1']);
+    expect(ids(visibleFamilies(fams, { ...emptyTierFilters(), colors: ['M'] }, none))).toEqual(['f1']);
+    expect(ids(visibleFamilies(fams, { ...emptyTierFilters(), tiers: [4] }, none))).toEqual(['a7']);
+    // prezzo: senza prezzo la famiglia esce dal filtro; 0 = solo già completi
+    const prices = score({ f1: 5000, a7: null });
+    expect(ids(visibleFamilies(fams, { ...emptyTierFilters(), maxPrice: 5000 }, prices))).toEqual(['f1']);
+    expect(ids(visibleFamilies(fams, { ...emptyTierFilters(), maxPrice: 4999 }, prices))).toEqual([]);
+    // "già completo": completamento al 100%, non solo costo zero (le mancanti senza prezzo costano 0)
+    expect(ids(visibleFamilies(fams, { ...emptyTierFilters(), maxPrice: 0 }, score({ f1: 0, a7: 0 }, { f1: 1, a7: 0.9 })))).toEqual(['f1']);
+    expect(ids(visibleFamilies(fams, { ...emptyTierFilters(), min: 0.75 }, score({}, { f1: 0.75, a7: 0.5 })))).toEqual(['f1']);
+  });
+
+  it("pagina dell'archetipo: liste della famiglia, o le non classificate con 'x'", () => {
+    const decks = readDecks(tfile());
+    expect(visibleDecks(decks, { arch: '', min: 0, fam: 'f1' }, null).map((x) => x.i)).toEqual([0, 1]);
+    expect(visibleDecks(decks, { arch: 'c1UR', min: 0, fam: 'f1' }, null).map((x) => x.i)).toEqual([1]);
+    expect(visibleDecks(decks, { arch: '', min: 0, fam: 'x' }, null).map((x) => x.i)).toEqual([3]);
   });
 });

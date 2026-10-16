@@ -321,8 +321,10 @@ test('Come funziona: breve, FAQ chiuse, avviso Fan Content Policy ufficiale una 
   await expect(about).toContainText(head('about.data.text'));
   // domande frequenti chiuse di default; le risposte si aprono
   const faqs = about.locator('details.faq');
-  await expect(faqs).toHaveCount(6); // con "Da dove vengono i prezzi?"
-  for (let i = 0; i < 6; i++) await expect(faqs.nth(i)).not.toHaveAttribute('open', '');
+  await expect(faqs).toHaveCount(7); // con "Da dove vengono i prezzi?" e "Cosa vuol dire il tier?"
+  for (let i = 0; i < 7; i++) await expect(faqs.nth(i)).not.toHaveAttribute('open', '');
+  await about.getByText(tr('about.faq.tier.q')).click();
+  await expect(about.getByText(tr('about.faq.tier.a'))).toBeVisible();
   await expect(about.getByText(tr('about.faq.precision.a'))).toBeHidden();
   await about.getByText(tr('about.faq.precision.q')).click();
   await expect(about.getByText(tr('about.faq.precision.a'))).toBeVisible();
@@ -1493,11 +1495,11 @@ test('simboli di mana: pannello Filtri e Mazzi, dallo sprite del sito, con nome 
   // Mazzi: simboli dei colori, con il nome dei colori come testo alternativo del gruppo
   await page.route('**/data/decks-61.json', (r) => r.fulfill({ json: syntheticDecks() }));
   await page.click('#navDecks');
-  const pips = page.locator('#deckList .pips').first();
+  const pips = page.locator('#tierSections .pips').first();
   await expect(pips).toHaveAttribute('role', 'img');
   await expect(pips).toHaveAttribute('aria-label', /.+/);
   expect(await pips.locator('svg.mana').count()).toBeGreaterThan(0);
-  await expect(page.locator('#deckList .cdot')).toHaveCount(0);
+  await expect(page.locator('#tierSections .cdot')).toHaveCount(0);
 });
 
 test('filtri: pannello, etichette rimovibili, nota, conteggio, testo scaricato solo al primo uso', async ({ page }, info) => {
@@ -1735,18 +1737,25 @@ function syntheticDecks(days = 61) {
     'Lightning Bolt', 'Fire // Ice', 'Island', 'Mountain'].map(ix);
   const fillers = Array.from({ length: 12 }, () => ['xU', 'U', [bs, 1, isl, 59], [], [[2026080100, 30]]]);
   return {
-    v: 1, days, anchor: '2026-10-04', basics: [isl, mnt],
+    v: 2, days, anchor: '2026-10-04', basics: [isl, mnt],
     t: {
       2026100400: ['2026-10-04', 'Pauper Challenge 32', 'https://www.mtgo.com/decklist/sintetico-1', 'm'],
       2026092000: ['2026-09-20', 'Pauper League', 'https://www.mtgo.com/decklist/sintetico-2', 'm'],
       2026091000: ['2026-09-10', 'Torneo locale', 'https://melee.gg/Tournament/View/1', 'p'],
+      2026090500: ['2026-09-05', 'Torneo di settembre', 'https://melee.gg/Tournament/View/3', 'p'],
       2026080100: ['2026-08-01', 'Torneo vecchio', 'https://melee.gg/Tournament/View/2', 'p'],
     },
-    a: { c1: ['Mono-Blue Terror', '', 'c'], a2: ['Lightning Bolt + Fire // Ice', 'R', 'a'], xU: ['', 'U', 'x'] },
+    a: {
+      c1: ['Mono-Blue Terror', 'U', 'c', 'c1'], c1R: ['Izzet Terror', 'UR', 'c', 'c1'],
+      a2: ['Lightning Bolt + Fire // Ice', 'R', 'a', 'a2'], xU: ['', 'U', 'x'],
+    },
+    // famiglie: [nome, tier, quota in punti base, carta simbolo, lista tipica]
+    f: { c1: ['Terror', 1, 625, tt, 0], a2: ['Lightning Bolt + Fire // Ice', 4, 60, lb, 1] },
     l: [
       ['c1', 'U', [bs, 4, cs, 4, dv, 4, tt, 4, isl, 44], [fi, 2], [[2026092000, '5-0'], [2026091000, 2]]],
       ['a2', 'R', [lb, 4, fi, 4, mnt, 52], [], [[2026100400, 7]]],
       ['c1', 'U', [bs, 4, isl, 56], [], [[2026091000, 1], [2026080100, 3]]],
+      ['c1R', 'UR', [bs, 4, tt, 4, lb, 4, isl, 48], [], [[2026090500, 5]]],
       ...fillers,
     ],
   };
@@ -1764,7 +1773,7 @@ async function mockDecks(page: Page): Promise<{ year: number }> {
 
 const first = (lang: Lang, n: number) => (lang === 'it' ? `${n}°` : `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : 'th'}`);
 
-test('mazzi senza collezione: per ultima apparizione, archetipo, Carica altri, decklist ed export', async ({ page, context }) => {
+test('mazzi senza collezione: tier list, pagina dell\'archetipo con le varianti, non classificate, decklist ed export', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const calls = await mockDecks(page);
   const problems = await setup(page);
@@ -1772,48 +1781,64 @@ test('mazzi senza collezione: per ultima apparizione, archetipo, Carica altri, d
   await page.click('#navDecks');
   await expect(page.locator('#navDecks')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('#viewMain')).toBeHidden();
-  await expect(page.locator('#dVerdict')).toHaveText(tr('decks.verdict', { n: 15 }));
+  // tier list: un archetipo in Tier 1 (scheda con l'illustrazione), uno tra gli "Altri" (riga), le non classificate in fondo
+  await expect(page.locator('#tVerdict')).toHaveText(tr('tier.verdict', { n: 2 }));
+  await expect(page.locator('#dResults')).toBeHidden();
+  const card = page.locator('.tier-sec.t1 .fam-card');
+  await expect(card).toHaveCount(1);
+  await expect(card.locator('.fam-name')).toHaveText('Terror');
+  await expect(card.locator('.fam-art img')).toHaveAttribute('src', /\/art_crop\//);
+  // artista sotto l'immagine (mai sopra) e la riga del copyright visibile
+  await expect(card.locator('.fam-artist')).toContainText('Tolarian Terror');
+  await expect(page.locator('#dTier > .artcredit')).toHaveText(tr('tier.copyright'));
+  await expect(card.locator('.fam-vars')).toContainText('Mono-Blue');
+  await expect(card.locator('.fam-vars')).toContainText('Izzet');
+  await expect(page.locator('.tier-sec.t4 .fam-row')).toHaveCount(1);
+  await expect(page.locator('.tier-sec.t4 .fam-art')).toHaveCount(0);
+  await expect(page.locator('.fam-unclassified a')).toHaveAttribute('href', '#mazzi/x');
+  // pagina dell'archetipo: intestazione, varianti, liste per ultima apparizione
+  await card.click();
+  await expect(page).toHaveURL(/#mazzi\/c1$/);
+  await expect(page.locator('#navDecks')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#dArchHead .arch-name')).toContainText('Terror');
+  await expect(page.locator('#dArchHead .tier-badge')).toHaveText(tr('tier.n', { n: 1 }));
+  await expect(page.locator('#dArchHead .artcredit')).toHaveText(tr('tier.copyright'));
+  await expect(page.locator('#dVerdict')).toHaveText(tr('decks.verdict', { n: 3 }));
   await expect(page.locator('#dSub')).toContainText(tr('decks.sortLast'));
   await expect(page.locator('#dNoColl')).toBeVisible();
   await expect(page.locator('#dMinWrap')).toBeHidden();
   await expect(page.locator('#dSideWrap')).toBeHidden();
-  // dalla più recente; nome dell'archetipo, volte, migliore piazzamento con il link al torneo
-  await expect(page.locator('#deckList .dk-name').first()).toHaveText('Lightning Bolt + Fire // Ice');
-  const second = page.locator('#deckList .dk').nth(1);
-  await expect(second).toContainText(tr('decks.times', { n: 2 }));
-  await expect(second.locator('.dk-best a')).toHaveAttribute('href', 'https://melee.gg/Tournament/View/1');
-  await expect(second.locator('.dk-best b')).toHaveText(first(L, 2));
+  await expect(page.locator('#deckList .dk')).toHaveCount(3);
   await expect(page.locator('#deckList .dk-comp')).toHaveCount(0);
-  // si parte da 10, poi 20 alla volta: qui ne restano 5, "Carica gli ultimi 5"
-  await expect(page.locator('#deckList .dk')).toHaveCount(10);
-  await expect(page.locator('#dShown')).toHaveText(tr('decks.shown', { n: 10, total: 15 }));
-  await expect(page.locator('#dMore')).toHaveText(tr('decks.moreLast', { n: 5 }));
-  await page.click('#dMore');
-  await expect(page.locator('#deckList .dk')).toHaveCount(15);
-  await expect(page.locator('#dMore')).toBeHidden();
-  await expect(page.locator('#deckList .dk-name').nth(10)).toBeFocused();
-  // archetipo: la nota dice perché se ne vedono meno, "Togli questi filtri" li toglie
-  await page.selectOption('#dArch', 'c1');
-  await expect(page.locator('#deckList .dk')).toHaveCount(2);
-  await expect(page.locator('#dVerdict')).toHaveText(tr('decks.verdict', { n: 15 }));
-  await expect(page.locator('#dNote')).toContainText(tr('decks.filtered', { n: 2, why: tr('decks.whyArch', { v: 'Mono-Blue Terror' }) }));
+  const top = page.locator('#deckList .dk').first();
+  await expect(top.locator('.dk-name')).toHaveText('Mono-Blue Terror');
+  await expect(top).toContainText(tr('decks.times', { n: 2 }));
+  await expect(top.locator('.dk-best a')).toHaveAttribute('href', 'https://melee.gg/Tournament/View/1');
+  await expect(top.locator('.dk-best b')).toHaveText(first(L, 2));
+  // variante: la nota dice perché se ne vedono meno, "Togli questi filtri" la toglie
+  await expect(page.locator('#dArchWrap')).toBeVisible();
+  await expect(page.locator('#dArch option').first()).toHaveText(tr('decks.variantAll', { n: 2 }));
+  await page.selectOption('#dArch', 'c1R');
+  await expect(page.locator('#deckList .dk')).toHaveCount(1);
+  await expect(page.locator('#dVerdict')).toHaveText(tr('decks.verdict', { n: 3 }));
+  await expect(page.locator('#dNote')).toContainText(tr('decks.filtered', { n: 1, why: tr('decks.whyVariant', { v: 'Izzet Terror' }) }));
   await page.click('#dClear');
-  await expect(page.locator('#deckList .dk')).toHaveCount(10);
+  await expect(page.locator('#deckList .dk')).toHaveCount(3);
   await expect(page.locator('#dNote')).toBeHidden();
   // decklist per tipo, con il side; export nel formato di MTG Arena
-  await second.locator('.dk-list summary').click();
-  await expect(second.locator('.dk-side h5')).toHaveText(`${tr('decks.sideboard')} (2)`);
-  await expect(second.locator('.dk-sec h5').first()).toHaveText(`${tr('decks.sec.creature')} (8)`);
-  await second.locator('[data-dcopy="deck"]').click();
+  await top.locator('.dk-list summary').click();
+  await expect(top.locator('.dk-side h5')).toHaveText(`${tr('decks.sideboard')} (2)`);
+  await expect(top.locator('.dk-sec h5').first()).toHaveText(`${tr('decks.sec.creature')} (8)`);
+  await top.locator('[data-dcopy="deck"]').click();
   const clip = (await page.evaluate(() => navigator.clipboard.readText())).split('\n').map((x) => x.trimEnd());
   // nomi come in MTG Arena: Delver (transform) solo con la prima faccia, Fire // Ice (split) completa
   expect(clip.slice(0, 8)).toEqual(['4 Brainstorm', '4 Counterspell', '4 Delver of Secrets', '4 Tolarian Terror',
     '44 Island', '', 'Sideboard', '2 Fire // Ice']);
   const dl = page.waitForEvent('download');
-  await second.locator('[data-dsave="deck"]').click();
+  await top.locator('[data-dsave="deck"]').click();
   expect((await dl).suggestedFilename()).toBe(tr('decks.fileDeck', { name: 'mono-blue-terror' }));
   // il nome di una carta apre la scheda
-  await second.locator('.dk-sec .dk-card').first().click();
+  await top.locator('.dk-sec .dk-card').first().click();
   await expect(page.locator('#sheet')).toBeVisible();
   await page.keyboard.press('Escape');
   // ultimo anno: scaricato solo su richiesta
@@ -1821,30 +1846,127 @@ test('mazzi senza collezione: per ultima apparizione, archetipo, Carica altri, d
   await page.selectOption('#dPeriod', '365');
   await expect(page.locator('#dSub')).toContainText(head('decks.sub365'));
   expect(calls.year).toBe(1);
+  // ritorno alla tier list con il link e con "indietro"
+  await page.click('.arch-back');
+  await expect(page.locator('#tierSections .fam-card')).toHaveCount(1);
+  await expect(page.locator('#dArchHead')).toBeHidden();
+  await page.goBack();
+  await expect(page.locator('#dArchHead .arch-name')).toContainText('Terror');
+  await page.goBack();
+  await expect(page.locator('#tierSections')).toBeVisible();
+  // liste non classificate: una pagina come quella di un archetipo; 10, poi 20 alla volta
+  await page.click('.fam-unclassified a');
+  await expect(page.locator('#dArchHead .arch-name')).toHaveText(tr('arch.unclassified'));
+  await expect(page.locator('#dArchWrap')).toBeHidden(); // un solo gruppo di colori
+  await expect(page.locator('#deckList .dk')).toHaveCount(10);
+  await expect(page.locator('#dShown')).toHaveText(tr('decks.shown', { n: 10, total: 12 }));
+  await expect(page.locator('#dMore')).toHaveText(tr('decks.moreLast', { n: 2 }));
+  await page.click('#dMore');
+  await expect(page.locator('#deckList .dk')).toHaveCount(12);
+  await expect(page.locator('#dMore')).toBeHidden();
+  await expect(page.locator('#deckList .dk-name').nth(10)).toBeFocused();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   expect(problems).toEqual([]);
 });
 
-test('mazzi con la collezione: completamento, mancanti con le copie, solo main, minimo, export delle mancanti', async ({ page, context }) => {
+test('tier list: filtri per colore, tier e prezzo, nota coerente, prezzi in arrivo, vai all\'archetipo', async ({ page }, info) => {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  await page.route('**/data/prices.json', async (route) => {
+    await gate;
+    await route.fulfill({ contentType: 'application/json', body: syntheticPrices() });
+  });
+  await mockDecks(page);
+  const problems = await setup(page);
+  await page.goto('./#mazzi');
+  await expect(page.locator('#tierSections .fam-card')).toHaveCount(1);
+  // su mobile i filtri partono chiusi
+  const box = page.locator('#tfBox');
+  if (info.project.name.startsWith('mobile')) {
+    expect(await box.evaluate((el) => (el as HTMLDetailsElement).open)).toBe(false);
+    await box.locator('summary').click();
+  }
+  // prezzo: disattivato finché i prezzi non arrivano, poi "Prezzo della lista tipica" (senza collezione)
+  await expect(page.locator('#tfPrice')).toBeDisabled();
+  await expect(page.locator('#tfPrice option').first()).toHaveText(tr('tier.pricePending'));
+  release();
+  await expect(page.locator('#tfPrice')).toBeEnabled();
+  await expect(page.locator('#tfPriceLabel')).toHaveText(tr('tier.priceList'));
+  await expect(page.locator('.fam-card .fam-price')).toContainText(head('tier.typicalPrice'));
+  // simboli di mana grandi almeno 18 px; stato premuto con la spunta, non solo con il colore
+  const pip = page.locator('.fam-card .pips svg.mana').first();
+  expect((await pip.boundingBox())!.width).toBeGreaterThanOrEqual(18);
+  const red = page.locator('#tfColors [data-v="R"]');
+  await expect(red.locator('.fcheck')).toBeHidden();
+  await red.click();
+  await expect(red).toHaveAttribute('aria-pressed', 'true');
+  await expect(red.locator('.fcheck')).toBeVisible();
+  // "almeno uno": Terror resta per la variante Izzet; le non classificate spariscono
+  await expect(page.locator('#tierSections .fam-card')).toHaveCount(1);
+  await expect(page.locator('#tierSections .fam-row')).toHaveCount(1);
+  await expect(page.locator('.fam-unclassified')).toHaveCount(0);
+  await expect(page.locator('#tfCount')).toHaveText(' (1)');
+  // "solo questi colori": resta solo l'archetipo rosso; il titolo conta tutti, la nota dice perché se ne vedono meno
+  await page.locator('input[name="tColorMode"][value="only"]').check({ force: true });
+  await expect(page.locator('#tierSections .fam-card')).toHaveCount(0);
+  await expect(page.locator('#tierSections .fam-row')).toHaveCount(1);
+  await expect(page.locator('#tVerdict')).toHaveText(tr('tier.verdict', { n: 2 }));
+  await expect(page.locator('#tNote')).toContainText(tr('tier.filtered', { n: 1, total: 2, why: tr('why.colorOnly', { v: tr('color.R').toLocaleLowerCase(L) }) }));
+  await page.click('#tClear');
+  await expect(page.locator('#tNote')).toBeHidden();
+  await expect(page.locator('.fam-unclassified')).toHaveCount(1);
+  await expect(page.locator('#tfCount')).toHaveText('');
+  // tier
+  await page.click('#tfTiers [data-v="4"]');
+  await expect(page.locator('#tierSections .fam-card')).toHaveCount(0);
+  await expect(page.locator('#tierSections .fam-row')).toHaveCount(1);
+  await page.click('#tClear');
+  // prezzo della lista tipica: Terror costa 2 € (solo Brainstorm ha un prezzo), entrambe sotto i 50 €
+  await page.selectOption('#tfPrice', '50');
+  await expect(page.locator('#tierSections .fam-card')).toHaveCount(1);
+  await expect(page.locator('#tNote')).toBeVisible();
+  await page.click('#tClear');
+  // vai all'archetipo
+  await page.selectOption('#tfGoto', 'a2');
+  await expect(page).toHaveURL(/#mazzi\/a2$/);
+  await expect(page.locator('#dArchHead .arch-name')).toContainText('Lightning Bolt + Fire // Ice');
+  await expect(page.locator('#dArchHead .tier-badge')).toHaveText(tr('tier.others'));
+  await expect(page.locator('#dArchWrap')).toBeHidden(); // una sola variante
+  await expect(page.locator('#dPriceLabel')).toHaveText(tr('tier.priceListOne'));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+  expect(problems).toEqual([]);
+});
+
+test('mazzi con la collezione: lista più vicina nella tier list, completamento, mancanti, solo main, minimo, già completo', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await mockDecks(page);
   const problems = await setup(page);
   await uploadCollection(page);
   await page.click('#navDecks');
+  // tier list: completamento della lista più vicina; prezzo = costo per completare
+  await expect(page.locator('#tSub')).toContainText(tr('tier.subColl', { n: 1 }));
+  await expect(page.locator('.fam-card .fam-comp')).toBeVisible();
+  await expect(page.locator('#tfPriceLabel')).toHaveText(tr('tier.priceMissing'));
+  await expect(page.locator('#tfMinWrap')).not.toHaveAttribute('hidden'); // su mobile il riquadro dei filtri è chiuso
+  await page.goto('./#mazzi/c1');
   await expect(page.locator('#dSub')).toContainText(tr('decks.sortComp'));
-  await expect(page.locator('#dSub')).toContainText(tr('decks.fullN', { n: 13 }));
+  await expect(page.locator('#dSub')).toContainText(tr('decks.fullN', { n: 1 }));
   await expect(page.locator('#dNoColl')).toBeHidden();
-  // per completamento: prima le complete (a parità, più apparizioni)
+  await expect(page.locator('#dPriceLabel')).toHaveText(tr('tier.priceMissingOne'));
+  // per completamento: prima la completa
   const top = page.locator('#deckList .dk').first();
   await expect(top.locator('.dk-best b')).toHaveText(first(L, 1));
   await expect(top).toContainText(tr('decks.complete'));
-  await page.selectOption('#dMin', '0.5');
-  await expect(page.locator('#dShown')).toHaveText(tr('decks.shown', { n: 10, total: 14 }));
   await page.selectOption('#dMin', '1');
-  await expect(page.locator('#dShown')).toHaveText(tr('decks.shown', { n: 10, total: 13 }));
+  await expect(page.locator('#deckList .dk')).toHaveCount(1);
   await expect(page.locator('#dNote')).toContainText(tr('decks.whyFull'));
   await page.selectOption('#dMin', '0');
+  // "già completo": solo le liste complete, anche se alle altre mancano solo carte senza prezzo
+  await page.selectOption('#dPrice', '0');
+  await expect(page.locator('#deckList .dk')).toHaveCount(1);
+  await expect(page.locator('#dNote')).toContainText(tr('tier.whyDone'));
+  await page.click('#dClear');
   await page.selectOption('#dArch', 'c1');
   const deck = page.locator('#deckList .dk').nth(1);
   // Tolarian Terror è un proxy (non contato): mancano 4 Tolarian Terror, 2 Counterspell e 1 Delver; il side c'è
@@ -1861,11 +1983,13 @@ test('mazzi con la collezione: completamento, mancanti con le copie, solo main, 
   // solo main: il side non conta
   await page.locator('#dSideWrap label').first().click();
   await expect(deck.locator('.dk-cnt')).toHaveText(tr('decks.have', { have: 9, need: 16 }));
-  // la scelta main/side resta, i filtri no
+  // la scelta main/side resta (anche nella tier list), i filtri no
   await page.reload();
   await expect(page.locator('#deckList .dk').first()).toBeVisible();
   await expect(page.locator('#dSideWrap input[value="main"]')).toBeChecked();
   await expect(page.locator('#dArch')).toHaveValue('');
+  await page.click('.arch-back');
+  await expect(page.locator('input[name="tSide"][value="main"]')).toBeChecked();
   expect(problems).toEqual([]);
 });
 
@@ -1878,7 +2002,7 @@ test('mazzi: i prezzi in arrivo non tolgono il focus, non chiudono le decklist e
   });
   await page.route('**/data/decks-61.json', (r) => r.fulfill({ json: syntheticDecks() }));
   await setup(page);
-  await page.click('#navDecks');
+  await page.goto('./#mazzi/x');
   await expect(page.locator('#deckList .dk')).toHaveCount(10);
   await page.click('#dMore');
   const name = page.locator('#deckList .dk-name').nth(10);
@@ -1924,6 +2048,6 @@ test('mazzi: file non disponibile, messaggio e Riprova', async ({ page }) => {
   await expect(page.locator('#dResults')).toBeHidden();
   fail = false;
   await page.click('#dRetry');
-  await expect(page.locator('#deckList .dk')).toHaveCount(10);
+  await expect(page.locator('#tierSections .fam-card')).toHaveCount(1);
   await expect(page.locator('#dStatus')).toBeHidden();
 });

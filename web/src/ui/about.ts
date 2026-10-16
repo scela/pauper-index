@@ -68,6 +68,7 @@ export function renderAbout(root: HTMLElement, d: Data | null): void {
       faq('precision', [t('about.faq.precision.a')]),
       faq('privacy', [t('about.faq.privacy.a')]),
       faq('prices', [t('about.faq.prices.a')]),
+      faq('tier', [t('about.faq.tier.a')]),
       faq('report', tNodes('about.faq.report.a', { email: mail })),
       faq('support', tNodes('about.faq.support.a', { link: ext(DONATE_URL, t('donate.link')) }))),
 
