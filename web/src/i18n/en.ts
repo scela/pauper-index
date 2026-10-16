@@ -20,7 +20,7 @@ export const en: Record<Key, Msg> = {
   'data.stale': 'The tournament source has had no new events for {days} days: the most recent data may be missing.',
 
   'load.aria': 'Load your collection',
-  'load.intro': 'Find out which cards played in Pauper you already own. Free, no sign-up: your collection stays in your browser.',
+  'load.intro': 'Load your collection',
   'load.fileBtn': 'ManaBox CSV file',
   'load.pasteBtn': 'Paste a list',
   'load.howto': 'How do I export from ManaBox?',

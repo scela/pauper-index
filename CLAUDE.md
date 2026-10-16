@@ -782,6 +782,10 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 
 ## Pagina iniziale e Carta dimenticata (piano approvato il 2026-10-15)
 
+- **Dopo l'approvazione (2026-10-16), modifiche decise dall'utente** (A–D, prima dei passi 4–5 dei Mazzi):
+  - **A**: nel blocco di caricamento niente più frase: solo l'etichetta "Carica la collezione" / "Load your collection" (`load.intro`), i due pulsanti, "Come si esporta da ManaBox?" e su desktop il trascinamento. Su mobile il menu Periodo mostra solo il periodo ("Ultimo anno"), perché il numero di carte è già nel titolo subito sotto (`NARROW`, `max-width: 640px`); il segnaposto di Espansione è "Espansione". Margini ancora un poco più stretti su mobile.
+  - **Obiettivo senza collezione: 3 carte** (quello del piano; il primo report l'aveva portato a 2 senza dirlo). Raggiunto con la frase tolta: prima carta a 441 px, terza che finisce a 666 su 667 (**margine di 1 px**). Con la collezione 3 carte, prima a 405. Il test "primo schermo su iPhone SE" ora controlla 3 carte in entrambi i casi e usa un prezzo sintetico per ogni printing (come i dati reali), così il riepilogo dei prezzi ha la lunghezza vera.
+
 - **Misure prima** (sito pubblicato, iPhone SE 375×667; script in `.cache/measure-home.mjs`, diventerà `scripts/home-metrics.mjs`): testata 124 px su tre righe, riga dei dati 39, controllo rapido 73, caricamento 244 (riga della collezione 97), filtri 146; **prima carta a 825 px senza collezione e a 703 con la collezione** (schermo 667); righe dell'elenco 170 px. Desktop 1280×900: prima carta a 548 / 447–472 px, righe 73 px.
 - **Decisioni dell'utente**:
   - un solo campo "Cerca una carta" al posto del controllo rapido e della ricerca dell'elenco: filtra l'elenco mentre si scrive, suggerisce tutte le carte; **Invio** con un suggerimento evidenziato (frecce) o con un nome esatto (anche italiano) apre la scheda, con un testo parziale chiude suggerimenti e tastiera e lascia l'elenco filtrato; l'attesa di Invio prima dei suggerimenti vale solo per il nome esatto; su mobile toccare fuori o scorrere chiude i suggerimenti;

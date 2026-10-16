@@ -22,7 +22,7 @@ export const it = {
   'data.stale': 'La fonte dei tornei non riceve nuovi tornei da {days} giorni: i dati più recenti potrebbero mancare.',
 
   'load.aria': 'Carica la collezione',
-  'load.intro': 'Scopri quali carte giocate in Pauper possiedi già. Gratis e senza registrazione: la tua collezione resta nel browser.',
+  'load.intro': 'Carica la collezione',
   'load.fileBtn': 'File CSV di ManaBox',
   'load.pasteBtn': 'Incolla una lista',
   'load.howto': 'Come si esporta da ManaBox?',

@@ -691,15 +691,15 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .res-head .sub.pricesum{grid-column:1/-1;grid-row:4;font-size:.8125rem}
   .res-head .res-tools{grid-column:2;grid-row:2;width:auto}
   .res-tools select{min-height:36px;max-width:9em;font-size:.875rem}
-  .dataline{margin-bottom:6px}
-  .searchfield{margin-top:6px}
-  .filters{margin-top:6px;padding:6px 0}
+  .dataline{margin-bottom:4px}
+  .searchfield{margin-top:4px}
+  .filters{margin-top:6px;padding:4px 0}
   .res-head{margin-bottom:4px}
-  .howto summary{min-height:28px}
+  .howto summary{min-height:24px}
   .load-intro{font-size:.9375rem}
   .load-actions{gap:6px}
   .load-actions .btn{padding:0 10px;font-size:.9375rem}
-  .drop{padding:12px 14px;gap:8px}
+  .drop{padding:10px 12px;gap:6px}
   /* righe compatte: miniatura, nome, "12% dei mazzi · di solito 4 copie · vista: …", poi ingresso e prezzo;
      le colonne della tabella e le printing possedute (nella scheda) non si mostrano */
   .cards tr{display:block;padding:8px 0;border-bottom:1px solid var(--line)}

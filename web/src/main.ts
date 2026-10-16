@@ -32,6 +32,8 @@ import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWa
 // Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa
 // (gli export: tutte le carte che rispettano i filtri attivi, non solo quelle mostrate).
 const PAGE = 10;
+/** Schermi stretti (stessa soglia delle righe compatte): voci del periodo senza il numero di carte. */
+const NARROW = window.matchMedia('(max-width: 640px)');
 const NEW_DAYS = 60;
 const STALE_SOURCE_DAYS = 21;
 const PASTED = '__pasted__'; // sorgente dei gruppi incollati: il nome si traduce quando viene mostrato
@@ -457,8 +459,11 @@ function renderFilters(): void {
   // con un'espansione scelta i conteggi del periodo sono quelli dell'espansione, come il riepilogo
   const codes = S.setCodes;
   const counts = presetCounts(d, S.opts, codes ? (idx) => printsInSets(d, idx, codes).length > 0 : undefined);
+  // su mobile il menu è stretto: solo il periodo (il numero di carte è già nel titolo subito sotto)
+  const narrow = NARROW.matches;
+  ($('#setInput') as HTMLInputElement).placeholder = narrow ? t('set.label') : t('set.placeholder');
   $('#period').replaceChildren(...counts.map((n, i) => h('option', { value: String(i), selected: S.opts.win === i },
-    t('period.option', { label: periodLabel(i), n: fmtInt(n) }))));
+    narrow ? periodLabel(i) : t('period.option', { label: periodLabel(i), n: fmtInt(n) }))));
   ($('#period') as HTMLSelectElement).value = String(S.opts.win);
   ($('#optMin') as HTMLInputElement).value = String(S.opts.minDecks);
   ($('#optLegal') as HTMLInputElement).checked = S.opts.legalOnly;
@@ -1347,6 +1352,7 @@ function wire(): void {
   // cambio di pagina (link, "indietro" del browser o il gesto di Android): il pannello si chiude
   window.addEventListener('hashchange', () => setMore(false));
   window.addEventListener('popstate', () => setMore(false));
+  NARROW.addEventListener('change', () => { if (S.d) renderFilters(); });
   window.addEventListener('hashchange', route);
   $('#undoBar').addEventListener('click', (e) => {
     if ((e.target as HTMLElement).id === 'undoRemove') undoRemoval();

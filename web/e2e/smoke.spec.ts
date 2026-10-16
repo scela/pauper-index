@@ -643,16 +643,19 @@ test('primo schermo su iPhone SE (375×667): obiettivi senza e con collezione', 
   // Senza, su Ubuntu il carattere di sistema sarebbe DejaVu Sans, molto più larga. Solo qui la CSP è aggirata, per lo stile.
   const ctx = await browser.newContext({ ...info.project.use, baseURL, viewport: { width: 375, height: 667 }, bypassCSP: true });
   const page = await ctx.newPage();
-  // prezzi sintetici: nella CI data/prices.json non esiste (si genera alla pubblicazione), ma il riepilogo va misurato
-  await page.route('**/data/prices.json', (r) => r.fulfill({ contentType: 'application/json', body: syntheticPrices() }));
+  // prezzi sintetici per ogni printing, come nei dati reali (quasi tutte le carte hanno un prezzo): nella CI
+  // data/prices.json non esiste (si genera alla pubblicazione), ma il riepilogo va misurato
+  const prints = (await (await page.request.get('data/printings.json')).json()) as { p: unknown[][] };
+  const allPrices = JSON.stringify({ v: 1, date: '2026-10-07', p: prints.p.map((ps) => ps.flatMap(() => [100, 0])) });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ contentType: 'application/json', body: allPrices }));
   await setup(page);
   await page.addStyleTag({ content: 'body, body *:not(.brand) { font-family: Arial, "Liberation Sans", sans-serif !important; }' });
   // i prezzi arrivano dopo: si misura con il riepilogo visibile (il caso più alto)
   await expect(page.locator('#priceSummary')).toBeVisible();
   const bottom = (sel: string, i = 0) => page.locator(sel).nth(i).evaluate((e) => e.getBoundingClientRect().bottom);
-  // senza collezione: frase, blocco di caricamento, campo di ricerca e le prime 2 carte
+  // senza collezione: blocco di caricamento, campo di ricerca e le prime 3 carte (obiettivo del piano)
   for (const sel of ['#loadIntro', '#loadArea', '#search']) expect(await bottom(sel)).toBeLessThanOrEqual(667);
-  expect(await bottom('#cardRows tr', 1)).toBeLessThanOrEqual(667);
+  expect(await bottom('#cardRows tr', 2)).toBeLessThanOrEqual(667);
   // con la collezione: "Possiedi N carte" e almeno 3 carte
   await page.click('#pasteToggle');
   await page.fill('#pasteText', '4 Ponder\n4 Brainstorm\n4 Counterspell\n2 Lightning Bolt\n4 Preordain\n2 Snuff Out\n2 Cast Down\n2 Mulldrifter');
@@ -933,7 +936,7 @@ async function counts(page: Page): Promise<{ head: number; list: number; note: n
   return { head: num(raw.head), list: raw.shown ? num(raw.shown, 1) : 0, note: raw.note ? num(raw.note) : null };
 }
 
-test('riepilogo ed elenco: stesso insieme, e i filtri che nascondono carte sono dichiarati', async ({ page }) => {
+test('riepilogo ed elenco: stesso insieme, e i filtri che nascondono carte sono dichiarati', async ({ page, isMobile }) => {
   await setup(page);
   // il caso segnalato: Edge of Eternities, storico, "non viste da oltre 6 mesi" (ricordato nel browser)
   await pickSet(page, 'edge of eternities', 'Edge of Eternities');
@@ -942,7 +945,9 @@ test('riepilogo ed elenco: stesso insieme, e i filtri che nascondono carte sono 
   expect(c.note).toBeNull();
   expect(c.list).toBe(c.head);
   // il menu Periodo conta le carte dell'espansione, come il riepilogo
-  await expect(page.locator('#period option:checked')).toContainText(c.head.toLocaleString(L === 'it' ? 'it-IT' : 'en-US'));
+  // (su mobile le voci mostrano solo il periodo: il numero è nel titolo subito sotto)
+  if (!isMobile) await expect(page.locator('#period option:checked')).toContainText(c.head.toLocaleString(L === 'it' ? 'it-IT' : 'en-US'));
+  else await expect(page.locator('#period option:checked')).toHaveText(tr('period.3'));
   await setSeen(page, 'old');
   c = await counts(page);
   expect(c.list).toBeLessThan(c.head);
