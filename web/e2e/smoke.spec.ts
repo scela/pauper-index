@@ -636,10 +636,17 @@ test('caricamento: frase, due pulsanti, area di testo su richiesta, aiuto per Ma
   expect((await page.locator('#loaded').boundingBox())!.height).toBeLessThanOrEqual(isMobile ? 100 : 56);
 });
 
-test('primo schermo su iPhone SE (375×667): obiettivi senza e con collezione', async ({ page, isMobile }) => {
+test('primo schermo su iPhone SE (375×667): obiettivi senza e con collezione', async ({ browser, baseURL, isMobile }, info) => {
   test.skip(!isMobile, 'obiettivi misurati su mobile');
-  await page.setViewportSize({ width: 375, height: 667 });
+  // gli obiettivi valgono per un telefono (San Francisco su iPhone, Roboto su Android): si misura con Arial, di larghezza
+  // simile, uguale in locale (Windows) e in CI (Liberation Sans, installata da "playwright install --with-deps").
+  // Senza, su Ubuntu il carattere di sistema sarebbe DejaVu Sans, molto più larga. Solo qui la CSP è aggirata, per lo stile.
+  const ctx = await browser.newContext({ ...info.project.use, baseURL, viewport: { width: 375, height: 667 }, bypassCSP: true });
+  const page = await ctx.newPage();
+  // prezzi sintetici: nella CI data/prices.json non esiste (si genera alla pubblicazione), ma il riepilogo va misurato
+  await page.route('**/data/prices.json', (r) => r.fulfill({ contentType: 'application/json', body: syntheticPrices() }));
   await setup(page);
+  await page.addStyleTag({ content: 'body, body *:not(.brand) { font-family: Arial, "Liberation Sans", sans-serif !important; }' });
   // i prezzi arrivano dopo: si misura con il riepilogo visibile (il caso più alto)
   await expect(page.locator('#priceSummary')).toBeVisible();
   const bottom = (sel: string, i = 0) => page.locator(sel).nth(i).evaluate((e) => e.getBoundingClientRect().bottom);
@@ -655,6 +662,7 @@ test('primo schermo su iPhone SE (375×667): obiettivi senza e con collezione', 
   await page.evaluate(() => window.scrollTo(0, 0));
   expect(await bottom('#verdict')).toBeLessThanOrEqual(667);
   expect(await bottom('#cardRows tr', 2)).toBeLessThanOrEqual(667);
+  await ctx.close();
 });
 
 test('righe compatte su mobile, filtri su una riga, "Ultima apparizione" nel pannello con la sua etichetta', async ({ page, isMobile }) => {

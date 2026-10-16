@@ -4,7 +4,7 @@ import {
   compute, deckShare, DEFAULT_OPTS, defaultRole, presetCounts, summarize, typicalCopies,
   type ImportSummary, type Opts, type Result,
 } from './lib/compare';
-import { detectLang, fmtDateTime, getLang, setLang, t, type Key, type Lang } from './i18n';
+import { detectLang, fmtDateShort, fmtDateTime, getLang, setLang, t, type Key, type Lang } from './i18n';
 import { baseName, looksLikeCSV, readTable } from './lib/csv';
 import { imageUrl, loadData, loadPrices, type Data } from './lib/data';
 import { $, h, svg } from './lib/dom';
@@ -793,7 +793,7 @@ function renderRows(): void {
         h('span', { class: 'mline' }, [
           t('row.share', { pct: fmtPct(x.share) }),
           coll && x.owned > 0 ? t('row.owned', { n: x.owned }) : t('row.typical', { n: x.typical }),
-          t('row.seen', { date: fmtDate(c.z) }),
+          t('row.seen', { date: fmtDateShort(c.z, Number(d.cards.anchor.slice(0, 4))) }),
         ].join(' · ')),
         h('span', { class: 'mline2' }, entry && c.e ? `${t('row.entry', { set: c.e.toUpperCase(), year: entry[1].slice(0, 4) })} · ` : '',
           h('span', { class: 'mprice' }, priceText(x)))));

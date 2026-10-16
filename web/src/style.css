@@ -691,9 +691,11 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .res-head .sub.pricesum{grid-column:1/-1;grid-row:4;font-size:.8125rem}
   .res-head .res-tools{grid-column:2;grid-row:2;width:auto}
   .res-tools select{min-height:36px;max-width:9em;font-size:.875rem}
-  .dataline{margin-bottom:8px}
-  .searchfield{margin-top:8px}
-  .filters{margin-top:8px;padding:8px 0}
+  .dataline{margin-bottom:6px}
+  .searchfield{margin-top:6px}
+  .filters{margin-top:6px;padding:6px 0}
+  .res-head{margin-bottom:4px}
+  .howto summary{min-height:28px}
   .load-intro{font-size:.9375rem}
   .load-actions{gap:6px}
   .load-actions .btn{padding:0 10px;font-size:.9375rem}
@@ -704,8 +706,11 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .cards td{padding:0;border:0}
   .cards td.c-qty,.cards td.c-pct,.cards td.c-seen,.cards td.c-entry,.cards td.c-price{display:none}
   .cards .own{display:none}
-  .cards .mline{display:block;margin-top:2px;font-size:.8125rem;line-height:1.35}
-  .cards .mline2{display:block;font-size:.75rem;line-height:1.35;color:var(--muted)}
+  /* una riga ciascuna anche con caratteri larghi o testo ingrandito: se non ci sta si tronca (tutto è nella scheda) */
+  .cards .mline{display:block;margin-top:2px;font-size:.8125rem;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cards .mline2{display:block;font-size:.75rem;line-height:1.35;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cards .nmwrap{min-width:0}
+  .cards .cardbtn{min-width:0;max-width:100%}
   .cards .nores{display:block}
   .groups thead{display:none}
   .groups tr{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:8px 0;border-bottom:1px solid var(--line)}

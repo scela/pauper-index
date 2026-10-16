@@ -3,6 +3,7 @@
 // Misure: altezza di testata, riga dei dati, blocco di caricamento (o riga della collezione), controlli; posizione del
 // titolo e della prima carta; altezza delle prime righe; quante carte stanno nel primo schermo.
 // -> ../.cache/screenshots/home-<etichetta>-*.png e home-<etichetta>.json (cartella ignorata da git).
+// Su mobile si misura con Arial (larga come i caratteri dei telefoni), come il test "primo schermo su iPhone SE".
 // Richiede il sito in esecuzione: npm run build; npm run preview  (in un'altra finestra); oppure SITE_URL=https://pauperindex.com/
 // Uso: node scripts/home-metrics.mjs <etichetta>
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -45,11 +46,12 @@ for (const [name, opts] of [
 ]) {
   for (const scheme of ['light', 'dark']) {
     for (const lang of ['it', 'en']) {
-      const ctx = await browser.newContext({ ...opts, locale: lang === 'it' ? 'it-IT' : 'en-US', colorScheme: scheme });
+      const ctx = await browser.newContext({ ...opts, locale: lang === 'it' ? 'it-IT' : 'en-US', colorScheme: scheme, bypassCSP: name === 'mobile' });
       const page = await ctx.newPage();
       await page.route('https://cards.scryfall.io/**', (r) => r.abort());
       await page.goto(URL);
       await page.waitForFunction(() => document.querySelector('#cardRows tr'));
+      if (name === 'mobile') await page.addStyleTag({ content: 'body, body *:not(.brand) { font-family: Arial, "Liberation Sans", sans-serif !important; }' });
       const base = `${OUT}/home-${label}-${name}-${scheme === 'light' ? 'chiaro' : 'scuro'}-${lang}`;
       const a = await measure(page, 'senza collezione');
       await page.screenshot({ path: `${base}-1-senza.png` });

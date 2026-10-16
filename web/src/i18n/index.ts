@@ -67,6 +67,15 @@ export function fmtDate(iso: string, l: Lang = current): string {
   return new Intl.DateTimeFormat(LOCALES[l], { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(d);
 }
 
+/** Data corta per le righe compatte: "11 ott" nell'anno di riferimento, altrimenti "ott 2024". */
+export function fmtDateShort(iso: string, refYear: number, l: Lang = current): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  if (!m) return iso || '';
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  const opts: Intl.DateTimeFormatOptions = +m[1] === refYear ? { day: 'numeric', month: 'short' } : { month: 'short', year: 'numeric' };
+  return new Intl.DateTimeFormat(LOCALES[l], { ...opts, timeZone: 'UTC' }).format(d);
+}
+
 export function fmtDateTime(ms: number, l: Lang = current): string {
   return new Date(ms).toLocaleString(LOCALES[l], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
