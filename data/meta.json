@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-17T11:40:52+00:00",
+  "generated_at": "2026-10-18T12:06:34+00:00",
   "last_tournament": "2026-10-11",
   "tournaments": 7101,
   "decks": 156550,
@@ -27,15 +27,15 @@
   ],
   "cards": 5051,
   "scryfall": {
-    "oracle_cards": "2026-10-17T09:01:58.799+00:00",
-    "default_cards": "2026-10-17T09:05:48.905+00:00"
+    "oracle_cards": "2026-10-18T09:01:55.818+00:00",
+    "default_cards": "2026-10-18T09:06:08.225+00:00"
   },
   "source": {
     "commit": "686a3f1f0962dfe2e8901523b83c98b5ce59b181",
     "commit_date": "2026-10-12T19:54:44+02:00",
     "url": "https://github.com/Jiliac/MTGODecklistCache.git",
     "status": "ok",
-    "days_since_last_tournament": 6
+    "days_since_last_tournament": 7
   },
   "dedup": {
     "before": {
