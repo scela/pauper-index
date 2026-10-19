@@ -33,7 +33,8 @@ async function rispolvera(page: Page): Promise<void> {
 /** Usa le funzioni principali: collezione, controllo rapido, espansione, export, Carta dimenticata, Mazzi, Ko-fi. */
 async function useEverything(page: Page, lang: Lang): Promise<void> {
   await page.route('https://cards.scryfall.io/**', (r) => r.fulfill({ contentType: 'image/png', body: PNG }));
-  await page.route('https://ko-fi.com/**', (r) => r.abort());
+  // sul contesto, non sulla pagina: il link apre una finestra nuova, che altrimenti carica ko-fi.com e i suoi cookie
+  await page.context().route('https://ko-fi.com/**', (r) => r.abort());
   await expect(page.locator('#dataline')).toContainText(translate(lang, 'data.line').split('{')[0]);
   await page.setInputFiles('#files', resolve(FIX, 'collezione-sintetica.csv'));
   await expect(page.locator('#loaded')).toBeVisible();
