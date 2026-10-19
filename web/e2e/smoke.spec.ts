@@ -562,6 +562,48 @@ test('cerca una carta: Invio con un nome esatto prima che i suggerimenti siano p
   await expect(page.locator('#sheet')).toBeHidden();
 });
 
+test('interazioni prima che arrivino i dati: banner, "Cerca una carta", Mazzi e Carta dimenticata senza errori', async ({ page }) => {
+  // "Cannot read properties of null (reading 'cards')" nella CI del 16/10: scrivere nel campo prima di cards.json
+  const problems: string[] = [];
+  page.on('pageerror', (e) => problems.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error' && !/favicon|reviews\/index\.json|404/.test(m.text())) problems.push(m.text()); });
+  let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  await page.route('**/data/cards.json', async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.route('https://cards.scryfall.io/**', (r) => r.fulfill({ contentType: 'image/png', body: PNG }));
+  await page.goto('./');
+  await page.click('#welcomeClose');
+  const input = page.locator('#search');
+  await input.focus();
+  await input.pressSequentially('light', { delay: 20 });
+  await input.press('ArrowDown');
+  await input.press('Enter');
+  await input.press('Escape');
+  await input.fill('Brainstorm');
+  await page.click('#navDecks');
+  await expect(page.locator('#viewDecks')).toBeVisible();
+  await page.click('#navDust');
+  await expect(page.locator('#viewDust')).toBeVisible();
+  await page.locator('#dustMin').fill('10');
+  await page.locator('#dustBtn').click({ trial: !(await page.locator('#dustBtn').isEnabled()) });
+  await page.waitForTimeout(200);
+  expect(problems).toEqual([]);
+  // all'arrivo dei dati la pagina si completa, sempre senza errori
+  release();
+  await expect(page.locator('#dustMinCount')).not.toHaveText('');
+  await page.click('#navDecks');
+  await expect(page.locator('#tierSections .fam-card').first()).toBeVisible();
+  // indietro fino alla pagina principale: il testo scritto prima dei dati filtra l'elenco
+  for (let i = 0; i < 3; i++) await page.goBack();
+  await expect(page.locator('#viewMain')).toBeVisible();
+  await expect(input).toHaveValue('Brainstorm');
+  await expect(page.locator('#cardRows .nm').first()).toHaveText('Brainstorm');
+  expect(problems).toEqual([]);
+});
+
 test('testata: una riga, pannello "⋯" su mobile, pulsanti speciali, libro che si apre senza cambiare dimensioni', async ({ page, isMobile }) => {
   await setup(page);
   const top = (await page.locator('.top').boundingBox())!;

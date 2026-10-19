@@ -1439,7 +1439,8 @@ async function main(): Promise<void> {
       ensureItalian();
       S.query = q;
       S.shown = PAGE;
-      renderResults();
+      // prima dei dati si ricorda solo il testo: l'elenco filtrato si disegna al loro arrivo (refresh)
+      if (S.d) renderResults();
     },
     open: openFromSearch,
     ready: () => {
@@ -1457,6 +1458,7 @@ async function main(): Promise<void> {
     save: saveText,
   });
   route();
+  showWelcome(); // non dipende dai dati: subito, senza spostare la pagina quando arrivano
   try {
     S.d = await loadData();
   } catch {
