@@ -42,8 +42,8 @@ describe('debutti: frase riassuntiva da modelli fissi', () => {
   });
 
   it('riscoperta: "mai vista nei tornei dal 2014" con l\'anno della prima stampa; mazzo nuovo', () => {
-    const r = row({ c: 5, k: 'r', d: 12, a: [['a9', 9, 9]], q: [1, 0, 2, 9], y: 2005, r: [['a9', 9, 9, 0, 1, []]] });
-    expect(summary(file([r]), r, cards, 'it')).toBe('Mai vista nei tornei dal 2014, ma stampata nel 2005, giocata soprattutto in Boots of Speed + Tidewater Minion (75%), quasi sempre in 4 copie, con un mazzo nuovo costruito intorno.');
+    const r = row({ c: 5, k: 'r', d: 26, a: [['a9', 20, 20]], q: [1, 0, 2, 23], y: 2005, r: [['a9', 20, 20, 0, 1, []]] });
+    expect(summary(file([r]), r, cards, 'it')).toBe('Mai vista nei tornei dal 2014, ma stampata nel 2005, giocata soprattutto in Boots of Speed + Tidewater Minion (77%), quasi sempre in 4 copie, in un mazzo nuovo, comparso dopo il suo debutto.');
     // stampata dopo il 2014 (Great Forest Druid, 2026)
     const r2 = row({ c: 7, k: 'r', y: 2026, a: [] });
     expect(summary(file([r2]), r2, cards, 'en')).toMatch(/^Never seen in tournaments before, printed in 2026,/);

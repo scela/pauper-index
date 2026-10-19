@@ -106,10 +106,26 @@ def test_replaced_needs_adoption_and_twenty_decks():
     # 25% della variante ma solo 19 mazzi: niente
     mine = [rec(since + 3, {NEW: 4}) for _ in range(19)]
     assert rep_of(NEW, mine, pre + mine + [rec(since + 3, {X: 4}) for _ in range(20)], since) == []
-    # mazzo nuovo (nessuna lista della variante prima): basta 5 mazzi, non con 4
-    mine = [rec(since + 3, {NEW: 4}, arch="a9", fam="a9") for _ in range(5)]
-    assert rep_of(NEW, mine, pre + mine, since, ("a9",)) == [["a9", 5, 5, 0, 1, []]]
-    assert rep_of(NEW, mine[:4], pre + mine[:4], since, ("a9",)) == []
+    # mazzo nuovo (nessuna lista della variante prima): stessa soglia, almeno 20 mazzi con la carta, non con 19
+    # (Giant's Boulder in "Dispatch + Baleful Strix", 10 mazzi: il gruppo è nato intorno ad altre carte)
+    mine = [rec(since + 3, {NEW: 4}, arch="a9", fam="a9") for _ in range(20)]
+    assert rep_of(NEW, mine, pre + mine, since, ("a9",)) == [["a9", 20, 20, 0, 1, []]]
+    assert rep_of(NEW, mine[:19], pre + mine[:19], since, ("a9",)) == []
+
+
+def test_replaced_needs_a_shared_color():
+    since = ORD("2026-09-07")
+    # NEW blu (Plunder the Trollshaws) in Izzet Terror: cala OLD rosso (Lightning Bolt), sostituito da un'altra carta
+    # rossa; cala anche OTHER blu; X incolore (artefatto) va con tutte
+    colors = [""] * 12
+    colors[NEW], colors[OLD], colors[OTHER], colors[X] = "U", "R", "UB", ""
+    pre = [rec(since - 5, {OLD: 4, OTHER: 2, X: 1}) for _ in range(20)]
+    mine = [rec(since + 3, {NEW: 4}) for _ in range(20)]
+    rep = debuts.replaced(NEW, mine, pre + mine, since, LAND, ["c1"], colors)[0][5]
+    assert sorted(r[0] for r in rep) == [OTHER, X]
+    colors[NEW] = ""  # una carta incolore che debutta va con tutte
+    rep = debuts.replaced(NEW, mine, pre + mine, since, LAND, ["c1"], colors)[0][5]
+    assert sorted(r[0] for r in rep) == [OLD, OTHER, X]
 
 
 def test_replaced_in_each_family_and_lands_only_with_lands():

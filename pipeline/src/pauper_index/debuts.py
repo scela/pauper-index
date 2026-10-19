@@ -126,7 +126,7 @@ def presence(ds: list[Recent], zone: str) -> Counter:
 
 
 def replaced(card: int, mine: list[Recent], recent: list[Recent], since: int, is_land: list[bool],
-             families: list[str]) -> list[list]:
+             families: list[str], colors: list[str] | None = None) -> list[list]:
     """"Al posto di": per ciascuna delle prime famiglie della carta, nella sua variante più frequente.
 
     Si calcola solo se la carta, dalla prima apparizione, è giocata da almeno MIN_ADOPTION dei mazzi della variante e
@@ -136,7 +136,11 @@ def replaced(card: int, mine: list[Recent], recent: list[Recent], since: int, is
     1. prima/dopo: le liste della variante nei BEFORE_DAYS giorni prima di `since` contro le liste con la carta;
     2. stesso periodo: le liste della variante senza la carta, da `since`, solo se almeno MIN_COMPARE.
     Una carta è "al posto di" se la sua presenza cala di almeno MIN_DROP in tutti i confronti validi. Una terra si
-    confronta solo con terre (basi comprese); le altre carte mai con terre.
+    confronta solo con terre (basi comprese); le altre carte mai con terre. La carta sostituita deve avere almeno un
+    colore in comune con la carta che debutta (`colors`, colori delle carte; le incolori vanno con tutte): Plunder the
+    Trollshaws (blu) non è "al posto di" Lightning Bolt in Izzet Terror, che l'ha sostituito Galvanic Discharge.
+    Un mazzo nuovo (la variante non c'era nei BEFORE_DAYS giorni prima) si segnala con la stessa soglia: almeno
+    MIN_COMPARE mazzi con la carta in quella variante.
     Restituisce [[variante, mazzi con la carta, mazzi della variante, prima, nuovo mazzo 0/1,
     [[carta, presenza prima, con la carta, senza la carta o -1] in per mille]]].
     """
@@ -151,8 +155,7 @@ def replaced(card: int, mine: list[Recent], recent: list[Recent], since: int, is
         post = [d for d in mine if d.arch == arch]
         total = sum(1 for d in recent if d.arch == arch and d.day >= since)
         pre = [d for d in recent if d.arch == arch and since - BEFORE_DAYS <= d.day < since]
-        # un mazzo nuovo (la variante non c'era prima) si segnala già da MIN_DECKS mazzi con la carta
-        if len(post) < MIN_ADOPTION * total or len(post) < (MIN_COMPARE if pre else MIN_DECKS):
+        if len(post) < MIN_ADOPTION * total or len(post) < MIN_COMPARE:
             continue
         without = [d for d in recent if d.arch == arch and d.day >= since and not d.has(card)]
         rows = []
@@ -161,6 +164,8 @@ def replaced(card: int, mine: list[Recent], recent: list[Recent], since: int, is
             p_wo = presence(without, zone) if len(without) >= MIN_COMPARE else None
             for c, n in p_pre.items():
                 if c == card or is_land[c] != land:
+                    continue
+                if colors and colors[card] and colors[c] and not set(colors[card]) & set(colors[c]):
                     continue
                 a, b = n / len(pre), p_post[c] / len(post)
                 if a - b < MIN_DROP:
@@ -197,6 +202,7 @@ def build_debuts(kept: list[Tournament], keymap, key_oids, db: CardDB, order: li
     pos = {o: i for i, o in enumerate(order)}
     basics = {pos[o] for o, c in db.cards.items() if c.name in NORMAL_BASICS and o in pos}
     is_land = [o in db.cards and "Land" in db.cards[o].type_line for o in order]
+    colors = [db.cards[o].card_colors if o in db.cards else "" for o in order]
     unban = {o: d for o, d in unbanned(update_legality(db, today, legality)).items() if anchor - d <= MAX_DAYS}
     # candidati: prima apparizione recente o sblocco recente, carta legale oggi, non terra base
     cand: dict[int, tuple[int, int | None]] = {}  # indice -> (giorno da cui si contano i mazzi, sblocco)
@@ -250,7 +256,7 @@ def build_debuts(kept: list[Tournament], keymap, key_oids, db: CardDB, order: li
         main_only = sum(1 for d in mine if i in d.main and i not in d.side)
         side_only = sum(1 for d in mine if i not in d.main)
         copies = Counter(min(4, d.main.get(i, 0) + d.side.get(i, 0)) for d in mine)
-        rep = replaced(i, mine, recent, since, is_land, [f for f, *_ in archs[:REPLACE_FAMILIES]])
+        rep = replaced(i, mine, recent, since, is_land, [f for f, *_ in archs[:REPLACE_FAMILIES]], colors)
         used_v.update(r[0] for r in rep)
         together = Counter()
         for d in mine:

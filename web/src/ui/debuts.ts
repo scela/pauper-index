@@ -142,7 +142,8 @@ export function initDebuts(deps: DebutsDeps): { show(): void; refresh(): void } 
     const sec = (title: Key, ...body: (Node | null)[]) => h('section', { class: 'deb-sec' }, h('h4', null, t(title)), ...body);
     const archs = h('ul', { class: 'deb-rows' }, ...r.a.map(([fam, k, tot]) => h('li', null,
       h('span', { class: 'deb-lbl' }, famName(f, fam) || t('deb.unclassified')), bar(k / r.d),
-      h('span', { class: 'deb-val' }, t('deb.a.archRow', { pct: pct(k / r.d), adopt: pct(tot ? k / tot : 0) })))));
+      h('span', { class: 'deb-val' }, t(fam === 'x' ? 'deb.a.archRowX' : 'deb.a.archRow',
+        { pct: pct(k / r.d), adopt: pct(tot ? k / tot : 0), arch: famName(f, fam) })))));
     const copies = h('p', null, [1, 2, 3, 4].map((n, i) => (r.q[i] ? `${t(n === 4 ? 'deb.a.copy4' : 'deb.a.copyN', { n })} ${pct(r.q[i] / r.d)}` : '')).filter(Boolean).join(' · '));
     const zone = h('p', null, t('deb.a.zoneRow', { main: pct(r.z[0] / r.d), side: pct(r.z[1] / r.d), both: pct(r.z[2] / r.d) }));
     const reps: HTMLElement[] = [];
