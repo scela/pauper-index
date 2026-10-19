@@ -524,6 +524,7 @@ export const en: Record<Key, Msg> = {
   'decks.labelMissing': 'missing cards of the deck',
   'decks.fileDeck': 'deck-{name}.txt',
   'decks.fileMissing': 'missing-{name}.txt',
+  'nav.debuts': 'Debuts',
   'deb.title': 'Debuts',
   'deb.lead': 'Cards that recently showed up in Pauper tournaments for the first time, and how they are played.',
   'deb.count': { one: '{n} card debuting in the last {days} days', other: '{n} cards debuting in the last {days} days' },

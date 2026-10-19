@@ -102,6 +102,25 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
 .navdust:hover .nd-ico{animation:duster-wiggle .7s ease-in-out}
 .nd-web{position:absolute;top:0;right:0;width:26px;height:26px;pointer-events:none}
 @media (prefers-reduced-motion: reduce){.navdust:hover .nd-ico{animation:none}}
+/* "Debutti": un sipario di velluto cremisi con la mantovana dorata; alla pressione e sulla propria pagina si apre
+   e mostra la stella sul palco (debutto teatrale), come la copertina del libro di Mazzi */
+.navcurtain{--sp-ledge:#3A0711;color:#F2D27A;
+  background:radial-gradient(120% 90% at 50% 0%,rgba(255,255,255,.14),transparent 60%),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.14) 0 3px,transparent 3px 7px),
+    linear-gradient(180deg,#8E1B2C 0%,#6E1322 55%,#4F0C18 100%)}
+.navcurtain::after{content:"";position:absolute;left:6px;right:6px;bottom:3px;border-bottom:2px dotted rgba(242,210,122,.7);pointer-events:none}
+.curtain{width:22px;height:22px;flex:none;overflow:visible}
+.curtain .stage{fill:#2A050C}
+.curtain .star{fill:#F2D27A}
+.curtain .drape{fill:#C9324A;stroke:#5E0E1C;stroke-width:.5;transition:transform .45s cubic-bezier(.3,.7,.3,1)}
+.curtain .left{transform-origin:3px 12px}
+.curtain .right{transform-origin:21px 12px}
+.curtain .fold{fill:none;stroke:#7E1423;stroke-width:.8;stroke-linecap:round;transition:opacity .3s}
+.curtain .valance{fill:#E2BE6A;stroke:#8C6A0E;stroke-width:.5}
+.navcurtain:active .curtain .left,.navcurtain[aria-current="page"] .curtain .left{transform:scaleX(.38)}
+.navcurtain:active .curtain .right,.navcurtain[aria-current="page"] .curtain .right{transform:scaleX(.38)}
+.navcurtain:active .curtain .fold,.navcurtain[aria-current="page"] .curtain .fold{opacity:0}
+@media (prefers-reduced-motion: reduce){.curtain .drape,.curtain .fold{transition:none}}
 .langs{display:inline-flex}
 .langs .btn{padding-inline:6px;min-width:34px;justify-content:center}
 .langs .btn[aria-pressed="true"]{color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:3px}
@@ -747,8 +766,21 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .dfilters .f-field{flex:1 1 100%;min-width:0}
   .dfilters .f-field select{flex:1;min-width:0;width:100%;max-width:100%}
 }
+/* telefoni da 360 a 430 px: tre pulsanti speciali, nome e "⋯" su una riga (pulsanti più stretti, nome più piccolo) */
+@media (max-width:430px){
+  .top{gap:4px}
+  h1{font-size:1rem}
+  .nav{gap:4px}
+  .specials{gap:4px}
+  .special{min-width:46px;padding:0 4px;font-size:.625rem;letter-spacing:-.01em}
+  .nav .navmore{width:30px}
+}
+@media (min-width:375px) and (max-width:430px){
+  h1{font-size:1.125rem}
+}
 @media (max-width:359px){
   .home .brand{display:none}
+  h1{font-size:1.25rem}
 }
 @media (max-width:640px){
   .arch-head{flex-direction:column;gap:10px}

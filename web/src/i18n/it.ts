@@ -526,6 +526,7 @@ export const it = {
   'decks.labelMissing': 'carte mancanti del mazzo',
   'decks.fileDeck': 'mazzo-{name}.txt',
   'decks.fileMissing': 'mancanti-{name}.txt',
+  'nav.debuts': 'Debutti',
   'deb.title': 'Debutti',
   'deb.lead': 'Le carte apparse per la prima volta nei tornei Pauper di recente, e come vengono giocate.',
   'deb.count': { one: '{n} carta al debutto negli ultimi {days} giorni', other: '{n} carte al debutto negli ultimi {days} giorni' },

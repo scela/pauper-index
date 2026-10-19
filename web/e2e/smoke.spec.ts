@@ -632,6 +632,11 @@ test('testata: una riga, pannello "⋯" su mobile, pulsanti speciali, libro che 
   const book = page.locator('#navDecks');
   await expect(book).toHaveAccessibleName(tr('nav.decks'));
   await expect(page.locator('#navDust')).toHaveAccessibleName(tr('nav.dust'));
+  await expect(page.locator('#navDebuts')).toHaveAccessibleName(tr('nav.debuts'));
+  // i tre pulsanti speciali: stessa altezza
+  const heights = await page.locator('.special').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)));
+  expect(heights).toHaveLength(3);
+  expect(new Set(heights).size).toBe(1);
   const more = page.locator('#navMore');
   if (isMobile) {
     // Informazioni, lingua e tema nel pannello "⋯": si apre, Esc lo chiude e riporta il focus, toccare fuori lo chiude
@@ -670,6 +675,40 @@ test('testata: una riga, pannello "⋯" su mobile, pulsanti speciali, libro che 
   await expect.poll(() => page.locator('.book-cover').evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
   const after = (await book.boundingBox())!;
   expect([after.width, after.height].map(Math.round)).toEqual([before.width, before.height].map(Math.round));
+  // sipario: aperto sulla pagina Debutti, stesse dimensioni
+  const curtain = page.locator('#navDebuts');
+  const c0 = (await curtain.boundingBox())!;
+  await curtain.click();
+  await expect(curtain).toHaveAttribute('aria-current', 'page');
+  await expect(book).not.toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#viewDebuts')).toBeVisible();
+  await expect.poll(() => page.locator('.curtain .left').evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
+  const c1 = (await curtain.boundingBox())!;
+  expect([c1.width, c1.height].map(Math.round)).toEqual([c0.width, c0.height].map(Math.round));
+});
+
+test('testata sui telefoni da 360 a 430 px: nome, tre pulsanti speciali e "⋯" su una riga; sotto 360 solo il logo', async ({ browser, baseURL }, info) => {
+  test.skip(info.project.name !== 'desktop-it' && info.project.name !== 'desktop-en', 'larghezze impostate dal test');
+  const ctx = await browser.newContext({ ...info.project.use, baseURL, viewport: { width: 320, height: 740 }, isMobile: true, hasTouch: true, bypassCSP: true });
+  const page = await ctx.newPage();
+  await setup(page);
+  await page.addStyleTag({ content: 'body, body *:not(.brand) { font-family: Arial, "Liberation Sans", sans-serif !important; }' });
+  for (const w of [320, 360, 375, 390, 430]) {
+    await page.setViewportSize({ width: w, height: 740 });
+    const box = async (sel: string) => (await page.locator(sel).boundingBox())!;
+    const top = await box('.top');
+    expect(top.height, `${w}px`).toBeLessThanOrEqual(60);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${w}px`).toBe(0);
+    const ys = await Promise.all(['#navDecks', '#navDust', '#navDebuts', '#navMore'].map(async (s) => box(s)));
+    for (const b of ys) expect(Math.abs(b.y + b.height / 2 - (ys[0].y + ys[0].height / 2)), `${w}px`).toBeLessThanOrEqual(3);
+    if (w < 360) await expect(page.locator('.home .brand')).toBeHidden();
+    else {
+      await expect(page.locator('.home .brand')).toBeVisible();
+      expect((await box('.home .brand')).x + (await box('.home .brand')).width, `${w}px`).toBeLessThanOrEqual(ys[0].x);
+    }
+    for (const s of ['#navDecks', '#navDust', '#navDebuts']) expect((await box(s)).height).toBeGreaterThanOrEqual(44);
+  }
+  await ctx.close();
 });
 
 test('banner della prima visita: riquadro con i tre passi, X che lo chiude, non ricompare, torna dopo "Cancella i miei dati"', async ({ page }) => {

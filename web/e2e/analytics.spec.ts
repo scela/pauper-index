@@ -56,7 +56,7 @@ async function useEverything(page: Page, lang: Lang): Promise<void> {
   await expect(page.locator('#dustResult')).toBeVisible();
   await page.click('#navDecks');
   await expect(page.locator('#viewDecks')).toBeVisible();
-  await page.evaluate(() => { location.hash = '#debutti'; });
+  await page.click('#navDebuts');
   await expect(page.locator('#viewDebuts')).toBeVisible();
   const popup = page.context().waitForEvent('page');
   await page.locator('.donate a').click();
