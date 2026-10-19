@@ -219,7 +219,7 @@ def cmd_alarm(args) -> None:
     stale_alarm(meta, today, token=os.environ.get("GITHUB_TOKEN"))
 
 
-VOLATILE_META = ("generated_at",)
+VOLATILE_META = ("generated_at", "scryfall")  # scryfall: date dei bulk, cambiano ogni giorno
 VOLATILE_SOURCE = ("commit", "commit_date", "days_since_last_tournament")
 
 
@@ -232,10 +232,33 @@ def _stable_meta(text: str) -> dict:
     return m
 
 
+def _stable_archetypes(text: str) -> dict:
+    # "seen" (ultimo giorno in cui il gruppo ha liste) si aggiorna a ogni build e non è mai letto
+    m = json.loads(text)
+    for g in m.get("groups", []):
+        g.pop("seen", None)
+    return m
+
+
+VOLATILE_FILES = {"data/meta.json": _stable_meta, "data/reviews/archetipi-auto.json": _stable_archetypes}
+
+
+def significant_changes(paths: list[str], old, new) -> list[str]:
+    """I percorsi cambiati in modo significativo; old(p)/new(p) danno il testo in HEAD e nella cartella di lavoro."""
+    out = []
+    for p in paths:
+        stable = VOLATILE_FILES.get(p)
+        before = old(p) if stable else ""
+        if not (stable and before and stable(before) == stable(new(p))):
+            out.append(p)
+    return out
+
+
 def cmd_changed(args) -> None:
     """Exit 0 se data/ contiene cambiamenti significativi rispetto a HEAD, 1 altrimenti.
 
-    Se cambia solo la parte volatile di meta.json (data di generazione, commit della fonte), la ripristina.
+    Se cambiano solo i campi volatili (data di generazione, date dei bulk, commit della fonte, "seen" degli
+    archetipi automatici), ripristina i file; con altri cambiamenti si committa tutto, campi volatili compresi.
     """
     import subprocess
 
@@ -244,15 +267,11 @@ def cmd_changed(args) -> None:
 
     changed = [f for f in git("status", "--porcelain", "--", "data").splitlines() if f.strip()]
     paths = [line[3:].strip() for line in changed]
-    others = [p for p in paths if p != "data/meta.json"]
-    meta_changed = "data/meta.json" in paths
-    if meta_changed and not others:
-        old = git("show", "HEAD:data/meta.json")
-        new = (config.DATA / "meta.json").read_text("utf-8")
-        if old and _stable_meta(old) == _stable_meta(new):
-            git("checkout", "--", "data/meta.json")
-            print("nessun cambiamento significativo (solo date di generazione)")
-            raise SystemExit(1)
+    if paths and not significant_changes(paths, lambda p: git("show", f"HEAD:{p}"),
+                                         lambda p: (config.ROOT / p).read_text("utf-8")):
+        git("checkout", "--", *paths)
+        print("nessun cambiamento significativo (solo campi volatili: " + ", ".join(paths) + ")")
+        raise SystemExit(1)
     if not paths:
         print("nessun cambiamento")
         raise SystemExit(1)
