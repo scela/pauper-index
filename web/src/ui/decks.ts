@@ -1,7 +1,7 @@
 // Pagina "Mazzi" (#mazzi): mazzi recenti, completamento con la collezione, decklist ed export.
 // I dati si scaricano solo quando si apre la pagina: data/decks-61.json, e data/decks-365.json su richiesta.
 
-import { fmtDate, fmtEur, fmtInt, fmtPct, fmtResult, getLang, t, type Key } from '../i18n';
+import { fmtDate, fmtEur, fmtEurAbout, fmtInt, fmtPct, fmtResult, getLang, t, type Key } from '../i18n';
 import type { Data } from '../lib/data';
 import {
   archetypes, completion, deckText, listPrice, missingCost, missingText, readDecks, SECTIONS, sectionOf, sortDecks, validDecks, visibleDecks,
@@ -233,7 +233,7 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
         h('h3', { class: 'arch-name' }, h('span', null, name), manaPips(colors)),
         h('p', { class: 'arch-line' }, h('span', { class: `tier-badge t${tierN}` }, tierN === 4 ? t('tier.others') : t('tier.n', { n: tierN })), ' ',
           t('arch.line', { tier: '', pct: fmtPct(share / 10000), lists: fmtInt(decks.length) }).replace(/^ · /, '')),
-        price !== null ? h('p', { class: 'arch-price' }, t('arch.typical', { v: fmtEur(price) })) : null,
+        price !== null ? h('p', { class: 'arch-price' }, t('arch.typical', { v: fmtEurAbout(price) })) : null,
         h('p', { class: 'note' }, t('tier.lead'), ' ', h('a', { href: '#informazioni' }, t('tier.leadLink'))),
         h('p', { class: 'artcredit' }, t('tier.copyright')))));
   }

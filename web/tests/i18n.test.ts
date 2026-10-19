@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ALL_KEYS, detectLang, DICTS, fmtDate, fmtInt, fmtPct, fmtResult, translate } from '../src/i18n';
+import { ALL_KEYS, detectLang, DICTS, fmtDate, fmtEurAbout, fmtInt, fmtPct, fmtResult, translate } from '../src/i18n';
 
 const forms = (m: unknown) => (typeof m === 'string' ? [m] : [(m as { one: string }).one, (m as { other: string }).other]);
 const vars = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
@@ -52,6 +52,14 @@ describe('formattazione per lingua', () => {
     expect(fmtDate('2026-10-04', 'it')).toBe('4 ott 2026');
     expect(fmtDate('2026-10-04', 'en')).toBe('Oct 4, 2026');
     expect(fmtDate('2026-01-01T00:30:00+00:00', 'en')).toBe('Jan 1, 2026');
+  });
+  it('prezzi "circa" all\'euro intero', () => {
+    const n = (s: string) => s.replace(/\s/g, ' ');
+    expect(n(fmtEurAbout(8891, 'it'))).toBe('89 €');
+    expect(n(fmtEurAbout(8749, 'it'))).toBe('87 €');
+    expect(fmtEurAbout(12990, 'en')).toBe('€130');
+    expect(fmtEurAbout(30, 'en')).toBe('€1');
+    expect(fmtEurAbout(0, 'en')).toBe('€0');
   });
   it('numeri, percentuali e piazzamenti', () => {
     expect(fmtInt(155432, 'it')).toBe('155.432');

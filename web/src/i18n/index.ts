@@ -85,6 +85,12 @@ export function fmtEur(cents: number, l: Lang = current): string {
   return (cents / 100).toLocaleString(LOCALES[l], { style: 'currency', currency: 'EUR' });
 }
 
+/** Prezzi detti "circa": all'euro intero ("circa 87 €"); sotto l'euro, ma non zero, 1 €. */
+export function fmtEurAbout(cents: number, l: Lang = current): string {
+  const eur = cents > 0 ? Math.max(1, Math.round(cents / 100)) : 0;
+  return eur.toLocaleString(LOCALES[l], { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, minimumFractionDigits: 0 });
+}
+
 export function fmtPct(x: number, l: Lang = current): string {
   if (x <= 0) return '0%';
   if (x < 0.001) return `<${(0.1).toLocaleString(LOCALES[l])}%`;

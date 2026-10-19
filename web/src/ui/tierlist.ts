@@ -3,7 +3,7 @@
 // Illustrazioni (art_crop di Scryfall): mai testo o livelli sopra, l'artista sotto ogni immagine e la riga del
 // copyright nella stessa pagina (regola di Scryfall, vedi CLAUDE.md).
 
-import { fmtDate, fmtEur, fmtInt, fmtPct, getLang, t, type Key } from '../i18n';
+import { fmtDate, fmtEur, fmtEurAbout, fmtInt, fmtPct, getLang, t, type Key } from '../i18n';
 import { COLORS, type ColorKey } from '../lib/cardfilter';
 import { imageUrl, type Data } from '../lib/data';
 import {
@@ -128,7 +128,7 @@ export function initTier(ctx: TierCtx): { render(): void } {
       compEl = h('p', { class: 'fam-comp' + (comp.pct >= 1 ? ' full' : '') },
         h('span', { class: 'dk-bar', 'aria-hidden': 'true' }, bar),
         h('span', null, comp.pct >= 1 ? t('tier.closestFull') : t('tier.closest', { p: fmtPct(comp.pct) })),
-        ctx.prices() && comp.pct < 1 ? h('span', { class: 'muted' }, ` · ${t('tier.toComplete', { v: fmtEur(comp.cost) })}`) : null);
+        ctx.prices() && comp.pct < 1 ? h('span', { class: 'muted' }, ` · ${t('tier.toComplete', { v: fmtEurAbout(comp.cost) })}`) : null);
     }
     return h('li', { class: 'fam' }, h('a', { class: 'fam-card', href: `#mazzi/${fam.id}` },
       fam.symbol >= 0 ? familyArt(d, fam.symbol) : null,
@@ -137,7 +137,7 @@ export function initTier(ctx: TierCtx): { render(): void } {
         h('span', { class: 'fam-stats' }, t('tier.stats', { pct: fmtPct(fam.share), lists: fmtInt(fam.lists) })),
         vars.length > 1 ? h('span', { class: 'fam-vars' }, shownVars.map((v, i) => `${labels[i]} ${fmtPct(v.apps / total)}`).join(' · ')
           + (vars.length > 3 ? ` · ${t('tier.moreVariants', { n: vars.length - 3 })}` : '')) : null,
-        h('span', { class: 'fam-price' }, s.list !== null ? t('tier.typicalPrice', { v: fmtEur(s.list) }) : ctx.prices() ? '' : t('tier.pricePending')),
+        h('span', { class: 'fam-price' }, s.list !== null ? t('tier.typicalPrice', { v: fmtEurAbout(s.list) }) : ctx.prices() ? '' : t('tier.pricePending')),
         compEl)));
   }
 
