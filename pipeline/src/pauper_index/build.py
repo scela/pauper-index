@@ -123,7 +123,8 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     default_path, default_upd = ensure_bulk("default_cards", None)
     log(f"prezzi: {prices.write_prices(default_path, default_upd)}")
     set_rows = outputs.build_sets(db, order, ctx.sets_info)
-    icons = seticons.build_sprite([r["c"] for r in set_rows], ctx.sets_info, online, config.DATA / "seticons.svg", log)
+    icons = seticons.build_sprite([r["c"] for r in set_rows], ctx.sets_info, online, config.DATA / "seticons.svg", log,
+                                 checked_path=config.CACHE / "seticons-checked.json")
     outputs.write_json(config.DATA / "sets.json", outputs.with_icons(set_rows, icons))
     manasymbols.build_sprite(ctx.api, online, config.DATA / "manasymbols.svg", log)
     outputs.write_json(config.DATA / "names.json", outputs.build_names(db, order))

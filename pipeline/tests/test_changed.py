@@ -53,3 +53,13 @@ def test_other_files_and_new_files_always_count():
                   {"data/meta.json": meta, "data/cards.json": {"c": 2}}) == ["data/cards.json"]
     # file nuovo (assente in HEAD), anche se è uno dei file con campi volatili
     assert _check({}, {"data/reviews/archetipi-auto.json": AUTO}) == ["data/reviews/archetipi-auto.json"]
+
+
+def test_seticons_version_only_is_not_a_change():
+    old = '<svg>\n<symbol id="dmu" viewBox="0 0 240 240" data-v="1791777600"><path d="M0 0h5v5z"/></symbol>\n</svg>\n'
+    same = old.replace("1791777600", "1792382400")
+    drawn = same.replace("h5v5", "h6v6")
+    texts = {"old": old, "same": same, "drawn": drawn}
+    p = "data/seticons.svg"
+    assert significant_changes([p], lambda _: texts["old"], lambda _: texts["same"]) == []
+    assert significant_changes([p], lambda _: texts["old"], lambda _: texts["drawn"]) == [p]

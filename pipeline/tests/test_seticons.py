@@ -83,3 +83,39 @@ def test_sprite_offline_reuses_existing_symbols(tmp_path):
     assert re.findall(r'<symbol id="([^"]+)"', text) == ["dmu"]  # le icone non più usate si tolgono
     rows = outputs.with_icons([{"c": "dmu"}, {"c": "dmc"}, {"c": "plst"}], icons)
     assert rows == [{"c": "dmu"}, {"c": "dmc", "i": "dmu"}, {"c": "plst", "i": ""}]
+
+
+def test_sprite_same_drawing_with_new_version_is_not_rewritten(tmp_path, monkeypatch):
+    # ogni settimana Scryfall cambia il ?ts di tutte le icone (1791777600 -> 1792382400) a disegno invariato
+    out, checked = tmp_path / "seticons.svg", tmp_path / "checked.json"
+    same = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M0 0h5v5z"/></svg>'
+    other = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M0 0h6v6z"/></svg>'
+    vb, paths = seticons.clean_icon(same)
+    out.write_text('<svg xmlns="http://www.w3.org/2000/svg">\n' + seticons._symbol("dmu", "1791777600", vb, paths)
+                   + "\n" + seticons._symbol("woe", "1791777600", vb, paths) + "\n</svg>\n", "utf-8")
+    before = out.read_text("utf-8")
+    calls = []
+
+    class R:
+        def __init__(self, url):
+            self.content = other if "woe" in url else same
+
+        def raise_for_status(self):
+            pass
+
+    class S:
+        def get(self, url, **k):
+            calls.append(url)
+            return R(url)
+
+    monkeypatch.setattr(seticons.requests, "Session", S)
+    info = {c: {"icon_svg_uri": f"https://svgs.scryfall.io/sets/{c}.svg?1792382400"} for c in ("dmu", "woe")}
+    seticons.build_sprite(["dmu", "woe"], info, True, out, log=lambda _: None, checked_path=checked)
+    text = out.read_text("utf-8")
+    assert 'id="dmu" viewBox="0 0 240 240" data-v="1791777600"' in text  # disegno uguale: riga invariata
+    assert 'id="woe" viewBox="0 0 240 240" data-v="1792382400"' in text  # disegno cambiato: riscritta
+    assert text.splitlines()[1] == before.splitlines()[1]
+    # la versione controllata si ricorda: alla build successiva nessun download
+    calls.clear()
+    seticons.build_sprite(["dmu", "woe"], info, True, out, log=lambda _: None, checked_path=checked)
+    assert calls == [] and out.read_text("utf-8") == text

@@ -98,6 +98,13 @@ jobs:
           path: data/reviews/italiano.json
           key: italiano-${{ github.run_id }}
           restore-keys: italiano-
+      - name: Cache delle versioni controllate dei simboli delle espansioni
+        # versioni (?ts) di Scryfall già scaricate con il disegno invariato: senza, le icone si riscaricano a ogni build.
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/seticons-checked.json
+          key: seticons-${{ github.run_id }}
+          restore-keys: seticons-
       - name: Ricostruisci i dati (fonte + Scryfall)
         run: python -m pauper_index build > .cache-build.log && tail -n 60 .cache-build.log
       - name: Revisioni dopo le espansioni

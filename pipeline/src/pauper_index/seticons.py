@@ -9,6 +9,7 @@ Lo sprite è committato: a ogni build si scaricano solo le icone nuove o cambiat
 le altre si riprendono dallo sprite esistente. Senza rete restano quelle già presenti.
 """
 
+import json
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -211,9 +212,28 @@ def read_sprite(path: Path) -> dict[str, tuple[str, str]]:
     return {m.group(1): (m.group(2), m.group(0)) for m in _SYMBOL.finditer(path.read_text("utf-8"))}
 
 
+_VERSION = re.compile(r' data-v="\w*"')
+
+
+def same_drawing(a: str, b: str) -> bool:
+    """Due <symbol> uguali a parte la versione (data-v): Scryfall cambia il ?ts di tutte le icone ogni settimana."""
+    return _VERSION.sub("", a) == _VERSION.sub("", b)
+
+
 def build_sprite(codes: list[str], sets_info: dict[str, dict], online: bool, out: Path,
-                 log=print) -> dict[str, str]:
-    """Scrive lo sprite con le icone dei set indicati. Restituisce set -> nome dell'icona (solo quelle presenti)."""
+                 log=print, checked_path: Path | None = None) -> dict[str, str]:
+    """Scrive lo sprite con le icone dei set indicati. Restituisce set -> nome dell'icona (solo quelle presenti).
+
+    Un'icona con una versione nuova si riscarica; se il disegno ripulito è identico, il <symbol> resta com'è
+    (anche il vecchio data-v), così il file non cambia. Le versioni già controllate si ricordano in
+    `checked_path` (fuori dal repository, nella cache della CI), per non riscaricarle a ogni build.
+    """
+    checked: dict[str, str] = {}
+    if checked_path and checked_path.exists():
+        try:
+            checked = json.loads(checked_path.read_text("utf-8"))
+        except ValueError:
+            checked = {}
     wanted: dict[str, str] = {}  # icona -> versione
     uri: dict[str, str] = {}
     by_set: dict[str, str] = {}
@@ -228,10 +248,10 @@ def build_sprite(codes: list[str], sets_info: dict[str, dict], online: bool, out
     have = read_sprite(out)
     symbols: dict[str, str] = {}
     session = requests.Session() if online else None
-    fetched = failed = 0
+    fetched = failed = same = 0
     for name in sorted(wanted):
         old = have.get(name)
-        if old and (old[0] == wanted[name] or session is None):
+        if old and (wanted[name] in (old[0], checked.get(name)) or session is None):
             symbols[name] = old[1]
             continue
         if session is None:
@@ -240,8 +260,15 @@ def build_sprite(codes: list[str], sets_info: dict[str, dict], online: bool, out
             r = session.get(uri[name], headers={"User-Agent": config.USER_AGENT, "Accept": "image/svg+xml"}, timeout=30)
             r.raise_for_status()
             vb, paths = clean_icon(r.content)
-            symbols[name] = _symbol(name, wanted[name], vb, paths)
-            fetched += 1
+            new = _symbol(name, wanted[name], vb, paths)
+            if old and same_drawing(old[1], new):
+                symbols[name] = old[1]
+                checked[name] = wanted[name]
+                same += 1
+            else:
+                symbols[name] = new
+                checked.pop(name, None)
+                fetched += 1
         except (requests.RequestException, ValueError, ET.ParseError) as e:
             failed += 1
             log(f"icona {name}: {e}")
@@ -250,5 +277,9 @@ def build_sprite(codes: list[str], sets_info: dict[str, dict], online: bool, out
     text = ('<svg xmlns="http://www.w3.org/2000/svg">\n'
             + "\n".join(symbols[n] for n in sorted(symbols)) + "\n</svg>\n")
     out.write_text(text, "utf-8", newline="\n")
-    log(f"icone dei set: {len(symbols)} (scaricate {fetched}, errori {failed})")
+    if checked_path:
+        checked_path.parent.mkdir(parents=True, exist_ok=True)
+        keep = {n: v for n, v in sorted(checked.items()) if n in symbols}
+        checked_path.write_text(json.dumps(keep, indent=0), "utf-8")
+    log(f"icone dei set: {len(symbols)} (cambiate {fetched}, uguali con versione nuova {same}, errori {failed})")
     return {c: n for c, n in by_set.items() if n in symbols}

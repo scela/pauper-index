@@ -16,6 +16,7 @@ import argparse
 import csv
 import datetime as dt
 import json
+import re
 import sys
 from collections import Counter
 
@@ -240,7 +241,13 @@ def _stable_archetypes(text: str) -> dict:
     return m
 
 
-VOLATILE_FILES = {"data/meta.json": _stable_meta, "data/reviews/archetipi-auto.json": _stable_archetypes}
+def _stable_seticons(text: str) -> str:
+    # data-v è il ?ts di Scryfall, che cambia ogni settimana per tutte le icone anche a disegno invariato
+    return re.sub(r' data-v="\w*"', "", text)
+
+
+VOLATILE_FILES = {"data/meta.json": _stable_meta, "data/reviews/archetipi-auto.json": _stable_archetypes,
+                  "data/seticons.svg": _stable_seticons}
 
 
 def significant_changes(paths: list[str], old, new) -> list[str]:
