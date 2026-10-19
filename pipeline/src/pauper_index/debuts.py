@@ -28,11 +28,14 @@ from .source import Tournament
 MAX_DAYS = 120  # periodo più lungo offerto dal sito
 MIN_DECKS = 5  # filtro anti-rumore: almeno 5 mazzi...
 MIN_PLAYERS = 3  # ...di almeno 3 giocatori diversi
-WATCH_MIN_DECKS = 2  # "In osservazione": le escluse dal filtro con almeno 2 mazzi
+WATCH_MIN_DECKS = 3  # "In osservazione": le escluse dal filtro con almeno 3 mazzi
 NEW_DAYS = 120  # "carta nuova" / "appena legale": stampa uscita al massimo 120 giorni prima della prima apparizione
 BEFORE_DAYS = 60  # periodo prima della prima apparizione per il confronto "al posto di"
 MIN_COMPARE = 20  # mazzi minimi di ciascun gruppo di confronto
 MIN_DROP = 0.20  # calo minimo della presenza (20 punti) perché una carta sia "al posto di"
+MIN_ADOPTION = 0.25  # "al posto di" solo dove la carta è in almeno il 25% dei mazzi della variante
+REPLACE_FAMILIES = 3  # "al posto di" nelle prime 3 famiglie della carta
+PARTIAL_WEEK = 0.5  # ultima settimana incompleta se ha meno della metà della mediana delle 4 precedenti
 MAX_REPLACED = 3
 TOP_ARCHS = 4
 TOP_WITH = 6
@@ -83,6 +86,12 @@ def unbanned(reg: dict) -> dict[str, int]:
     return out
 
 
+def first_print_year(db: CardDB, oid: str) -> int:
+    """Anno della prima stampa su carta o MTGO (per la frase delle riscoperte: "stampata nel 2005")."""
+    prints = [p.released_at for p in db.printings.get(oid, []) if p.games & ENTRY_GAMES and p.released_at]
+    return int(min(prints)[:4]) if prints else 0
+
+
 def category(db: CardDB, oid: str, first: int, unban: int | None) -> str:
     """n = carta nuova, l = appena legale, u = tolta dalle bandite, r = riscoperta."""
     if unban is not None:
@@ -116,50 +125,69 @@ def presence(ds: list[Recent], zone: str) -> Counter:
     return n
 
 
-def replaced(card: int, mine: list[Recent], recent: list[Recent], since: int,
-             basics: set[int]) -> tuple[str, list, int]:
-    """"Al posto di": carte che calano nella variante principale delle liste che giocano la carta.
+def replaced(card: int, mine: list[Recent], recent: list[Recent], since: int, is_land: list[bool],
+             families: list[str]) -> list[list]:
+    """"Al posto di": per ciascuna delle prime famiglie della carta, nella sua variante più frequente.
 
-    Confronto 1 (prima/dopo): le liste della variante nei BEFORE_DAYS giorni prima di `since` contro le liste con la
-    carta. Confronto 2 (stesso periodo): le liste della variante senza la carta, da `since`, contro quelle con la
-    carta; vale solo se sono almeno MIN_COMPARE, e allora la carta deve calare in entrambi. Così una carta che cala
-    per un'altra novità arrivata nello stesso momento non viene attribuita alla carta sbagliata.
-    Restituisce (variante, [[carta, presenza prima, con la carta, senza la carta o -1] in per mille], nuovo mazzo).
+    Si calcola solo se la carta, dalla prima apparizione, è giocata da almeno MIN_ADOPTION dei mazzi della variante e
+    da almeno MIN_COMPARE mazzi: una carta giocata da poche liste indica una versione diversa del mazzo, non una
+    sostituzione (Surveillance Room in Tron, 4%, sembrava "al posto di" Candy Trail perché le sue liste sono le più
+    recenti, quelle con Giant's Boulder). Poi due confronti, nella zona (main o side) dove la carta sta più spesso:
+    1. prima/dopo: le liste della variante nei BEFORE_DAYS giorni prima di `since` contro le liste con la carta;
+    2. stesso periodo: le liste della variante senza la carta, da `since`, solo se almeno MIN_COMPARE.
+    Una carta è "al posto di" se la sua presenza cala di almeno MIN_DROP in tutti i confronti validi. Una terra si
+    confronta solo con terre (basi comprese); le altre carte mai con terre.
+    Restituisce [[variante, mazzi con la carta, mazzi della variante, prima, nuovo mazzo 0/1,
+    [[carta, presenza prima, con la carta, senza la carta o -1] in per mille]]].
     """
-    variants = Counter(d.arch for d in mine if d.arch)
-    if not variants:
-        return "", [], 0
-    arch = variants.most_common(1)[0][0]
     zone = "side" if sum(card in d.side for d in mine) > sum(card in d.main for d in mine) else "main"
-    post = [d for d in mine if d.arch == arch]
-    pre = [d for d in recent if d.arch == arch and since - BEFORE_DAYS <= d.day < since]
-    without = [d for d in recent if d.arch == arch and d.day >= since and not d.has(card)]
-    if not pre:
-        return arch, [], 1  # la variante non esisteva prima: la carta ha dato vita a un mazzo nuovo
-    if len(pre) < MIN_COMPARE or len(post) < MIN_DECKS:
-        return arch, [], 0
-    p_pre, p_post = presence(pre, zone), presence(post, zone)
-    p_wo = presence(without, zone) if len(without) >= MIN_COMPARE else None
+    land = is_land[card]
     out = []
-    for c, n in p_pre.items():
-        if c == card or c in basics:
+    for fam in families:
+        variants = Counter(d.arch for d in mine if (d.fam or "x") == fam and d.arch)
+        if not variants:
             continue
-        a, b = n / len(pre), p_post[c] / len(post)
-        if a - b < MIN_DROP:
+        arch = variants.most_common(1)[0][0]
+        post = [d for d in mine if d.arch == arch]
+        total = sum(1 for d in recent if d.arch == arch and d.day >= since)
+        pre = [d for d in recent if d.arch == arch and since - BEFORE_DAYS <= d.day < since]
+        # un mazzo nuovo (la variante non c'era prima) si segnala già da MIN_DECKS mazzi con la carta
+        if len(post) < MIN_ADOPTION * total or len(post) < (MIN_COMPARE if pre else MIN_DECKS):
             continue
-        w = -1.0
-        if p_wo is not None:
-            w = p_wo[c] / len(without)
-            if w - b < MIN_DROP:
-                continue
-        out.append((a - b, c, a, b, w))
-    out.sort(key=lambda x: (-x[0], x[1]))
-    return arch, [[c, round(a * 1000), round(b * 1000), round(w * 1000) if w >= 0 else -1]
-                  for _, c, a, b, w in out[:MAX_REPLACED]], 0
+        without = [d for d in recent if d.arch == arch and d.day >= since and not d.has(card)]
+        rows = []
+        if len(pre) >= MIN_COMPARE:
+            p_pre, p_post = presence(pre, zone), presence(post, zone)
+            p_wo = presence(without, zone) if len(without) >= MIN_COMPARE else None
+            for c, n in p_pre.items():
+                if c == card or is_land[c] != land:
+                    continue
+                a, b = n / len(pre), p_post[c] / len(post)
+                if a - b < MIN_DROP:
+                    continue
+                w = -1.0
+                if p_wo is not None:
+                    w = p_wo[c] / len(without)
+                    if w - b < MIN_DROP:
+                        continue
+                rows.append((a - b, c, a, b, w))
+            rows.sort(key=lambda x: (-x[0], x[1]))
+        out.append([arch, len(post), total, len(pre), 0 if pre else 1,
+                    [[c, round(a * 1000), round(b * 1000), round(w * 1000) if w >= 0 else -1]
+                     for _, c, a, b, w in rows[:MAX_REPLACED]]])
+    return out
 
 
 def monday(day: int) -> int:
     return day - dt.date.fromordinal(day).weekday()
+
+
+def week_partial(week_tot: Counter, anchor: int) -> bool:
+    """L'ultima settimana è incompleta se l'ultimo torneo non è di domenica, o se ha meno della metà dei mazzi della
+    mediana delle 4 settimane prima (i tornei arrivano una volta alla settimana, a volte in ritardo)."""
+    last = monday(anchor)
+    prev4 = sorted(week_tot[last - 7 * k] for k in range(1, 5))
+    return dt.date.fromordinal(anchor).isoweekday() != 7 or week_tot[last] < PARTIAL_WEEK * (prev4[1] + prev4[2]) / 2
 
 
 def build_debuts(kept: list[Tournament], keymap, key_oids, db: CardDB, order: list[str], anchor: int,
@@ -168,6 +196,7 @@ def build_debuts(kept: list[Tournament], keymap, key_oids, db: CardDB, order: li
                  legality: Path = LEGALITY, log=print) -> dict:
     pos = {o: i for i, o in enumerate(order)}
     basics = {pos[o] for o, c in db.cards.items() if c.name in NORMAL_BASICS and o in pos}
+    is_land = [o in db.cards and "Land" in db.cards[o].type_line for o in order]
     unban = {o: d for o, d in unbanned(update_legality(db, today, legality)).items() if anchor - d <= MAX_DAYS}
     # candidati: prima apparizione recente o sblocco recente, carta legale oggi, non terra base
     cand: dict[int, tuple[int, int | None]] = {}  # indice -> (giorno da cui si contano i mazzi, sblocco)
@@ -192,6 +221,7 @@ def build_debuts(kept: list[Tournament], keymap, key_oids, db: CardDB, order: li
             recent.append(Recent(d.day, ti, d.result, d.player, main, side, aid, fam))
     week_tot = Counter(monday(d.day) for d in recent)
     last_week = monday(anchor)
+    partial = week_partial(week_tot, anchor)
     by_card: dict[int, list[Recent]] = {i: [] for i in cand}
     for d in recent:
         for i in set(d.main) | set(d.side):
@@ -220,9 +250,8 @@ def build_debuts(kept: list[Tournament], keymap, key_oids, db: CardDB, order: li
         main_only = sum(1 for d in mine if i in d.main and i not in d.side)
         side_only = sum(1 for d in mine if i not in d.main)
         copies = Counter(min(4, d.main.get(i, 0) + d.side.get(i, 0)) for d in mine)
-        variant, rep, new_deck = replaced(i, mine, recent, since, basics)
-        if rep or new_deck:
-            used_v.add(variant)
+        rep = replaced(i, mine, recent, since, is_land, [f for f, *_ in archs[:REPLACE_FAMILIES]])
+        used_v.update(r[0] for r in rep)
         together = Counter()
         for d in mine:
             together.update(c for c in set(d.main) | set(d.side) if c != i and c not in basics)
@@ -236,23 +265,20 @@ def build_debuts(kept: list[Tournament], keymap, key_oids, db: CardDB, order: li
             "a": archs,
             "z": [main_only, side_only, n - main_only - side_only],
             "q": [copies[k] for k in (1, 2, 3, 4)],
-            "rv": variant if rep or new_deck else "", "r": rep,
+            "y": first_print_year(db, order[i]), "r": rep,
             "w0": iso(w0), "w": [wc[w] for w in weeks], "wt": [week_tot[w] for w in weeks],
             "co": [[c, k] for c, k in sorted(together.items(), key=lambda x: (-x[1], x[0]))[:TOP_WITH]],
             "b": [[tids[d.ti], d.result] for d in best],
         }
         if ub is not None:
             row["u"] = iso(ub)
-        if new_deck:
-            row["nd"] = 1
         rows.append(row)
     names = {f: (fams[f][0] if f in fams else "") for f in sorted(used_f)}
     head = {
         "v": 1, "anchor": iso(anchor), "max": MAX_DAYS, "minDecks": MIN_DECKS, "minPlayers": MIN_PLAYERS,
-        # l'ultima settimana è completa solo se l'ultimo torneo è di domenica
-        "lastWeekPartial": int(dt.date.fromordinal(anchor).isoweekday() != 7),
+        "lastWeekPartial": int(partial),
         "fam": names,
-        "arch": {v: arch_names.get(v, "") for v in sorted(used_v)},  # variante del confronto "al posto di"
+        "arch": {v: arch_names.get(v, "") for v in sorted(used_v)},  # varianti dei confronti "al posto di"
         "t": {str(tids[ti]): [iso(tours[ti].day), tours[ti].name, tours[ti].uri, tours[ti].kind]
               for ti in sorted(used_t)},
         "o": watch,
@@ -274,17 +300,21 @@ def write_review(path: Path, rows: list, watch: list, head: dict, db: CardDB, or
     lines = [f"# Debutti (ultimo torneo {head['anchor']})", "",
              f"Prima apparizione entro {head['max']} giorni, almeno {head['minDecks']} mazzi e "
              f"{head['minPlayers']} giocatori.", "",
+             "Al posto di: per variante, adozione (mazzi con la carta / mazzi della variante dalla prima apparizione) "
+             "e presenza della carta sostituita prima → con la carta (senza la carta, se ci sono almeno 20 liste).", "",
              "| Carta | Prima | Categoria | Mazzi | Giocatori | Archetipo principale | Al posto di |",
              "|---|---|---|---|---|---|---|"]
     for r in rows:
         f, k, tot = r["a"][0] if r["a"] else ("x", 0, 1)
         label = head["fam"].get(f) or "non classificate"
         arch = f"{label} {100 * k / r['d']:.0f}% (adozione {100 * k / max(1, tot):.0f}%)"
-        rep = ", ".join(f"{name(c)} {a / 10:.0f}%→{b / 10:.0f}%" + (f" (senza {w / 10:.0f}%)" if w >= 0 else "")
-                        for c, a, b, w in r["r"])
-        rep = rep or ("mazzo nuovo" if r.get("nd") else "—")
-        if r["rv"]:
-            rep = f"{head['arch'].get(r['rv']) or 'non classificate'}: {rep}"
+        parts = []
+        for v, k_, tot_, npre, nd, reps in r["r"]:
+            what = ", ".join(f"{name(c)} {a / 10:.0f}%→{b / 10:.0f}%" + (f" (senza {w / 10:.0f}%)" if w >= 0 else "")
+                             for c, a, b, w in reps) or ("mazzo nuovo" if nd else "nessuna")
+            parts.append(f"**{head['arch'].get(v) or 'non classificate'}** (adozione {100 * k_ / max(1, tot_):.0f}%, "
+                         f"{k_}/{tot_}; {npre} liste prima): {what}")
+        rep = "<br>".join(parts) or "—"
         lines.append(f"| {name(r['c'])} | {r['f']} | {KIND[r['k']]} | {r['d']} | {r['p']} | {arch} | {rep} |")
     lines += ["", "## In osservazione", "", "| Carta | Prima | Categoria | Mazzi | Giocatori |",
               "|---|---|---|---|---|"]

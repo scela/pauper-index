@@ -2,44 +2,46 @@
 
 Prima apparizione entro 120 giorni, almeno 5 mazzi e 3 giocatori.
 
+Al posto di: per variante, adozione (mazzi con la carta / mazzi della variante dalla prima apparizione) e presenza della carta sostituita prima → con la carta (senza la carta, se ci sono almeno 20 liste).
+
 | Carta | Prima | Categoria | Mazzi | Giocatori | Archetipo principale | Al posto di |
 |---|---|---|---|---|---|---|
-| Giant's Boulder | 2026-08-11 | nuova | 763 | 442 | Tron 66% (adozione 95%) | Tron: Prophetic Prism 75%→31% (senza 69%), Candy Trail 84%→44% (senza 81%) |
-| Vandalblast | 2026-09-07 | appena legale | 570 | 409 | Tron 22% (adozione 42%) | — |
-| Baleful Strix | 2026-09-07 | appena legale | 538 | 336 | Affinity 34% (adozione 44%) | Dimir Faeries: Suffocating Fumes 86%→41% (senza 97%), Sewer-veillance Cam 48%→8% (senza 95%), Augur of Bolas 83%→58% (senza 97%) |
-| Dispatch | 2026-09-08 | appena legale | 396 | 285 | Affinity 48% (adozione 46%) | — |
-| Call Damage Control | 2026-06-21 | nuova | 384 | 240 | Tron 78% (adozione 34%) | Tron: Moment's Peace 41%→11% (senza 39%) |
-| Cut Down | 2026-09-08 | appena legale | 298 | 202 | Dimir Control 44% (adozione 91%) | — |
-| Plunder the Trollshaws | 2026-08-13 | nuova | 288 | 174 | Dimir Control 37% (adozione 72%) | — |
-| Hawkeye's Bow | 2026-06-21 | nuova | 155 | 110 | Snacker Gates 51% (adozione 18%) | Snacker Gates: Thraben Charm 93%→4% (senza 94%), Guardian of the Guildpact 87%→8% (senza 42%) |
-| Soul-Guide Lantern | 2026-09-07 | appena legale | 148 | 113 | Ragged Short Spear + Soul-Guide Lantern 26% (adozione 89%) | — |
-| Crossover Collaboration | 2026-06-24 | nuova | 126 | 63 | Ruby Storm 100% (adozione 68%) | Ruby Storm: Pirate's Pillage 70%→7% (senza 50%), Spider Manifestation 42%→6% (senza 40%), Wrenn's Resolve 94%→67% (senza 90%) |
-| Vision of Love | 2026-06-25 | nuova | 98 | 52 | Mono-Red Madness 79% (adozione 6%) | Mono-Red Madness: Kessig Flamebreather 91%→51% (senza 88%) |
-| Ragged Short Spear | 2026-08-13 | nuova | 86 | 69 | Ragged Short Spear + Soul-Guide Lantern 55% (adozione 100%) | Ragged Short Spear + Soul-Guide Lantern: mazzo nuovo |
-| Ultimate Alliance | 2026-07-02 | nuova | 70 | 30 | Mono-White Aggro 67% (adozione 47%) | — |
-| Return to Dust | 2026-09-07 | appena legale | 44 | 37 | White Aggro 23% (adozione 10%) | White Aggro: Martyr of Sands 85%→30% (senza 66%), Journey to Nowhere 88%→40% (senza 78%), Revoke Existence 22%→0% (senza 28%) |
-| Twinned Vision | 2026-09-30 | nuova | 43 | 26 | Ruby Storm 51% (adozione 73%) | Ruby Storm: Electric Revelation 83%→4%, Big Score 100%→36%, Highway Robbery 30%→0% |
-| Surveillance Room | 2026-07-12 | nuova | 34 | 27 | Tron 91% (adozione 4%) | Tron: Prophetic Prism 82%→16% (senza 43%), Candy Trail 73%→10% (senza 59%), Conduit Pylons 64%→3% (senza 80%) |
-| Guerrilla Gorilla | 2026-07-03 | nuova | 30 | 23 | Spy Combo 97% (adozione 7%) | Spy Combo: Flaring Pain 94%→66% (senza 93%) |
+| Giant's Boulder | 2026-08-11 | nuova | 763 | 442 | Tron 66% (adozione 95%) | **Tron** (adozione 95%, 504/530; 399 liste prima): Prophetic Prism 75%→31% (senza 69%), Candy Trail 84%→44% (senza 81%)<br>**Esper Affinity** (adozione 64%, 118/185; 20 liste prima): nessuna<br>**Dispatch + Baleful Strix** (adozione 100%, 10/10; 0 liste prima): mazzo nuovo |
+| Vandalblast | 2026-09-07 | appena legale | 570 | 409 | Tron 22% (adozione 42%) | **Tron** (adozione 42%, 127/306; 507 liste prima): nessuna<br>**Dimir Control** (adozione 51%, 59/116; 6 liste prima): nessuna |
+| Baleful Strix | 2026-09-07 | appena legale | 538 | 336 | Affinity 34% (adozione 44%) | **Esper Affinity** (adozione 67%, 121/181; 15 liste prima): nessuna<br>**Dimir Control** (adozione 98%, 114/116; 6 liste prima): nessuna<br>**Dimir Faeries** (adozione 78%, 136/175; 210 liste prima): Suffocating Fumes 86%→41% (senza 97%), Sewer-veillance Cam 48%→8% (senza 95%), Augur of Bolas 83%→58% (senza 97%) |
+| Dispatch | 2026-09-08 | appena legale | 396 | 285 | Affinity 48% (adozione 46%) | **Esper Affinity** (adozione 93%, 169/181; 15 liste prima): nessuna<br>**Ragged Short Spear + Soul-Guide Lantern** (adozione 95%, 42/44; 3 liste prima): nessuna |
+| Call Damage Control | 2026-06-21 | nuova | 384 | 240 | Tron 78% (adozione 34%) | **Tron** (adozione 34%, 301/878; 303 liste prima): Moment's Peace 41%→11% (senza 39%)<br>**Ornithopter of Paradise + Omen of the Forge** (adozione 93%, 13/14; 0 liste prima): mazzo nuovo |
+| Cut Down | 2026-09-08 | appena legale | 298 | 202 | Dimir Control 44% (adozione 91%) | **Dimir Control** (adozione 95%, 110/116; 6 liste prima): nessuna<br>**Dimir Faeries** (adozione 40%, 68/171; 210 liste prima): Extract a Confession 77%→24% (senza 88%), Augur of Bolas 83%→35% (senza 86%), Dispel 90%→62% (senza 86%) |
+| Plunder the Trollshaws | 2026-08-13 | nuova | 288 | 174 | Dimir Control 37% (adozione 72%) | **Dimir Control** (adozione 86%, 102/118; 6 liste prima): nessuna<br>**Izzet Terror** (adozione 46%, 32/70; 44 liste prima): Lightning Bolt 68%→12% (senza 76%) |
+| Hawkeye's Bow | 2026-06-21 | nuova | 155 | 110 | Snacker Gates 51% (adozione 18%) | **Seeker of Skybreak + Vision of Love** (adozione 100%, 17/17; 0 liste prima): mazzo nuovo |
+| Soul-Guide Lantern | 2026-09-07 | appena legale | 148 | 113 | Ragged Short Spear + Soul-Guide Lantern 26% (adozione 89%) | **Ragged Short Spear + Soul-Guide Lantern** (adozione 89%, 39/44; 3 liste prima): nessuna |
+| Crossover Collaboration | 2026-06-24 | nuova | 126 | 63 | Ruby Storm 100% (adozione 68%) | **Ruby Storm** (adozione 68%, 126/184; 88 liste prima): Pirate's Pillage 70%→7% (senza 50%), Spider Manifestation 42%→6% (senza 40%), Wrenn's Resolve 94%→67% (senza 90%) |
+| Vision of Love | 2026-06-25 | nuova | 98 | 52 | Mono-Red Madness 79% (adozione 6%) | — |
+| Ragged Short Spear | 2026-08-13 | nuova | 86 | 69 | Ragged Short Spear + Soul-Guide Lantern 55% (adozione 100%) | **Ragged Short Spear + Soul-Guide Lantern** (adozione 100%, 47/47; 0 liste prima): mazzo nuovo<br>**Pursue the Past + Melded Moxite** (adozione 100%, 7/7; 0 liste prima): mazzo nuovo |
+| Ultimate Alliance | 2026-07-02 | nuova | 70 | 30 | Mono-White Aggro 67% (adozione 47%) | **Mono-White Aggro** (adozione 47%, 47/101; 35 liste prima): nessuna |
+| Return to Dust | 2026-09-07 | appena legale | 44 | 37 | White Aggro 23% (adozione 10%) | — |
+| Twinned Vision | 2026-09-30 | nuova | 43 | 26 | Ruby Storm 51% (adozione 73%) | **Ruby Storm** (adozione 73%, 22/30; 59 liste prima): Electric Revelation 83%→4%, Big Score 100%→36%, Highway Robbery 30%→0% |
+| Surveillance Room | 2026-07-12 | nuova | 34 | 27 | Tron 91% (adozione 4%) | — |
+| Guerrilla Gorilla | 2026-07-03 | nuova | 30 | 23 | Spy Combo 97% (adozione 7%) | — |
 | HYDRA Assault Robot | 2026-06-24 | nuova | 29 | 16 | Affinity 31% (adozione 1%) | — |
 | Gigantosaurus | 2026-09-08 | appena legale | 29 | 17 | Elves 72% (adozione 10%) | — |
-| Patient Instructor | 2026-08-14 | nuova | 25 | 21 | White Aggro 100% (adozione 14%) | White Aggro: Idyllic Grange 92%→40% (senza 75%), Guardians' Pledge 93%→48% (senza 91%), Spider-Man, Web-Slinger 64%→20% (senza 68%) |
+| Patient Instructor | 2026-08-14 | nuova | 25 | 21 | White Aggro 100% (adozione 14%) | — |
 | An Offer You Can't Refuse | 2026-09-12 | appena legale | 23 | 21 | Affinity 57% (adozione 3%) | — |
-| Smaug, the Great Calamity // Spew Flame | 2026-08-14 | nuova | 19 | 15 | Gruul Ramp 84% (adozione 19%) | Gruul Ramp: Nyxborn Hydra 70%→12% (senza 55%), Bannerhide Krushok 63%→12% (senza 70%), Ram Through 57%→12% (senza 48%) |
-| Old Thrush | 2026-08-12 | nuova | 17 | 14 | Spy Combo 88% (adozione 6%) | Spy Combo: Vitu-Ghazi Inspector 39%→7% (senza 45%), Healer of the Glade 33%→7% (senza 41%) |
-| Great Forest Druid | 2026-07-12 | riscoperta | 14 | 6 | Ornithopter of Paradise + Omen of the Forge 93% (adozione 93%) | Ornithopter of Paradise + Omen of the Forge: mazzo nuovo |
-| Paradox Gardens | 2026-07-11 | nuova | 14 | 9 | Turbo Fog 100% (adozione 20%) | Turbo Fog: Foreboding Landscape 90%→29% (senza 74%), Brainstorm 85%→29% (senza 76%), Muddle the Mixture 77%→21% (senza 60%) |
-| Minion Missile | 2026-07-05 | nuova | 12 | 11 | Rakdos Madness 100% (adozione 5%) | Rakdos Madness: Chain Lightning 23%→0% (senza 22%) |
-| Tidewater Minion | 2026-06-30 | riscoperta | 12 | 11 | Boots of Speed + Tidewater Minion 75% (adozione 100%) | Boots of Speed + Tidewater Minion: mazzo nuovo |
-| Titan's Grave | 2026-07-11 | nuova | 9 | 8 | Food Gardens 67% (adozione 8%) | Food Gardens: Tragic Slip 61%→33% (senza 64%) |
+| Smaug, the Great Calamity // Spew Flame | 2026-08-14 | nuova | 19 | 15 | Gruul Ramp 84% (adozione 19%) | — |
+| Old Thrush | 2026-08-12 | nuova | 17 | 14 | Spy Combo 88% (adozione 6%) | — |
+| Great Forest Druid | 2026-07-12 | riscoperta | 14 | 6 | Ornithopter of Paradise + Omen of the Forge 93% (adozione 93%) | **Ornithopter of Paradise + Omen of the Forge** (adozione 93%, 13/14; 0 liste prima): mazzo nuovo |
+| Paradox Gardens | 2026-07-11 | nuova | 14 | 9 | Turbo Fog 100% (adozione 20%) | — |
+| Minion Missile | 2026-07-05 | nuova | 12 | 11 | Rakdos Madness 100% (adozione 5%) | — |
+| Tidewater Minion | 2026-06-30 | riscoperta | 12 | 11 | Boots of Speed + Tidewater Minion 75% (adozione 100%) | **Boots of Speed + Tidewater Minion** (adozione 100%, 9/9; 0 liste prima): mazzo nuovo |
+| Titan's Grave | 2026-07-11 | nuova | 9 | 8 | Food Gardens 67% (adozione 8%) | — |
 | Ferocity of the Hunt | 2026-09-30 | nuova | 8 | 8 | Bogles 25% (adozione 3%) | — |
 | Undercover Skrull | 2026-07-12 | nuova | 6 | 4 | Glistener Seer + Persistent Petitioners 100% (adozione 25%) | — |
 | Confusticate and Bebother | 2026-08-14 | nuova | 6 | 3 | Familiars 50% (adozione 4%) | — |
 | Clowning Around | 2026-09-17 | riscoperta | 6 | 4 | Gather the Townsfolk + Hallow 33% (adozione 100%) | — |
-| Bilbo Baggins, Burglar // Take a Glance | 2026-08-14 | nuova | 6 | 4 | Familiars 83% (adozione 6%) | Familiars: Deep Analysis 24%→0% (senza 40%), Glacial Floodplain 43%→20% (senza 47%), Snow-Covered Island 20%→0% (senza 28%) |
+| Bilbo Baggins, Burglar // Take a Glance | 2026-08-14 | nuova | 6 | 4 | Familiars 83% (adozione 6%) | — |
 | Unflinching Hortimancer | 2026-10-01 | nuova | 5 | 3 | Loam Dryad + Blood Researcher 60% (adozione 100%) | — |
 | Kickoff Celebrations | 2026-06-25 | riscoperta | 5 | 4 | Seeker of Skybreak + Vision of Love 100% (adozione 31%) | — |
-| Plague Spores | 2026-07-08 | riscoperta | 5 | 3 | Ephemerate 100% (adozione 1%) | Jeskai Ephemerate: Envelop 69%→0% (senza 58%), Thraben Charm 66%→0% (senza 49%), Destroy Evil 33%→0% (senza 29%) |
+| Plague Spores | 2026-07-08 | riscoperta | 5 | 3 | Ephemerate 100% (adozione 1%) | — |
 
 ## In osservazione
 
@@ -68,41 +70,3 @@ Prima apparizione entro 120 giorni, almeno 5 mazzi e 3 giocatori.
 | You're Ambushed on the Road | 2026-07-02 | riscoperta | 3 | 1 |
 | Machinesmith Automaton | 2026-06-24 | nuova | 3 | 3 |
 | Banishing Light | 2026-06-14 | riscoperta | 3 | 2 |
-| Gnawing Crescendo | 2026-07-11 | riscoperta | 2 | 2 |
-| Hardbristle Bandit | 2026-08-26 | riscoperta | 2 | 1 |
-| Spider-Man No More | 2026-08-23 | riscoperta | 2 | 2 |
-| Cactarantula | 2026-08-26 | riscoperta | 2 | 1 |
-| Tragic Fall | 2026-07-27 | riscoperta | 2 | 2 |
-| Paladin's Arms | 2026-09-25 | riscoperta | 2 | 1 |
-| Vedalken Aethermage | 2026-06-13 | riscoperta | 2 | 2 |
-| Ant-Man's Army | 2026-07-12 | nuova | 2 | 2 |
-| Agate-Blade Assassin | 2026-08-06 | riscoperta | 2 | 1 |
-| Ice Flan | 2026-07-12 | riscoperta | 2 | 2 |
-| Slash of Light | 2026-09-25 | riscoperta | 2 | 1 |
-| TCRI Building | 2026-07-11 | riscoperta | 2 | 2 |
-| Attercop | 2026-09-11 | nuova | 2 | 1 |
-| Studious First-Year // Rampant Growth | 2026-09-11 | riscoperta | 2 | 1 |
-| Unquenchable Thirst | 2026-08-26 | riscoperta | 2 | 1 |
-| HULK SMASH! | 2026-09-02 | nuova | 2 | 2 |
-| Mirkwood Nurturer | 2026-08-13 | nuova | 2 | 2 |
-| Borough Backup | 2026-06-24 | nuova | 2 | 2 |
-| Silver Deputy | 2026-08-26 | riscoperta | 2 | 1 |
-| Spy Network | 2026-07-11 | riscoperta | 2 | 2 |
-| Desert's Due | 2026-08-26 | riscoperta | 2 | 1 |
-| Guilty Conscience | 2026-06-13 | riscoperta | 2 | 2 |
-| Frilled Deathspitter | 2026-06-13 | riscoperta | 2 | 2 |
-| White Mage's Staff | 2026-09-25 | riscoperta | 2 | 1 |
-| Archon's Glory | 2026-09-04 | riscoperta | 2 | 1 |
-| Weapons Vendor | 2026-09-25 | riscoperta | 2 | 1 |
-| Horrid Vigor | 2026-08-18 | riscoperta | 2 | 1 |
-| Portent Tracker | 2026-08-03 | riscoperta | 2 | 2 |
-| Seize the Secrets | 2026-08-26 | riscoperta | 2 | 1 |
-| Asgardian Citadel | 2026-07-03 | nuova | 2 | 2 |
-| Panther Pounce | 2026-08-03 | nuova | 2 | 2 |
-| Crude Bent Blade | 2026-08-13 | nuova | 2 | 2 |
-| Serpent's Pass | 2026-07-11 | riscoperta | 2 | 2 |
-| Hidden Necropolis | 2026-07-25 | riscoperta | 2 | 2 |
-| Dampen Thought | 2026-08-13 | riscoperta | 2 | 2 |
-| Gurmag Nightwatch | 2026-08-26 | riscoperta | 2 | 1 |
-| Failed Fording | 2026-08-26 | riscoperta | 2 | 1 |
-| Mischievous Sneakling | 2026-07-11 | riscoperta | 2 | 2 |

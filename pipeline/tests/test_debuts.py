@@ -4,6 +4,7 @@ import datetime as dt
 import hashlib
 import json
 from array import array
+from collections import Counter
 from types import SimpleNamespace
 
 from pauper_index import debuts
@@ -67,33 +68,79 @@ def rec(day, main=None, side=None, arch="c1", fam="c1", player=0, ti=0, result=1
 NEW, OLD, OTHER, X = 1, 2, 3, 5
 
 
+LAND = [False] * 12
+LAND[9] = LAND[10] = LAND[0] = True  # 9, 10: terre non base; 0: Island
+
+
+def rep_of(card, mine, recent, since, fams=("c1",)):
+    return debuts.replaced(card, mine, recent, since, LAND, list(fams))
+
+
 def test_replaced_both_comparisons_must_agree():
     since = ORD("2026-09-07")
     pre = [rec(since - 10, {OLD: 4, OTHER: 4}) for _ in range(20)]
-    mine = [rec(since + 3, {NEW: 4}) for _ in range(10)]
+    mine = [rec(since + 3, {NEW: 4}) for _ in range(20)]
     # nello stesso periodo le liste senza la carta giocano ancora OLD ma non OTHER (calata per un'altra novità)
     without = [rec(since + 3, {OLD: 4, X: 4}) for _ in range(20)]
-    variant, rep, nd = debuts.replaced(NEW, mine, pre + mine + without, since, set())
-    assert variant == "c1" and nd == 0
+    ((variant, k, tot, npre, nd, rep),) = rep_of(NEW, mine, pre + mine + without, since)
+    assert (variant, k, tot, npre, nd) == ("c1", 20, 40, 20, 0)
     assert rep == [[OLD, 1000, 0, 1000]]  # OTHER cala anche senza la carta: non è attribuita a NEW
     # liste senza la carta meno di 20 (Giant's Boulder in Tron): basta il confronto prima/dopo
-    variant, rep, nd = debuts.replaced(NEW, mine, pre + mine + without[:19], since, set())
+    rep = rep_of(NEW, mine, pre + mine + without[:19], since)[0][5]
     assert sorted(r[0] for r in rep) == [OLD, OTHER] and all(r[3] == -1 for r in rep)
-    # troppo poche liste prima: nessun "al posto di"
-    assert debuts.replaced(NEW, mine, pre[:19] + mine, since, set())[1:] == ([], 0)
-    # la variante non esisteva prima: mazzo nuovo
-    assert debuts.replaced(NEW, mine, mine, since, set()) == ("c1", [], 1)
+    # troppo poche liste prima: la variante c'è, ma nessun "al posto di"
+    assert rep_of(NEW, mine, pre[:19] + mine, since) == [["c1", 20, 20, 19, 0, []]]
     # calo sotto i 20 punti: niente
     pre2 = [rec(since - 10, {OLD: 4}) for _ in range(20)]
-    mine2 = [rec(since + 3, {NEW: 4, OLD: 4}) for _ in range(9)] + [rec(since + 3, {NEW: 4})]
-    assert debuts.replaced(NEW, mine2, pre2 + mine2, since, set())[1] == []
+    mine2 = [rec(since + 3, {NEW: 4, OLD: 4}) for _ in range(18)] + [rec(since + 3, {NEW: 4}) for _ in range(2)]
+    assert rep_of(NEW, mine2, pre2 + mine2, since)[0][5] == []
+
+
+def test_replaced_needs_adoption_and_twenty_decks():
+    since = ORD("2026-08-11")
+    pre = [rec(since - 10, {OLD: 4}) for _ in range(40)]
+    # Surveillance Room in Tron: poche liste della variante (le più recenti), il 4%: una versione diversa del mazzo
+    mine = [rec(since + 20, {NEW: 1}) for _ in range(31)]
+    others = [rec(since + 3, {OLD: 4}) for _ in range(20)] + [rec(since + 20, {X: 4}) for _ in range(729)]
+    assert rep_of(NEW, mine, pre + mine + others, since) == []
+    # 25% della variante ma solo 19 mazzi: niente
+    mine = [rec(since + 3, {NEW: 4}) for _ in range(19)]
+    assert rep_of(NEW, mine, pre + mine + [rec(since + 3, {X: 4}) for _ in range(20)], since) == []
+    # mazzo nuovo (nessuna lista della variante prima): basta 5 mazzi, non con 4
+    mine = [rec(since + 3, {NEW: 4}, arch="a9", fam="a9") for _ in range(5)]
+    assert rep_of(NEW, mine, pre + mine, since, ("a9",)) == [["a9", 5, 5, 0, 1, []]]
+    assert rep_of(NEW, mine[:4], pre + mine[:4], since, ("a9",)) == []
+
+
+def test_replaced_in_each_family_and_lands_only_with_lands():
+    since = ORD("2026-09-07")
+    # Baleful Strix: Dimir Faeries (c7UB) e Dimir Control (c19UB), ciascuna con la sua variante più frequente
+    fae_pre = [rec(since - 5, {OLD: 4, 9: 2}, arch="c7UB", fam="c7") for _ in range(20)]
+    fae = [rec(since + 3, {NEW: 4, 10: 2}, arch="c7UB", fam="c7") for _ in range(20)]
+    ctl_pre = [rec(since - 5, {OTHER: 4}, arch="c19UB", fam="c19") for _ in range(20)]
+    ctl = [rec(since + 3, {NEW: 4}, arch="c19UB", fam="c19") for _ in range(20)]
+    out = rep_of(NEW, fae + ctl, fae_pre + fae + ctl_pre + ctl, since, ("c7", "c19"))
+    assert [(v, [r[0] for r in rep]) for v, *_, rep in out] == [("c7UB", [OLD]), ("c19UB", [OTHER])]  # mai la terra 9
+    # una terra (10) si confronta solo con terre: cala la terra 9, non OLD
+    fae2 = [rec(since + 3, {10: 2}, arch="c7UB", fam="c7") for _ in range(20)]
+    ((*_, rep),) = rep_of(10, fae2, fae_pre + fae2, since, ("c7",))
+    assert [r[0] for r in rep] == [9]
+
+
+def test_last_week_partial():
+    sunday = ORD("2026-10-11")
+    weeks = {debuts.monday(sunday) - 7 * k: n for k, n in enumerate((900, 1086, 502, 768, 961))}
+    assert debuts.week_partial(Counter(weeks), sunday) is False
+    assert debuts.week_partial(Counter(weeks), sunday - 1) is True  # di sabato: settimana incompleta
+    weeks[debuts.monday(sunday)] = 400  # meno della metà della mediana (864,5) delle 4 settimane prima
+    assert debuts.week_partial(Counter(weeks), sunday) is True
 
 
 def test_replaced_uses_the_zone_of_the_card():
     since = ORD("2026-09-07")
     pre = [rec(since - 5, {X: 4}, {OLD: 2}) for _ in range(20)]
-    mine = [rec(since + 1, {X: 4, OLD: 4}, {NEW: 2}) for _ in range(6)]
-    rep = debuts.replaced(NEW, mine, pre + mine, since, set())[1]
+    mine = [rec(since + 1, {X: 4, OLD: 4}, {NEW: 2}) for _ in range(20)]
+    rep = rep_of(NEW, mine, pre + mine, since)[0][5]
     assert [r[0] for r in rep] == [OLD]  # OLD esce dal side anche se entra nel main
 
 
@@ -133,7 +180,7 @@ def test_build_filter_watch_weeks_and_privacy(tmp_path):
     j = json.loads(text)
     (row,) = j["c"]
     assert row["c"] == IDX["New Card"] and row["k"] == "n" and row["d"] == 6 and row["p"] == 3
-    assert row["q"] == [0, 0, 3, 3] and row["z"] == [6, 0, 0]
+    assert row["q"] == [0, 0, 3, 3] and row["z"] == [6, 0, 0] and row["y"] == 2026
     assert j["o"] == [[IDX["Few Players"], "r", "2026-09-28", 5, 2]]  # escluso per i giocatori, con il numero
     # settimane da lunedì 28 settembre e da lunedì 5 ottobre; l'ultima (fino a domenica 11) è completa
     assert row["w0"] == "2026-09-28" and row["w"] == [3, 3] and row["wt"] == [3, 4]
@@ -142,7 +189,7 @@ def test_build_filter_watch_weeks_and_privacy(tmp_path):
     assert [b[1] for b in row["b"]] == [1, 1, 1]
     assert row["b"][0][0] == 2026101100 and j["t"]["2026101100"][1] == "challenge-2"
     # privacy: nel file solo il numero dei giocatori, nessun campo per mazzo o per giocatore
-    assert set(row) == {"c", "k", "f", "d", "p", "a", "z", "q", "rv", "r", "w0", "w", "wt", "co", "b"}
+    assert set(row) == {"c", "k", "f", "d", "p", "a", "z", "q", "y", "r", "w0", "w", "wt", "co", "b"}
     assert all(len(b) == 2 for b in row["b"]) and all(len(t) == 4 for t in j["t"].values())
     assert sorted(p.name for p in tmp_path.iterdir()) == ["debuts.json", "debutti.md", "legalita.json"]
 
