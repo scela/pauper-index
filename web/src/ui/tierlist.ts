@@ -128,7 +128,7 @@ export function initTier(ctx: TierCtx): { render(): void } {
       compEl = h('p', { class: 'fam-comp' + (comp.pct >= 1 ? ' full' : '') },
         h('span', { class: 'dk-bar', 'aria-hidden': 'true' }, bar),
         h('span', null, comp.pct >= 1 ? t('tier.closestFull') : t('tier.closest', { p: fmtPct(comp.pct) })),
-        ctx.prices() && comp.pct < 1 ? h('span', { class: 'muted' }, ` · ${t('tier.toComplete', { v: fmtEurAbout(comp.cost) })}`) : null);
+        ctx.prices() && comp.pct < 1 ? h('span', { class: 'muted fam-cost' }, t('tier.toComplete', { v: fmtEurAbout(comp.cost) })) : null);
     }
     return h('li', { class: 'fam' }, h('a', { class: 'fam-card', href: `#mazzi/${fam.id}` },
       fam.symbol >= 0 ? familyArt(d, fam.symbol) : null,

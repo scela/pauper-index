@@ -629,6 +629,7 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 .fam-stats,.fam-vars,.fam-price{margin:0;font-size:.875rem;color:var(--muted)}
 .fam-comp{display:flex;align-items:center;gap:8px;margin:2px 0 0;font-size:.875rem}
 .fam-comp .dk-bar{flex:1 1 auto}
+.fam-cost::before{content:"·";margin-right:.3em}
 .fam-rows{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px}
 .fam-row a{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 8px;min-height:44px;padding:4px 10px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--surface);color:var(--ink);text-decoration:none}
 .fam-row a:hover{border-color:var(--ink)}
@@ -755,7 +756,12 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .arch-name{font-size:1.3rem}
   .fam-grid,.fam-rows{grid-template-columns:1fr}
   /* tier list: una sola riga introduttiva (il link sul tier va accanto al primo titolo) e schede orizzontali */
-  .deckspage:has(#dTier:not([hidden])) .decks-lead,.tier-lead,.nc-long{display:none}
+  .decks-lead,.tier-lead,.nc-long{display:none}
+  /* lista più vicina: barra su tutta la riga, il testo sotto (nella colonna stretta della scheda) */
+  .fam-card .fam-comp{flex-wrap:wrap;gap:2px 4px}
+  .fam-card .fam-comp .dk-bar{flex:1 0 100%;order:-1}
+  .fam-card .fam-cost{flex-basis:100%}
+  .fam-card .fam-cost::before{content:none}
   .nc-short{display:inline}
   .tier-what{display:inline}
   .decks-nocoll{margin:2px 0 8px}
