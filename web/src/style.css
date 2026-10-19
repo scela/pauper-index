@@ -54,13 +54,31 @@ h1 a{color:inherit;text-decoration:none;cursor:pointer}
 .home:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
 @media (prefers-reduced-motion: reduce){.home,.home .logo{transition:none}.home:hover .logo{transform:none}}
 .home .brand{font-family:"Pauper Index Title",var(--font);font-weight:400;letter-spacing:.01em}
+h1{white-space:nowrap}
+/* tra 761 e 1199 px (tablet, finestre strette) tre pulsanti speciali e il nome grande non stanno in una riga:
+   nome più piccolo ed etichetta breve di "Carta dimenticata" */
+@media (min-width:761px) and (max-width:1199px){
+  h1{font-size:1.75rem}
+  .top{gap:8px}
+  .specials{gap:6px}
+  .special{padding:0 10px 0 8px}
+  .special .nd-full{display:none}
+  .special .nd-short{display:inline}
+}
+/* sotto 960 px i pulsanti speciali prendono la forma dei telefoni (icona sopra, etichetta sotto) */
+@media (min-width:761px) and (max-width:959px){
+  h1{font-size:1.375rem}
+  .nav{gap:6px;font-size:.875rem}
+  .special{flex-direction:column;justify-content:center;gap:1px;height:48px;min-width:56px;padding:0 6px;font-size:.6875rem;line-height:1.1}
+  .book,.nd-ico,.curtain{width:22px;height:22px}
+}
 .home{display:inline-flex;align-items:center;gap:.28em}
 .logo{width:1.2em;height:1.2em;flex:none;color:var(--logo)}
 .nav{display:flex;gap:8px;align-items:center;font-size:.9375rem;min-width:0}
 /* "Informazioni", lingua e tema: in riga su desktop, nel pannello del pulsante "⋯" su mobile */
 .navextra{display:flex;gap:6px;align-items:center}
 .nav .navmore{display:none}
-.navlink{font-weight:500;padding:6px;color:var(--muted);text-decoration:none}
+.navlink{font-weight:500;padding:6px;color:var(--muted);text-decoration:none;white-space:nowrap}
 .navlink:hover,.navlink[aria-current="page"]{color:var(--ink);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
 /* pulsanti speciali (Mazzi, Carta dimenticata, poi Debutti): una famiglia con stessa altezza, rilievo, angoli e
    focus; ognuno ha il suo tema. Premuto sulla propria pagina (aria-current). Le dimensioni non cambiano mai. */

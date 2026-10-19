@@ -711,6 +711,25 @@ test('testata sui telefoni da 360 a 430 px: nome, tre pulsanti speciali e "⋯" 
   await ctx.close();
 });
 
+test('testata da tablet e desktop (761–1440 px), anche con un carattere largo: una riga, nessuno scorrimento', async ({ browser, baseURL }, info) => {
+  test.skip(info.project.name !== 'desktop-it' && info.project.name !== 'desktop-en', 'larghezze impostate dal test');
+  // in CI il carattere di sistema è DejaVu Sans, molto più largo di quelli di Windows e macOS: con il terzo pulsante
+  // la testata andava su due righe (CI rossa del 19/10). Qui si misura con un carattere largo anche in locale.
+  const ctx = await browser.newContext({ ...info.project.use, baseURL, viewport: { width: 1280, height: 860 }, bypassCSP: true });
+  const page = await ctx.newPage();
+  await setup(page);
+  await page.addStyleTag({ content: 'body, body *:not(.brand) { font-family: "DejaVu Sans", Verdana, sans-serif !important; }' });
+  for (const w of [761, 800, 900, 960, 1024, 1199, 1200, 1280, 1440]) {
+    await page.setViewportSize({ width: w, height: 860 });
+    expect((await page.locator('.top').boundingBox())!.height, `${w}px`).toBeLessThanOrEqual(60);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${w}px`).toBe(0);
+    await expect(page.locator('#navAbout')).toBeVisible();
+    const hs = await page.locator('.special').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)));
+    expect(new Set(hs).size, `${w}px`).toBe(1);
+  }
+  await ctx.close();
+});
+
 test('banner della prima visita: riquadro con i tre passi, X che lo chiude, non ricompare, torna dopo "Cancella i miei dati"', async ({ page }) => {
   await setup(page);
   const box = page.locator('#welcome');
