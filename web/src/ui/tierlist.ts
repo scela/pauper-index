@@ -52,7 +52,10 @@ export function familyArt(d: Data, symbol: number, big = false): HTMLElement | n
   const artist = d.prints.artists[pr[3]] || '';
   return h('figure', { class: 'fam-art' + (big ? ' big' : '') },
     h('img', { src: imageUrl(pr[0], 'art_crop'), alt: '', loading: 'lazy', decoding: 'async', width: 640, height: 480 }),
-    h('figcaption', { class: 'fam-artist' }, artist ? t('tier.artist', { name: artist, card: c.n }) : c.n));
+    // nelle schede orizzontali su mobile (illustrazione stretta) compare la forma breve, sempre con l'artista
+    h('figcaption', { class: 'fam-artist' }, ...(artist
+      ? [h('span', { class: 'fa-long' }, t('tier.artist', { name: artist, card: c.n })), h('span', { class: 'fa-short' }, t('tier.artistShort', { name: artist }))]
+      : [c.n])));
 }
 
 export function initTier(ctx: TierCtx): { render(): void } {
@@ -168,7 +171,9 @@ export function initTier(ctx: TierCtx): { render(): void } {
       const fams = shown.filter((f) => f.tier === tier);
       if (!fams.length) continue;
       const head = h('h3', { class: 'tier-head' }, h('span', { class: `tier-badge t${tier}` }, tier === 4 ? t('tier.others') : t('tier.n', { n: tier })),
-        h('span', { class: 'tier-count' }, t('tier.count', { n: fams.length })));
+        h('span', { class: 'tier-count' }, t('tier.count', { n: fams.length })),
+        // su mobile la frase sul tier è tolta: resta il link accanto al primo titolo
+        sections.length ? null : h('a', { class: 'tier-what', href: '#informazioni', 'aria-label': t('tier.whatAria') }, t('tier.leadLink')));
       if (tier < 4) {
         sections.push(h('section', { class: `tier-sec t${tier}` }, head,
           h('ul', { class: 'fam-grid' }, ...fams.map((f) => famCard(d, f, scores.get(f.id)!)))));

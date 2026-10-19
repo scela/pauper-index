@@ -717,6 +717,41 @@ test('primo schermo su iPhone SE (375×667): obiettivi senza e con collezione', 
   await ctx.close();
 });
 
+test('tier list su iPhone SE (375×667): schede orizzontali, "Tier 1" e 2 archetipi interi nel primo schermo', async ({ browser, baseURL, isMobile }, info) => {
+  test.skip(!isMobile, 'obiettivo misurato su mobile');
+  // dati reali (decks-61.json committato), carattere Arial come nel test del primo schermo
+  const ctx = await browser.newContext({ ...info.project.use, baseURL, viewport: { width: 375, height: 667 }, bypassCSP: true });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => localStorage.setItem('pauper-index:welcomeClosed', '1'));
+  await setup(page);
+  await page.click('#navDecks');
+  const cards = page.locator('.tier-sec.t1 .fam-card');
+  await expect(cards.nth(1)).toBeVisible();
+  await page.addStyleTag({ content: 'body, body *:not(.brand) { font-family: Arial, "Liberation Sans", sans-serif !important; }' });
+  // una sola riga introduttiva; il link sul tier accanto al primo titolo
+  await expect(page.locator('.tier-lead')).toBeHidden();
+  await expect(page.locator('.decks-lead')).toBeHidden();
+  await expect(page.locator('#dNoColl .nc-short')).toBeVisible();
+  expect((await page.locator('#dNoColl').boundingBox())!.height).toBeLessThanOrEqual(30);
+  await expect(page.locator('.tier-sec.t1 .tier-what')).toBeVisible();
+  await expect(page.locator('.tier-what')).toHaveCount(1);
+  expect(await page.locator('.tier-sec.t1 .tier-head').evaluate((e) => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(667);
+  expect(await cards.nth(1).evaluate((e) => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(667);
+  // illustrazione a sinistra, larga 112 px e 4:3, con l'artista visibile sotto ogni immagine
+  for (const i of [0, 1]) {
+    const img = (await cards.nth(i).locator('.fam-art img').boundingBox())!;
+    const body = (await cards.nth(i).locator('.fam-body').boundingBox())!;
+    expect(Math.round(img.width)).toBe(112);
+    expect(Math.round(img.height)).toBe(84);
+    expect(body.x).toBeGreaterThan(img.x + img.width - 1);
+    await expect(cards.nth(i).locator('.fam-artist .fa-short')).toBeVisible();
+    const artist = (await cards.nth(i).locator('.fam-artist').boundingBox())!;
+    expect(artist.y).toBeGreaterThanOrEqual(img.y + img.height - 1);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await ctx.close();
+});
+
 test('righe compatte su mobile, filtri su una riga, "Ultima apparizione" nel pannello con la sua etichetta', async ({ page, isMobile }) => {
   await setup(page);
   const row = page.locator('#cardRows tr').first();

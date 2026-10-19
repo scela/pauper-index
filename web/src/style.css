@@ -634,6 +634,9 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 .fam-row a:hover{border-color:var(--ink)}
 .fam-row .muted{grid-column:1/-1;font-size:.8125rem}
 .fam-unclassified{margin:18px 0 0}
+/* forme brevi delle schede orizzontali e della riga introduttiva: solo su mobile */
+.fa-short,.nc-short,.tier-what{display:none}
+.tier-what{margin-left:auto;font-size:.875rem;font-weight:400}
 .artcredit{margin:16px 0 0;font-size:.8125rem;color:var(--muted)}
 .arch-back{display:inline-flex;align-items:center;min-height:44px;font-weight:600}
 .arch-head{display:flex;gap:18px;align-items:flex-start;margin:4px 0 16px}
@@ -751,6 +754,26 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
   .arch-head .fam-art{flex:none;width:100%;max-width:300px}
   .arch-name{font-size:1.3rem}
   .fam-grid,.fam-rows{grid-template-columns:1fr}
+  /* tier list: una sola riga introduttiva (il link sul tier va accanto al primo titolo) e schede orizzontali */
+  .deckspage:has(#dTier:not([hidden])) .decks-lead,.tier-lead,.nc-long{display:none}
+  .nc-short{display:inline}
+  .tier-what{display:inline}
+  .decks-nocoll{margin:2px 0 8px}
+  .tf-box{margin:0 0 6px}
+  .tf-box > summary{margin:0 0 4px}
+  #dTier .res-head .sub{font-size:.875rem}
+  .tier-sec{margin:12px 0 0;padding:10px 0 0}
+  .tier-head{margin:0 0 8px}
+  .fam-grid{gap:8px}
+  .fam-card{flex-direction:row;align-items:stretch}
+  .fam-card .fam-art{flex:0 0 112px;width:112px;border-right:1px solid var(--line)}
+  .fam-card .fam-art img{width:112px;height:84px}
+  .fam-card .fam-artist{padding:2px 6px 4px;font-size:.6875rem;line-height:1.25;overflow-wrap:anywhere}
+  .fam-card .fa-long{display:none}
+  .fam-card .fa-short{display:inline}
+  .fam-body{flex:1;min-width:0;gap:2px;padding:6px 10px 8px}
+  .fam-title{align-items:flex-start;font-size:1rem}
+  .fam-card .fam-vars{display:none}
   .tf-selects .f-field{width:100%}
   .tf-selects select{flex:1;min-width:0;min-height:40px}
   .cards thead{display:none}
