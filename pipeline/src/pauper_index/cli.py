@@ -8,6 +8,7 @@
   changed    exit 0 se data/ ha cambiamenti significativi da committare
   prices     solo prezzi: scarica il bulk default_cards se è cambiato e riscrive data/prices.json
   italian    nomi italiani (ricerca Scryfall lang:it): aggiornamento incrementale se serve; --full per rifarli tutti
+  tested     exit 0 se un'esecuzione su push di main con il job Test riuscito ha lo stesso codice di HEAD (deploy)
 
 Opzioni: --offline (niente rete: usa cache e fuzzy_matches.csv), --no-fetch (non aggiorna la fonte).
 """
@@ -285,17 +286,26 @@ def cmd_changed(args) -> None:
     print("cambiamenti: " + ", ".join(paths[:20]) + (" …" if len(paths) > 20 else ""))
 
 
+def cmd_tested(args) -> None:
+    import os
+
+    from .deploygate import cmd_tested as tested
+    tested(args.repo or os.environ.get("GITHUB_REPOSITORY", "scela/pauper-index"))
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="pauper_index", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["build", "sets", "baseline", "review", "alarm", "changed", "prices", "italian"])
+    ap.add_argument("command", choices=["build", "sets", "baseline", "review", "alarm", "changed", "prices", "italian",
+                                            "tested"])
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--no-fetch", action="store_true")
     ap.add_argument("--full", action="store_true", help="italian: scarica di nuovo tutte le stampe italiane")
     ap.add_argument("--force", help="review: forza la revisione di questo set (codice Scryfall)")
+    ap.add_argument("--repo", help="tested: repository GitHub (predefinito: GITHUB_REPOSITORY)")
     ap.add_argument("--today", help="review/alarm: data di riferimento AAAA-MM-GG (per i test)")
     args = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     {"build": cmd_build, "sets": cmd_sets, "baseline": cmd_baseline, "review": cmd_review, "alarm": cmd_alarm,
-     "changed": cmd_changed, "prices": cmd_prices, "italian": cmd_italian}[args.command](args)
+     "changed": cmd_changed, "prices": cmd_prices, "italian": cmd_italian, "tested": cmd_tested}[args.command](args)

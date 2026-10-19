@@ -162,7 +162,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      actions: read     # esito dei test dell'ultimo commit di codice
+      actions: read     # esito dei job Test delle ultime esecuzioni su push
       pages: write
       id-token: write
     environment:
@@ -172,37 +172,27 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main   # include il commit dei dati appena fatto dal job update
-          fetch-depth: 0      # storia completa (senza contenuti) per trovare l'ultimo commit di codice
+          fetch-depth: 0      # storia completa (senza contenuti) per confrontare main con i commit testati
           filter: blob:none
-      - name: Solo con i test verdi (esecuzioni programmate e manuali)
-        # il job update non esegue i test: senza questo controllo un main rosso andrebbe online la mattina dopo.
-        # Si pubblica solo se il job Test del push dell'ultimo commit che tocca il codice è riuscito; altrimenti il
-        # deploy fallisce, online resta la versione precedente e il job notify apre una Issue.
-        if: github.event_name != 'push'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          sha=$(git log -1 --format=%H -- web pipeline .github/workflows)
-          runs=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$sha&event=push&per_page=20" --jq '.workflow_runs[] | select(.path == ".github/workflows/aggiorna.yml") | .id')
-          ok=""
-          for id in $runs; do
-            c=$(gh api "repos/${{ github.repository }}/actions/runs/$id/jobs" --jq '.jobs[] | select(.name == "Test") | .conclusion')
-            echo "esecuzione $id, job Test: ${c:-in corso o assente}"
-            if [ "$c" = "success" ]; then ok=1; fi
-          done
-          if [ -z "$ok" ]; then
-            echo "::error::test non verdi per l'ultimo commit di codice ${sha:0:7}: pubblicazione fermata (online resta la versione precedente)"
-            exit 1
-          fi
-          echo "test verdi per ${sha:0:7}: si pubblica"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: pipeline/requirements-lock.txt
+      - name: Dipendenze
+        run: pip install -r pipeline/requirements-lock.txt -e pipeline
+      - name: Solo con i test verdi (esecuzioni programmate e manuali)
+        # il job update non esegue i test: senza questo controllo un main rosso andrebbe online la mattina dopo.
+        # Si pubblica se tra le ultime 30 esecuzioni su push di main ce n'è una con il job Test riuscito il cui commit
+        # ha web/, pipeline/, .github/workflows/ e data/manual/ (tranne fuzzy_matches.csv, scritto da update) uguali a
+        # main (pauper_index/deploygate.py). Altrimenti il deploy fallisce, online resta la versione precedente e il
+        # job notify apre una Issue.
+        if: github.event_name != 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -m pauper_index tested
       - name: Prezzi indicativi (non committati, cambiano ogni giorno)
         run: |
-          pip install -r pipeline/requirements-lock.txt -e pipeline
           # senza prezzi il sito funziona lo stesso (mostra "—"): un errore qui non blocca la pubblicazione
           python -m pauper_index prices || echo "::warning::prezzi non generati: il sito mostra '—'"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
