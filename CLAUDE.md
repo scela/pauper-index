@@ -15,7 +15,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
 - User-Agent `PauperIndex/0.1`;
 - variabili d'ambiente `PAUPER_INDEX_*`.
 
-## Stato attuale (2026-10-15)
+## Stato attuale (2026-10-19)
 
 - **Online**: sito https://pauperindex.com (dominio personalizzato; www e il vecchio https://scela.github.io/pauper-index/ reindirizzano lì), repository pubblico https://github.com/scela/pauper-index. Aggiornamento automatico ogni giorno alle 07:23 UTC, più l'avvio manuale (Actions → "Aggiorna e pubblica" → Run workflow).
 - **Fasi**:
@@ -51,21 +51,21 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] A4: campo unico "Cerca una carta" con la scheda arricchita (vedi "Cerca una carta")
     - [x] A5: filtri su una riga ("Ultima apparizione" nel pannello), righe compatte, misure prima/dopo
     - [x] B: Carta dimenticata, soglia dei mazzi storici (riquadro numerico; vedi "Carta dimenticata: soglia dei mazzi")
-  - [ ] Restyling della sezione Mazzi, piano approvato il 2026-10-15 (vedi "Restyling dei Mazzi"):
+  - [x] Restyling della sezione Mazzi, piano approvato il 2026-10-15 (vedi "Restyling dei Mazzi"):
     - [x] passo 1: Golgari Gardens con le liste Gardens di "Defile + Crypt Rats", mancanti con i nomi della decklist, ridisegno della pagina Mazzi senza perdere focus e decklist aperte
     - [x] passo 2: simboli di mana (vedi "Simboli di mana")
     - [x] passo 3: pipeline (tier, carte simbolo, lista tipica, nomi dei mazzi bianchi), vedi "Tier e carte simbolo" — report
     - [x] passo 3b: Food Gardens, famiglie Ephemerate, Control (titolo "Dimir Control") e Synthesizer, colonna `famiglia` (vedi "Tier e carte simbolo")
     - [x] passo 4 (2026-10-16): tier list e pagina dell'archetipo (vedi "Tier list e pagina dell'archetipo")
     - [x] passo 5 (2026-10-16): filtri della tier list e della pagina dell'archetipo — report con screenshot
-    - [ ] passo 6: testata
-    - [ ] passo 7: rifinitura — report finale
+    - [x] passo 6: testata (fatta nel passo A2 della pagina iniziale, vedi "Testata (2026-10-15)")
+    - [x] passo 7 (2026-10-19): rifinitura, dopo le correzioni del 2026-10-19 (vedi "Correzioni del 2026-10-19") — report finale
   - [x] 2026-10-10: conteggio anonimo delle visite e degli eventi con GoatCounter, senza cookie (vedi "Conteggio delle visite")
 - **Opzioni tolte su richiesta**: "Escludi terre base" (le terre base sono sempre escluse) e "Conta le copie" (una carta è posseduta se ne hai almeno una copia).
-- **Test** (2026-10-16, dopo i passi 4–5 dei Mazzi): 124 pytest, 97 Vitest, 217 Playwright (più 11 saltati di proposito: i test col mouse e quelli solo desktop non girano su mobile, quello del primo schermo gira solo su mobile, il test del conteggio sul dominio pubblicato solo su desktop-it) sui quattro progetti desktop/mobile × IT/EN.
+- **Test** (2026-10-19, dopo il passo 7 dei Mazzi): 127 pytest, 98 Vitest, 223 Playwright (più 13 saltati di proposito: i test col mouse e quelli solo desktop non girano su mobile, quelli del primo schermo e della tier list su iPhone SE girano solo su mobile, il test del conteggio sul dominio pubblicato solo su desktop-it) sui quattro progetti desktop/mobile × IT/EN.
 - **Dependabot**: unita la PR #1 (pytest 8.4.2 → 9.1.1), con tutti i test verdi. Il 2026-10-15, tutte con i test verdi in CI: #8 (actions/setup-node 7.0.0 → 7.1.0), #9 (ruff 0.16.10 → 0.17.0), #10 (iniconfig 2.3.0 → 2.3.1), #12 (@playwright/test 1.63.0 → 1.64.0, vite 8.3.2 → 8.3.4, vitest 5.0.3 → 5.0.4). La #12 ha sostituito la #11, chiusa da Dependabot al rebase su `main` dopo GoatCounter.
 - **Test intermittenti in locale** (2026-10-15): risolti nel passo 4. "brainst" + Invio in `analytics.spec.ts` era un difetto del codice (Invio prima dei suggerimenti), corretto senza toccare il test; "Carta dimenticata: passaggio fluido" misurava il tempo a orologio, ora controlla le durate dichiarate delle animazioni.
-- **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti.
+- **Issue**: #4 (test intermittente in CI) chiusa con la correzione del blur nei campi con suggerimenti. 2026-10-19: chiuse #16 (CI fallita del 16/10, vedi "Correzioni del 2026-10-19") e #7 (revisione di The Hobbit, nulla da decidere).
 
 ## Prossimi passi
 
@@ -533,7 +533,7 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
 - Actions fissate per SHA, aggiornate da Dependabot (`.github/dependabot.yml`: Actions, npm, pip).
 - Permessi minimi per job; `permissions: {}` a livello di workflow. Nessun segreto oltre a `GITHUB_TOKEN`.
 - I commit fatti con `GITHUB_TOKEN` non avviano altri workflow: per questo `deploy` è nello stesso workflow di `update`.
-- **`changed`** (`python -m pauper_index changed`): ignora i campi volatili di `meta.json` (`generated_at`, `source.commit`, `source.commit_date`, `source.days_since_last_tournament`). Se cambiano solo quelli, ripristina il file e non fa commit. Quindi `generated_at` nel sito è la data dell'**ultimo cambiamento dei dati**.
+- **`changed`** (`python -m pauper_index changed`): ignora i campi volatili di `meta.json` (`generated_at`, `scryfall` con le date dei bulk, `source.commit`, `source.commit_date`, `source.days_since_last_tournament`) e `seen` dei gruppi in `data/reviews/archetipi-auto.json` (dal 2026-10-19; mai letto dalla pipeline). Se cambiano solo quelli, ripristina i file e non fa commit; con altri cambiamenti si committa tutto (`significant_changes`, test in `test_changed.py`). Quindi `generated_at` nel sito è la data dell'**ultimo cambiamento dei dati**.
 - **Allarme "fonte ferma"**: `alarm` gira ogni giorno, anche senza dati nuovi. Se l'ultimo torneo è più vecchio di 21 giorni apre la Issue "Fonte dati ferma", con i fork di MTGODecklistCache aggiornati di recente, ma solo se non ce n'è già una aperta. Il sito calcola l'avviso anche da solo, dalla data dell'ultimo torneo, perché senza dati nuovi non c'è un nuovo commit.
 - **Workflow programmati nei repository pubblici**: GitHub li disattiva dopo 60 giorni senza attività nel repository (docs "Disabling and enabling a workflow"; cosa conti come attività non è specificato). Due difese:
   1. a ogni esecuzione `gh api -X PUT …/actions/workflows/aggiorna.yml/enable`;
@@ -768,6 +768,15 @@ Tolti: la barra a segmenti (heatmap), la sezione "Cosa conta", i preset a schede
   - **Golgari Gardens**: due righe alternative in fondo a `archetypes.csv` (Khalni Garden, Cast Down, Snuff Out, Eviscerator's Insight, Fanatical Offering, tutte e 5; Khalni Garden, Writhing Chrysalis, Skred, Eviscerator's Insight, tutte e 4). Prendono le liste Gardens di "Defile + Crypt Rats" (17 delle 21 senza fog, in un anno) più 9 di "Crypt Rats + Troll" e 3 non classificate o ibride; verificato che **nessuna lista di Jund Wildfire né di "Respite + Tangle" cambia nome**, a 61 giorni e in un anno. La metà con i fog di "Defile + Crypt Rats" (19 mazzi in un anno, 0 a 61 giorni: Moment's Peace, Tangle, porte) è lo stesso mazzo di "Respite + Tangle" e resta fuori: qualsiasi carta chiave che la prende prende anche "Respite + Tangle". Cast Down distingue le Gardens (100%) dalle liste con i fog, ma non basta da sola (alcune liste di "Respite + Tangle" lo giocano).
   - **Mancanti** con i nomi della decklist (`dn`), come la decklist.
   - **Difetti corretti** (trovati da test intermittenti): all'arrivo dei prezzi `refresh()` ridisegnava l'elenco, togliendo il focus (per esempio dopo "Carica altri") e chiudendo le decklist aperte; ora `keepPlace` li ritrova per mazzo (`data-key`) e per elemento. Dopo un errore di caricamento `refresh()` riavviava il caricamento e ridisegnava "Riprova" sotto il dito; ora un caricamento in corso o fallito si riprova solo con "Riprova" (`S.pending`, `S.failed`).
+
+## Correzioni del 2026-10-19 (prima del passo 7 dei Mazzi)
+
+- **Fonte** (verifica, nessun cambio): Jiliac/MTGODecklistCache dal 2025-07 si aggiorna **una volta a settimana** (di solito domenica o lunedì, con i tornei fino al giorno prima). Su 2.556 commit, 31 pause di almeno 7 giorni, quasi tutte di 7–8 giorni; le più lunghe 12,0 giorni (17–29 agosto 2026) e 13,5 giorni (31 agosto–14 settembre 2026). Quindi i dati hanno normalmente da 1 a 8 giorni, fino a circa 15. Fork aggiornati (stessa ricerca dell'allarme): **brossignol/MTGODecklistCache**, fork di Badaro, aggiornato **ogni giorno** ("Added AAAA-MM-GG tournaments", ultimo il 2026-10-18), stessa struttura (`Tournaments`, `Tournaments-Archive`) ma senza la cartella `CardsRealm`; divergente da Jiliac (554 commit in più, 331 in meno). Cambiare fonte solo con il via dell'utente (andrebbero rifatte deduplica e confronti). Il sito avvisa solo oltre 21 giorni (`STALE_SOURCE_DAYS`): un avviso a 7 giorni comparirebbe quasi ogni settimana.
+- **`changed`**: date dei bulk e `seen` come campi volatili (vedi "Automazione e pubblicazione").
+- **`itnames-other.json` indicizzato per nome: non fatto.** Usa gli indici di `cardnames.json`, che si spostano quando entra una carta nuova: riscritture quasi complete il 10 e il 17 ottobre (circa 160 KB in più nel pack di git ciascuna, misurato con `git pack-objects`). Con i nomi al posto degli indici il file passerebbe da 267 a 373 KB gzip (+105 KB per chi usa la ricerca in italiano). Non conviene finché le riscritture restano di qualche MB l'anno.
+- **Tier list su mobile** (sotto 640 px): schede orizzontali (`.fam-card` in riga), illustrazione 4:3 larga 112 px a sinistra con l'artista sotto in forma breve ("Illustr. {nome}" / "Art: {name}", `tier.artistShort`; la forma lunga con la carta resta su desktop), a destra nome, simboli, quota, prezzo e con la collezione la lista più vicina (barra su tutta la riga); varianti nascoste. Una sola riga introduttiva: senza collezione "Carica la collezione per vedere cosa ti manca." (`decks.noCollShort*`), con la collezione nessuna; la frase sul tier diventa il link "Cosa vuol dire" accanto al primo titolo (`.tier-what`, nome accessibile `tier.whatAria`). **Misure** (`node scripts/tier-metrics.mjs <etichetta>`, iPhone SE con Arial): "Tier 1" a 306 px (prima 489), **2 archetipi interi** nel primo schermo (prima 0), schede da 106–120 px (prima 372–418), pagina di 4.306 px (prima 10.971). Desktop invariato. Test "tier list su iPhone SE".
+- **Errore "Cannot read properties of null (reading 'cards')"** nella CI del 16/10: non era la causa del fallimento (il test "mazzi con la collezione" aspettava il filtro del prezzo, disattivato senza `prices.json`; corretto in `e1d11f0`). Le righe venivano dallo stderr del browser, condiviso dai test dello stesso worker e allegato al test fallito: le scriveva "Invio con un nome esatto prima che i suggerimenti siano pronti", che trattiene `cards.json`. A ogni tasto in "Cerca una carta" il callback `query` chiamava `renderResults()` con `S.d` nullo. Ora prima dei dati si ricorda solo il testo e l'elenco filtrato si disegna al loro arrivo. Il banner della prima visita compare subito, senza aspettare i dati. Test "interazioni prima che arrivino i dati" (con `cards.json` trattenuto: banner, ricerca con frecce e Invio, Mazzi, Carta dimenticata; senza la correzione dava 7 errori).
+- **Prezzi "circa"** all'euro intero (`fmtEurAbout`: "circa 89 €", sotto l'euro 1 €): lista tipica e costo per completare, nella tier list e nella pagina dell'archetipo. Gli altri prezzi restano con i centesimi.
 
 ## Tier list e pagina dell'archetipo (restyling dei Mazzi, passi 4–5, 2026-10-16)
 
