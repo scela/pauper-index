@@ -146,7 +146,7 @@ python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -e "pipeline[dev
 .\.venv\Scripts\python -m pauper_index review     # revisioni dei set scadute (--force SET, --today AAAA-MM-GG)
 .\.venv\Scripts\python -m pauper_index alarm      # allarme "fonte ferma"
 .\.venv\Scripts\python -m pauper_index changed    # cambiamenti significativi in data/ (usato dalla CI)
-..venvScriptspython -m pauper_index tested     # exit 0 se un Test riuscito su push ha lo stesso codice di main (usato da deploy; serve gh)
+.\.venv\Scripts\python -m pauper_index tested     # exit 0 se un Test riuscito su push ha lo stesso codice di main (usato da deploy; serve gh)
 .\.venv\Scripts\python -m pauper_index sets       # report dei set d'ingresso
 .\.venv\Scripts\python -m pauper_index baseline   # confronto con la baseline
 .\.venv\Scripts\python -m pauper_index prices     # solo data/prices.json (bulk default_cards più recente); --offline usa quello in cache
