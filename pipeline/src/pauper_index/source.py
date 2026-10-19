@@ -39,6 +39,7 @@ class Deck:
     main: array  # coppie piatte (id_nome, copie), unsigned short
     side: array
     fp: int = 0  # impronta dopo la risoluzione dei nomi
+    player: int = -1  # giocatore come numero progressivo valido solo in memoria per questa esecuzione; -1 = assente
 
 
 @dataclass(slots=True)
@@ -140,7 +141,11 @@ def _cards(items, names: NameTable) -> array:
     return a
 
 
-def load_tournament(path: Path, root: Path, names: NameTable) -> Tournament | None:
+def load_tournament(path: Path, root: Path, names: NameTable,
+                    players: dict[str, int] | None = None) -> Tournament | None:
+    """Un file della fonte. `players` assegna a ogni nome di giocatore un numero progressivo (serve solo a contare
+    i giocatori diversi dei Debutti): il nome non viene mai conservato nel mazzo né scritto, e il dizionario vive
+    solo durante il caricamento."""
     rel = path.relative_to(root).as_posix()
     parts = rel.split("/")
     with open(path, encoding="utf-8-sig") as f:
@@ -158,15 +163,20 @@ def load_tournament(path: Path, root: Path, names: NameTable) -> Tournament | No
         side = _cards(d.get("Sideboard"), names)
         if not main and not side:
             continue
-        tour.decks.append(Deck(parse_day(d.get("Date")) or day, normalize_result(d.get("Result")), main, side))
+        dk = Deck(parse_day(d.get("Date")) or day, normalize_result(d.get("Result")), main, side)
+        who = (d.get("Player") or "").strip().casefold() if players is not None else ""
+        if who:
+            dk.player = players.setdefault(who, len(players))
+        tour.decks.append(dk)
     return tour
 
 
 def load_all(root: Path = config.SOURCE_DIR) -> tuple[list[Tournament], NameTable]:
     names = NameTable()
+    players: dict[str, int] = {}  # solo in memoria, scartato alla fine del caricamento
     out = []
     for p in iter_files(root):
-        t = load_tournament(p, root, names)
+        t = load_tournament(p, root, names, players)
         if t is not None:
             out.append(t)
     out.sort(key=lambda t: (t.day, t.rel))

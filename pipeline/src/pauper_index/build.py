@@ -5,7 +5,7 @@ import time
 from collections import Counter
 from dataclasses import dataclass
 
-from . import config, decks, italian, manasymbols, outputs, prices, seticons
+from . import config, debuts, decks, italian, manasymbols, outputs, prices, seticons
 from .carddb import CardDB
 from .dedup import dedupe
 from .names import clean, norm
@@ -141,8 +141,14 @@ def build(online: bool = True, fetch: bool = True) -> dict:
     ctx.timings["italiano"] = round(time.monotonic() - t, 1)
     # decklist recenti e archetipi (funzione 4, "Mazzi che puoi costruire")
     t = time.monotonic()
-    decks.build_decks(ctx.kept, ctx.keymap, ctx.key_oids, db, order, anchor, log=log)
+    dres = decks.build_decks(ctx.kept, ctx.keymap, ctx.key_oids, db, order, anchor, log=log)
     ctx.timings["mazzi"] = round(time.monotonic() - t, 1)
+    # carte entrate di recente nei tornei, con l'analisi del metagame (pagina Debutti)
+    t = time.monotonic()
+    debuts.build_debuts(ctx.kept, ctx.keymap, ctx.key_oids, db, order, anchor,
+                        {o: st.first for o, st in stats.items()}, dres["arch_of"], dres["fams"],
+                        dt.date.today().isoformat(), log=log)
+    ctx.timings["debutti"] = round(time.monotonic() - t, 1)
 
     # report
     unresolved_ids = {i for i, r in enumerate(ctx.resolutions) if r.method in UNRESOLVED_METHODS}
@@ -199,7 +205,8 @@ def build(online: bool = True, fetch: bool = True) -> dict:
              for f in ("cards.json", "texts.json", "itnames.json", "itnames-other.json", "ittexts.json",
                        "printings.json", "names.json",
                        "allnames.json", "cardnames.json",
-                       "sets.json", "seticons.svg", "decks-61.json", "decks-365.json", "prices.json", "meta.json")]
+                       "sets.json", "seticons.svg", "decks-61.json", "decks-365.json", "debuts.json", "prices.json",
+                       "meta.json")]
     names_hist = distinct_names(kept)
     names_y1 = distinct_names(kept, y1)
     summary = {

@@ -520,4 +520,10 @@ def build_decks(kept: list[Tournament], keymap, key_oids, db: CardDB, order: lis
         if days == min(WINDOWS):
             report(sub, registry, curated, db, order, review_dir / "archetipi.md", fams)
     log(f"mazzi: {info}")
-    return info
+    # per i Debutti: archetipo di ogni lista della finestra lunga (stessa classificazione dei file dei mazzi)
+    arch_of: dict[tuple, tuple[str, str, str]] = {}
+    for dl in lists:
+        colors = deck_colors(dl.main, order, db)
+        aid, entry = archetype(dl.arch, colors, registry, curated)
+        arch_of[dl.key()] = (aid, entry[0], family(dl.arch, curated))
+    return {"info": info, "arch_of": arch_of, "fams": fams}
