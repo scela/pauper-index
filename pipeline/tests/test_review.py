@@ -81,7 +81,7 @@ def no_network(monkeypatch):
 
 def test_stale_alarm(tmp_path, no_network):
     meta = {"last_tournament": "2026-09-01"}
-    assert review.stale_alarm(meta, dt.date(2026, 9, 22), tmp_path) is False
-    assert review.stale_alarm(meta, dt.date(2026, 9, 23), tmp_path) is True
+    assert review.stale_alarm(meta, dt.date(2026, 9, 16), tmp_path) is False  # 15 giorni: ancora normale
+    assert review.stale_alarm(meta, dt.date(2026, 9, 17), tmp_path) is True
     text = (tmp_path / "fonte-ferma.md").read_text("utf-8")
     assert text.startswith("Fonte dati ferma\n") and "someone/MTGODecklistCache" in text

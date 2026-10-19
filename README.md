@@ -48,7 +48,7 @@ Il workflow [`Aggiorna e pubblica`](.github/workflows/aggiorna.yml) gira ogni gi
 3. esegue le revisioni dopo le espansioni e controlla che la fonte non sia ferma: in entrambi i casi apre una Issue;
 4. se qualcosa fallisce apre una Issue assegnata al proprietario del repository (arriva un'email).
 
-Il sito mostra sempre la data dei dati e avvisa se la fonte non riceve tornei da più di 21 giorni.
+Il sito mostra sempre la data dei dati e avvisa se la fonte non riceve tornei da più di 15 giorni (la fonte li aggiunge una volta alla settimana).
 
 **Aggiornamento manuale**: su GitHub, scheda *Actions* → *Aggiorna e pubblica* → *Run workflow*.
 **Forzare una revisione**: stesso percorso, scrivendo il codice Scryfall del set (per esempio `hob`) nel campo *forza_revisione*.

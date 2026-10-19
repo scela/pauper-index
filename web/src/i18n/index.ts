@@ -76,6 +76,13 @@ export function fmtDateShort(iso: string, refYear: number, l: Lang = current): s
   return new Intl.DateTimeFormat(LOCALES[l], { ...opts, timeZone: 'UTC' }).format(d);
 }
 
+/** Età dei dati: "oggi", "ieri", "8 giorni fa". */
+export function fmtAgo(days: number, l: Lang = current): string {
+  if (days <= 0) return translate(l, 'data.today');
+  if (days === 1) return translate(l, 'data.yesterday');
+  return translate(l, 'data.ago', { n: days });
+}
+
 export function fmtDateTime(ms: number, l: Lang = current): string {
   return new Date(ms).toLocaleString(LOCALES[l], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }

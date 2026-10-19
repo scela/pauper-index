@@ -66,6 +66,7 @@ export function renderAbout(root: HTMLElement, d: Data | null): void {
       h('h3', null, t('about.faq')),
       faq('played', [t('about.faq.played.a')]),
       faq('precision', [t('about.faq.precision.a')]),
+      faq('fresh', [t('about.faq.fresh.a')]),
       faq('privacy', [t('about.faq.privacy.a')]),
       faq('prices', [t('about.faq.prices.a')]),
       faq('tier', [t('about.faq.tier.a')]),

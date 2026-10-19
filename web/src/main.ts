@@ -4,7 +4,7 @@ import {
   compute, deckShare, DEFAULT_OPTS, defaultRole, presetCounts, summarize, typicalCopies,
   type ImportSummary, type Opts, type Result,
 } from './lib/compare';
-import { detectLang, fmtDateShort, fmtDateTime, getLang, setLang, t, type Key, type Lang } from './i18n';
+import { detectLang, fmtAgo, fmtDateShort, fmtDateTime, getLang, setLang, t, type Key, type Lang } from './i18n';
 import { baseName, looksLikeCSV, readTable } from './lib/csv';
 import { imageUrl, loadData, loadPrices, type Data } from './lib/data';
 import { $, h, svg } from './lib/dom';
@@ -43,7 +43,7 @@ function moreLabel(left: number, step: number, kind: 'res' | 'decks'): string {
 /** Schermi stretti (stessa soglia delle righe compatte): voci del periodo senza il numero di carte. */
 const NARROW = window.matchMedia('(max-width: 640px)');
 const NEW_DAYS = 60;
-const STALE_SOURCE_DAYS = 21;
+const STALE_SOURCE_DAYS = 15; // come la pipeline: la fonte arriva una volta a settimana, pause normali fino a circa 14 giorni
 const PASTED = '__pasted__'; // sorgente dei gruppi incollati: il nome si traduce quando viene mostrato
 const periodLabel = (i: number) => t(`period.${i}` as Key);
 const periodDesc = (i: number) => t(`periodDesc.${i}` as Key);
@@ -429,11 +429,12 @@ function renderDataline(): void {
   const m = S.d!.meta;
   const el = $('#dataline');
   el.classList.remove('error');
+  // età calcolata nel browser: se i dati non cambiano non c'è un nuovo commit, ma età e avviso devono essere giusti
+  const today = new Date().toISOString().slice(0, 10);
+  const days = Math.max(0, daysBetween(m.last_tournament, today));
   el.replaceChildren(t('data.line', {
-    last: fmtDate(m.last_tournament), tournaments: fmtInt(m.tournaments), decks: fmtInt(m.decks), generated: fmtDate(m.generated_at),
+    last: fmtDateShort(m.last_tournament, Number(today.slice(0, 4))), ago: fmtAgo(days), decks: fmtInt(m.decks),
   }));
-  // allarme calcolato anche nel browser: se i dati non cambiano non c'è un nuovo commit, ma l'avviso deve comparire
-  const days = daysBetween(m.last_tournament, new Date().toISOString().slice(0, 10));
   if (m.source.status === 'ferma' || days > STALE_SOURCE_DAYS) {
     el.append(' ', h('span', { class: 'warn' }, t('data.stale', { days })));
   }

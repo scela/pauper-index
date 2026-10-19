@@ -29,4 +29,4 @@ SCRYFALL_DELAY = 0.1  # secondi tra due richieste API
 WINDOWS = (61, 365, 730, None)  # None = storico
 NEW_SET_DAYS = 60
 RELEVANT_SET_MIN_CARDS = 5
-STALE_SOURCE_DAYS = 21
+STALE_SOURCE_DAYS = 15

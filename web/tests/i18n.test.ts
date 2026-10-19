@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ALL_KEYS, detectLang, DICTS, fmtDate, fmtEurAbout, fmtInt, fmtPct, fmtResult, translate } from '../src/i18n';
+import { ALL_KEYS, detectLang, DICTS, fmtAgo, fmtDate, fmtEurAbout, fmtInt, fmtPct, fmtResult, translate } from '../src/i18n';
 
 const forms = (m: unknown) => (typeof m === 'string' ? [m] : [(m as { one: string }).one, (m as { other: string }).other]);
 const vars = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
@@ -60,6 +60,10 @@ describe('formattazione per lingua', () => {
     expect(fmtEurAbout(12990, 'en')).toBe('€130');
     expect(fmtEurAbout(30, 'en')).toBe('€1');
     expect(fmtEurAbout(0, 'en')).toBe('€0');
+  });
+  it('età dei dati', () => {
+    expect([0, 1, 8].map((d) => fmtAgo(d, 'it'))).toEqual(['oggi', 'ieri', '8 giorni fa']);
+    expect([0, 1, 8].map((d) => fmtAgo(d, 'en'))).toEqual(['today', 'yesterday', '8 days ago']);
   });
   it('numeri, percentuali e piazzamenti', () => {
     expect(fmtInt(155432, 'it')).toBe('155.432');

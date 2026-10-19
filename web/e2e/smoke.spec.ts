@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { fmtDate, translate, type Key, type Lang } from '../src/i18n';
+import { fmtAgo, fmtDate, fmtDateShort, translate, type Key, type Lang } from '../src/i18n';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIX = resolve(HERE, '../tests/fixtures');
@@ -87,10 +87,27 @@ test('lingua del browser, testi statici, area di caricamento, filtri e lista, co
   await expect(page.locator('.box, .tick, #assign, #optBasics')).toHaveCount(0);
   // date nella lingua scelta (data di data/meta.json)
   const meta = JSON.parse(readFileSync(resolve(HERE, '../../data/meta.json'), 'utf-8'));
-  await expect(page.locator('#dataline')).toContainText(fmtDate(meta.last_tournament, L));
+  await expect(page.locator('#dataline')).toContainText(fmtDateShort(meta.last_tournament, new Date().getUTCFullYear(), L));
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   expect(problems).toEqual([]);
+});
+
+test('riga dei dati: età sempre visibile, avviso solo oltre 15 giorni', async ({ page }) => {
+  const meta = JSON.parse(readFileSync(resolve(HERE, '../../data/meta.json'), 'utf-8'));
+  const at = (days: number) => new Date(Date.parse(meta.last_tournament.slice(0, 10) + 'T12:00:00Z') + days * 86400000);
+  await page.clock.setFixedTime(at(8));
+  await setup(page);
+  const line = page.locator('#dataline');
+  await expect(line).toContainText(`(${fmtAgo(8, L)})`);
+  await expect(line.locator('.warn')).toHaveCount(0);
+  await page.clock.setFixedTime(at(15));
+  await page.reload();
+  await expect(line).toContainText(`(${fmtAgo(15, L)})`);
+  await expect(line.locator('.warn')).toHaveCount(0);
+  await page.clock.setFixedTime(at(16));
+  await page.reload();
+  await expect(line.locator('.warn')).toHaveText(tr('data.stale', { days: 16 }));
 });
 
 test('selettore IT/EN: cambia tutti i testi e la scelta resta dopo il ricaricamento', async ({ page }) => {
@@ -321,8 +338,8 @@ test('Come funziona: breve, FAQ chiuse, avviso Fan Content Policy ufficiale una 
   await expect(about).toContainText(head('about.data.text'));
   // domande frequenti chiuse di default; le risposte si aprono
   const faqs = about.locator('details.faq');
-  await expect(faqs).toHaveCount(7); // con "Da dove vengono i prezzi?" e "Cosa vuol dire il tier?"
-  for (let i = 0; i < 7; i++) await expect(faqs.nth(i)).not.toHaveAttribute('open', '');
+  await expect(faqs).toHaveCount(8); // con "Da dove vengono i prezzi?", "Cosa vuol dire il tier?" e "Perché mancano i tornei degli ultimi giorni?"
+  for (let i = 0; i < 8; i++) await expect(faqs.nth(i)).not.toHaveAttribute('open', '');
   await about.getByText(tr('about.faq.tier.q')).click();
   await expect(about.getByText(tr('about.faq.tier.a'))).toBeVisible();
   await expect(about.getByText(tr('about.faq.precision.a'))).toBeHidden();
