@@ -824,3 +824,77 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 }
 /* blocco legale: riceve il focus da "Note legali" (per i lettori di schermo), senza contorno */
 .legal:focus{outline:none}
+
+/* ---------- Debutti (#debutti) ---------- */
+.debpage h2#debHeading{font-size:clamp(1.5rem,4vw,2rem);line-height:1.15;letter-spacing:-.02em;margin:10px 0 4px}
+.deb-lead{margin:0 0 8px;color:var(--muted)}
+.deb-count{margin:0 0 10px;font-weight:600}
+.deb-count .note{display:block;font-weight:400;margin:2px 0 0}
+.deb-controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:0 0 14px}
+.deb-controls label:not(.chk){display:flex;gap:6px;align-items:center}
+.deb-controls select{font:inherit;font-size:16px;padding:6px 8px;border:1px solid var(--line-strong);border-radius:var(--r-s);background:var(--surface);color:var(--ink);max-width:100%}
+.deb-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px}
+.deb-card{display:grid;grid-template-columns:110px minmax(0,1fr);gap:0 12px;align-items:start;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);padding:10px}
+.deb-card .deb-an{grid-column:2}
+.deb-card .deb-an[open]{grid-column:1/-1}
+.deb-price{white-space:nowrap}
+.deb-card:has(details[open]){grid-column:1/-1}
+.deb-img{display:block}
+.deb-img img{display:block;width:110px;height:auto;aspect-ratio:146/204;border-radius:5px;background:var(--line)}
+.deb-body{flex:1;min-width:0}
+.deb-name{margin:0;font-size:1.0625rem;line-height:1.25}
+.deb-title{display:inline;font-weight:650}
+.deb-title:hover,.deb-link:hover{text-decoration:underline}
+.deb-link{display:inline;color:var(--accent)}
+.deb-badge{display:inline-block;vertical-align:1px;line-height:1.35;padding:0 7px;border-radius:999px;font-size:.75rem;font-weight:650;background:var(--ink);color:var(--surface)}
+.deb-badge.k-n{background:var(--rar-m)}
+.deb-badge.k-l{background:var(--accent);color:var(--accent-ink)}
+.deb-badge.k-u{background:var(--rar-s)}
+.deb-badge.k-r{background:var(--rar-r)}
+.deb-badge.week{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.deb-stats{margin:4px 0 0;font-size:.8125rem;color:var(--muted)}
+.deb-stats .deb-badge{margin-right:4px}
+.deb-sum{margin:4px 0 0;font-size:.9375rem;line-height:1.4}
+.deb-own.yes{color:var(--ink);font-weight:600}
+.deb-an{margin-top:6px}
+.deb-an>summary{cursor:pointer;color:var(--accent);font-size:.875rem;font-weight:600;min-height:32px;display:flex;align-items:center}
+.deb-anbody{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 24px;margin-top:4px}
+.deb-sec h4{margin:10px 0 4px;font-size:.875rem}
+.deb-sec p{margin:2px 0;font-size:.875rem}
+.deb-rows{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:.875rem}
+.deb-rows li{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center}
+.deb-lbl{font-weight:600}
+.deb-val{color:var(--muted)}
+.deb-bar{flex:1 0 100%;height:6px;border-radius:999px;background:var(--line);overflow:hidden;order:2}
+.deb-fill{display:block;height:100%;background:var(--accent);border-radius:999px}
+.deb-rows li .deb-val{order:3}
+.deb-rep+.deb-rep{margin-top:6px}
+.deb-with{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.875rem}
+.deb-chart{max-width:420px}
+.deb-weeks{display:block;width:100%;height:72px}
+.deb-weeks rect{fill:var(--accent)}
+.deb-weeks rect.partial{fill:var(--line-strong)}
+.deb-axis{display:flex;justify-content:space-between;gap:8px;margin:2px 0 0;font-size:.75rem;color:var(--muted)}
+.deb-best a{color:var(--accent)}
+.deb-rows.deb-best li{display:block}
+.deb-watch{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}
+.deb-watch>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.deb-watch .deb-rows{margin-top:6px}
+@media (max-width:640px){
+  .deb-lead{display:none}
+  .deb-count{font-size:.9375rem;margin-bottom:8px}
+  .deb-count .note{display:none}
+  .deb-controls{gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .deb-controls label:not(.chk){flex:1 1 0;min-width:0}
+  .deb-controls .flabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .deb-controls select{width:100%}
+  .deb-controls .chk{flex:1 0 100%}
+  .deb-list{grid-template-columns:1fr;gap:8px}
+  .deb-card{grid-template-columns:76px minmax(0,1fr);gap:0 10px;padding:8px}
+  .deb-card .deb-an{grid-column:1/-1}
+  .deb-img img{width:76px}
+  .deb-name{font-size:1rem}
+  .deb-sum{font-size:.875rem;line-height:1.35}
+  .deb-anbody{grid-template-columns:1fr}
+  .deb-an>summary{min-height:36px}
+}

@@ -2148,3 +2148,104 @@ test('mazzi: file non disponibile, messaggio e Riprova', async ({ page }) => {
   await expect(page.locator('#tierSections .fam-card')).toHaveCount(1);
   await expect(page.locator('#dStatus')).toBeHidden();
 });
+
+/* ---------- Debutti ---------- */
+
+const DEBUTS = JSON.parse(readFileSync(resolve(HERE, '../../data/debuts.json'), 'utf-8'));
+const debAge = (iso: string) => (Date.parse(DEBUTS.anchor) - Date.parse(iso)) / 864e5;
+const debIn = (days: number) => DEBUTS.c.filter((r: { f: string; u?: string }) => debAge(r.u || r.f) <= days);
+
+async function openDebuts(page: Page): Promise<void> {
+  await page.evaluate(() => { location.hash = '#debutti'; });
+  await expect(page.locator('.deb-card').first()).toBeVisible();
+}
+
+test('debutti: file scaricato solo all\'apertura, 90 giorni, categorie, analisi, scheda e "In osservazione"', async ({ page }) => {
+  const problems = await setup(page);
+  const reqs: string[] = [];
+  page.on('request', (r) => { if (r.url().includes('debuts.json')) reqs.push(r.url()); });
+  await page.waitForTimeout(300);
+  expect(reqs).toEqual([]);
+  await openDebuts(page);
+  const n90 = debIn(90).length;
+  await expect(page.locator('#debPeriod')).toHaveValue('90');
+  await expect(page.locator('.deb-card')).toHaveCount(n90);
+  await expect(page.locator('#debCount')).toHaveText(tr('deb.count', { n: n90, days: 90 }));
+  expect(reqs).toHaveLength(1);
+  // periodo: 30 giorni
+  await page.selectOption('#debPeriod', '30');
+  await expect(page.locator('.deb-card')).toHaveCount(debIn(30).length);
+  await page.selectOption('#debPeriod', '90');
+  // categoria: solo le appena legali
+  const legal = debIn(90).filter((r: { k: string }) => r.k === 'l').length;
+  await page.selectOption('#debKind', 'l');
+  await expect(page.locator('.deb-card')).toHaveCount(legal);
+  for (const b of await page.locator('.deb-card .deb-badge:not(.week)').all()) await expect(b).toHaveText(tr('deb.badge.l'));
+  await page.selectOption('#debKind', '');
+  // analisi della prima carta (la più giocata)
+  const first = page.locator('.deb-card').first();
+  await first.locator('.deb-an summary').click();
+  await expect(first.locator('.deb-sec h4').first()).toHaveText(tr('deb.a.archs'));
+  await expect(first.locator('.deb-weeks')).toBeVisible();
+  await expect(first.locator('.deb-weeks')).toHaveAttribute('aria-label', new RegExp(head('deb.a.weeksAlt')));
+  for (const a of await first.locator('.deb-best a').all()) {
+    await expect(a).toHaveAttribute('target', '_blank');
+    await expect(a).toHaveAttribute('rel', 'noopener noreferrer');
+  }
+  // la carta apre la scheda del sito
+  const name = await first.locator('.deb-title').innerText();
+  await first.locator('.deb-title').click();
+  await expect(page.locator('#sheetTitle')).toContainText(name);
+  await page.keyboard.press('Escape');
+  // in osservazione: chiusa, con il numero delle carte del periodo e il motivo
+  const watch = page.locator('#debWatch');
+  const w90 = DEBUTS.o.filter((o: [number, string, string]) => debAge(o[2]) <= 90);
+  await expect(watch).not.toHaveAttribute('open', '');
+  await expect(watch.locator('summary')).toHaveText(tr('deb.watch', { n: w90.length, decks: DEBUTS.minDecks, players: DEBUTS.minPlayers }));
+  await watch.locator('summary').click();
+  await expect(watch.locator('li')).toHaveCount(w90.length);
+  await expect(watch.locator('li b').first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  expect(problems).toEqual([]);
+});
+
+test('debutti con la collezione: possesso, prezzo e "Solo quelle che possiedi"', async ({ page }) => {
+  await setup(page);
+  await uploadCollection(page);
+  await openDebuts(page);
+  await expect(page.locator('#debOwnedWrap')).toBeVisible();
+  await expect(page.locator('.deb-own')).toHaveCount(debIn(90).length);
+  await page.check('#debOwned');
+  const owned = await page.locator('.deb-card').count();
+  if (owned === 0) await expect(page.locator('#debNone')).toBeVisible();
+  else await expect(page.locator('.deb-own.yes')).toHaveCount(owned);
+});
+
+test('debutti: file non disponibile, messaggio e Riprova', async ({ page }) => {
+  await setup(page);
+  await page.route('**/data/debuts.json', (r) => r.fulfill({ status: 404, body: '' }));
+  await page.evaluate(() => { location.hash = '#debutti'; });
+  await expect(page.locator('#debStatus')).toContainText(tr('deb.error'));
+  await page.unroute('**/data/debuts.json');
+  await page.click('#debRetry');
+  await expect(page.locator('.deb-card').first()).toBeVisible();
+  await expect(page.locator('#debStatus')).toBeHidden();
+});
+
+test('debutti su iPhone SE (375×667): titolo e 2 carte intere nel primo schermo', async ({ browser, baseURL, isMobile }, info) => {
+  test.skip(!isMobile, 'obiettivo misurato su mobile');
+  const ctx = await browser.newContext({ ...info.project.use, baseURL, viewport: { width: 375, height: 667 }, bypassCSP: true });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => localStorage.setItem('pauper-index:welcomeClosed', '1'));
+  await setup(page);
+  await openDebuts(page);
+  await page.addStyleTag({ content: 'body, body *:not(.brand) { font-family: Arial, "Liberation Sans", sans-serif !important; }' });
+  await expect(page.locator('#debHeading')).toBeInViewport();
+  const cards = page.locator('.deb-card');
+  for (const i of [0, 1]) expect(await cards.nth(i).evaluate((e) => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(667);
+  // immagine della carta intera (con artista e copyright stampati), mai ritagliata
+  const img = (await cards.first().locator('.deb-img img').boundingBox())!;
+  expect(Math.abs(img.height / img.width - 204 / 146)).toBeLessThan(0.02);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await ctx.close();
+});

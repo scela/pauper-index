@@ -14,7 +14,7 @@ export const GC_SCRIPT = '/count.js';
 
 /** Eventi contati: ciascuno al massimo una volta per pagina caricata. */
 export const GC_EVENTS = [
-  'collezione-caricata', 'controllo-rapido', 'filtro-espansione', 'carta-dimenticata', 'mazzi', 'export', 'ko-fi',
+  'collezione-caricata', 'controllo-rapido', 'filtro-espansione', 'carta-dimenticata', 'mazzi', 'debutti', 'export', 'ko-fi',
 ] as const;
 export type GcEvent = (typeof GC_EVENTS)[number];
 

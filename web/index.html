@@ -403,6 +403,25 @@
     </section>
   </div>
 
+  <div id="viewDebuts" hidden>
+    <section class="debpage" aria-labelledby="debHeading">
+      <h2 id="debHeading" data-i18n="deb.title">Debutti</h2>
+      <p class="deb-lead" data-i18n="deb.lead">Le carte apparse per la prima volta nei tornei Pauper di recente, e come vengono giocate.</p>
+      <p class="note" id="debStatus" role="status"></p>
+      <div id="debBody" hidden>
+        <p class="deb-count"><span id="debCount"></span> <span class="note" id="debRule"></span></p>
+        <div class="deb-controls" role="group" data-i18n-aria="deb.title" aria-label="Debutti">
+          <label><span class="flabel" data-i18n="deb.period">Periodo</span><select id="debPeriod"></select></label>
+          <label><span class="flabel" data-i18n="deb.kind">Categoria</span><select id="debKind"></select></label>
+          <label class="chk" id="debOwnedWrap" hidden><input type="checkbox" id="debOwned"> <span data-i18n="deb.ownedOnly">Solo quelle che possiedi</span></label>
+        </div>
+        <ul class="deb-list" id="debutsList"></ul>
+        <p class="note" id="debNone" hidden data-i18n="deb.none">Nessuna carta con questi filtri.</p>
+        <div id="debWatchBox"></div>
+      </div>
+    </section>
+  </div>
+
   <div id="viewAbout" hidden></div>
   </main>
 

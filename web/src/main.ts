@@ -26,6 +26,7 @@ import { howSteps, renderAbout } from './ui/about';
 import { initSetPicker } from './ui/setpicker';
 import { initDust } from './ui/dust';
 import { initDecks } from './ui/decks';
+import { initDebuts } from './ui/debuts';
 import { initSearch, type SearchApi } from './ui/search';
 import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openNeverSheet, openSheet, recentlyClosed, renderGrid, scheduleClose, setSheetItalian, unblockHover } from './ui/sheet';
 
@@ -102,6 +103,7 @@ let search: SearchApi | null = null;
 let noteEntry: NameEntry | null = null;
 let dust: { refresh(): void } | null = null;
 let decks: { show(): void; refresh(): void } | null = null;
+let debuts: { show(): void; refresh(): void } | null = null;
 let setPicker: { refresh(): void } | null = null;
 let panel: { render(): void; close(): void } | null = null;
 let textsLoading: Promise<boolean> | null = null;
@@ -391,6 +393,7 @@ function render(): void {
   search?.refresh();
   dust?.refresh();
   decks?.refresh();
+  debuts?.refresh();
   setPicker?.refresh();
 }
 
@@ -954,8 +957,8 @@ function doSave(kind: string): void {
 function openFor(btn: HTMLElement, mode: 'hover' | 'click', animate = false): void {
   const d = S.d!;
   const idx = Number(btn.dataset.idx);
-  // carte dei mazzi: possono essere fuori dalla lista con i filtri attuali, il possesso viene dalla collezione
-  const inDecks = !!btn.closest('#viewDecks');
+  // carte dei mazzi e dei debutti: possono essere fuori dalla lista con i filtri attuali, il possesso viene dalla collezione
+  const inDecks = !!btn.closest('#viewDecks, #viewDebuts');
   const res = (inDecks ? null : S.results.find((x) => x.idx === idx)) || (inDecks && hasColl() ? ownedResult(idx) : null);
   const approx = !!res && res.prints.length > 0 && res.prints.every((p) => !p.exact);
   // vista per espansione: la carta attiva della scheda è la stampa di quel set
@@ -1062,13 +1065,16 @@ function route(): void {
   const about = ABOUT_HASHES.includes(location.hash);
   const forgotten = location.hash === '#carta-dimenticata';
   const decksPage = location.hash === '#mazzi' || location.hash.startsWith('#mazzi/');
-  $('#viewMain').hidden = about || forgotten || decksPage;
+  const debutsPage = location.hash === '#debutti';
+  $('#viewMain').hidden = about || forgotten || decksPage || debutsPage;
+  $('#viewDebuts').hidden = !debutsPage;
   $('#viewAbout').hidden = !about;
   $('#viewDust').hidden = !forgotten;
   $('#viewDecks').hidden = !decksPage;
-  for (const [id, on] of [['#navAbout', about], ['#navDust', forgotten], ['#navDecks', decksPage]] as const) {
-    if (on) $(id).setAttribute('aria-current', 'page');
-    else $(id).removeAttribute('aria-current');
+  for (const [id, on] of [['navAbout', about], ['navDust', forgotten], ['navDecks', decksPage], ['navDebuts', debutsPage]] as const) {
+    const el = document.getElementById(id);
+    if (on) el?.setAttribute('aria-current', 'page');
+    else el?.removeAttribute('aria-current');
   }
   // nella pagina Informazioni il blocco legale e la FAQ sulle donazioni sostituiscono il piè di pagina
   document.querySelector<HTMLElement>('.wrap > .foot')!.hidden = about;
@@ -1078,11 +1084,15 @@ function route(): void {
     decks?.show();
     track('mazzi');
   }
+  if (debutsPage) {
+    debuts?.show();
+    track('debutti');
+  }
   if (location.hash === '#note-legali') {
     const legal = document.getElementById('legal');
     legal?.scrollIntoView({ block: 'start' });
     legal?.focus({ preventScroll: true });
-  } else if (about || forgotten || decksPage) window.scrollTo(0, 0);
+  } else if (about || forgotten || decksPage || debutsPage) window.scrollTo(0, 0);
 }
 
 /* ---------- eventi ---------- */
@@ -1265,7 +1275,7 @@ function wire(): void {
       openFor(b, 'hover', true);
     }, HOVER_OPEN_MS);
   };
-  for (const rows of [$('#cardRows'), $('#deckList')]) {
+  for (const rows of [$('#cardRows'), $('#deckList'), $('#debutsList'), $('#debWatchBox')]) {
     rows.addEventListener('mouseover', (e) => {
       if (!fine.matches) return;
       const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
@@ -1458,6 +1468,11 @@ async function main(): Promise<void> {
     copy: (text, what) => void copyText(text, what),
     save: saveText,
   });
+  debuts = initDebuts({
+    data: () => S.d,
+    owned: () => (hasColl() && S.cix ? (idx: number) => S.cix!.byCard.get(idx)?.total || 0 : null),
+    prices: () => S.prices,
+  });
   route();
   showWelcome(); // non dipende dai dati: subito, senza spostare la pagina quando arrivano
   try {
@@ -1485,6 +1500,7 @@ async function main(): Promise<void> {
   if (S.prices) {
     showPrices();
     decks?.refresh();
+    debuts?.refresh();
   }
 }
 
