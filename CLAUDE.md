@@ -60,7 +60,7 @@ La specifica completa è in `docs/SPEC.md`. Questo file registra le decisioni pr
     - [x] passo 5 (2026-10-16): filtri della tier list e della pagina dell'archetipo — report con screenshot
     - [x] passo 6: testata (fatta nel passo A2 della pagina iniziale, vedi "Testata (2026-10-15)")
     - [x] passo 7 (2026-10-19): rifinitura, dopo le correzioni del 2026-10-19 (vedi "Correzioni del 2026-10-19") — report finale
-  - [ ] Funzione **Debutti**, piano approvato il 2026-10-19 (vedi "Debutti"):
+  - [x] Funzione **Debutti** (2026-10-19), piano approvato il 2026-10-19 (vedi "Debutti"):
     - [x] pipeline: `data/debuts.json`, registro della legalità, report `data/reviews/debutti.md` — report
     - [x] pagina `#debutti` (vedi "Debutti: la pagina")
     - [x] pulsante "Debutti" (sipario) e testata stretta su mobile (vedi "Testata (2026-10-15)")
