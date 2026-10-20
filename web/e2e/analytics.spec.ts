@@ -42,9 +42,12 @@ async function useEverything(page: Page, lang: Lang): Promise<void> {
   await page.locator('#search').fill('Brainstorm');
   await page.locator('#search').press('Enter');
   await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
-  // cuore nella scheda (evento preferita)
+  // cuore nella scheda (evento preferita) e pagina delle preferite (evento preferite)
   await page.locator('#sheet .favbtn').click();
-  await page.keyboard.press('Escape');
+  await page.locator('#sheet .favnote a').click();
+  await expect(page.locator('#viewFav')).toBeVisible();
+  await page.evaluate(() => { location.hash = ''; });
+  await expect(page.locator('#viewMain')).toBeVisible();
   await page.locator('#setInput').click();
   await page.locator('#setInput').fill('ice age');
   await page.locator('#setList [role="option"]', { hasText: 'Ice Age' }).first().click();

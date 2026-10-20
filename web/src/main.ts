@@ -12,6 +12,7 @@ import { realignedCSV, textList } from './lib/exports';
 import { daysBetween, fmtDate, fmtEur, fmtInt, fmtPct, fmtPrint } from './lib/format';
 import { cheapestPrice, ownedPrice, ownedPrintIndex, priceTotals, printPrice, type PricesFile } from './lib/prices';
 import { clearAll, idbGet, idbSet, lsDel, lsGet, lsSet } from './lib/store';
+import { norm } from './lib/norm';
 import { parseTextList } from './lib/text';
 import type { Group, Role, Row } from './lib/types';
 import { collectionIndex, collectionSize, ownedFor, type CollectionIndex, type NameEntry, type Owned } from './lib/quick';
@@ -29,6 +30,7 @@ import { initDecks } from './ui/decks';
 import { initDebuts } from './ui/debuts';
 import { initSearch, type SearchApi } from './ui/search';
 import { favIndices, favList, favMark, heartBtn, initFav, loadFavs, refOf, resetFavs } from './ui/fav';
+import { initFavPage } from './ui/favpage';
 import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openNeverSheet, openSheet, recentlyClosed, renderGrid, scheduleClose, setSheetItalian, unblockHover } from './ui/sheet';
 
 // Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa
@@ -105,6 +107,7 @@ let noteEntry: NameEntry | null = null;
 let dust: { refresh(): void } | null = null;
 let decks: { show(): void; refresh(): void } | null = null;
 let debuts: { show(): void; refresh(): void } | null = null;
+let favPage: { show(): void; refresh(): void } | null = null;
 let setPicker: { refresh(): void } | null = null;
 let panel: { render(): void; close(): void } | null = null;
 let textsLoading: Promise<boolean> | null = null;
@@ -395,6 +398,7 @@ function render(): void {
   dust?.refresh();
   decks?.refresh();
   debuts?.refresh();
+  favPage?.refresh();
   setPicker?.refresh();
 }
 
@@ -962,7 +966,7 @@ function openFor(btn: HTMLElement, mode: 'hover' | 'click', animate = false): vo
   const d = S.d!;
   const idx = Number(btn.dataset.idx);
   // carte dei mazzi e dei debutti: possono essere fuori dalla lista con i filtri attuali, il possesso viene dalla collezione
-  const inDecks = !!btn.closest('#viewDecks, #viewDebuts');
+  const inDecks = !!btn.closest('#viewDecks, #viewDebuts, #viewFav');
   const res = (inDecks ? null : S.results.find((x) => x.idx === idx)) || (inDecks && hasColl() ? ownedResult(idx) : null);
   const approx = !!res && res.prints.length > 0 && res.prints.every((p) => !p.exact);
   // vista per espansione: la carta attiva della scheda è la stampa di quel set
@@ -1031,6 +1035,19 @@ function favsChanged(): void {
   if (!S.d) return;
   if (S.cf.fav) renderResults();
   else panel?.render();
+  favPage?.refresh();
+}
+
+/** Prezzo di una preferita giocata: la printing posseduta (come la colonna Prezzo), altrimenti "da X €". */
+function favPrice(idx: number): string {
+  if (!S.prices) return '—';
+  const res = hasColl() ? ownedResult(idx) : null;
+  if (res && res.owned > 0) {
+    const c = ownedPrice(S.d!, S.prices, res);
+    if (c) return fmtEur(c);
+  }
+  const low = cheapestPrice(S.prices, idx);
+  return low ? t('price.from', { p: fmtEur(low) }) : '—';
 }
 
 /* ---------- tema e viste ---------- */
@@ -1079,12 +1096,14 @@ function route(): void {
   const forgotten = location.hash === '#carta-dimenticata';
   const decksPage = location.hash === '#mazzi' || location.hash.startsWith('#mazzi/');
   const debutsPage = location.hash === '#debutti';
-  $('#viewMain').hidden = about || forgotten || decksPage || debutsPage;
+  const favsPage = location.hash === '#preferite';
+  $('#viewMain').hidden = about || forgotten || decksPage || debutsPage || favsPage;
+  $('#viewFav').hidden = !favsPage;
   $('#viewDebuts').hidden = !debutsPage;
   $('#viewAbout').hidden = !about;
   $('#viewDust').hidden = !forgotten;
   $('#viewDecks').hidden = !decksPage;
-  for (const [id, on] of [['navAbout', about], ['navDust', forgotten], ['navDecks', decksPage], ['navDebuts', debutsPage]] as const) {
+  for (const [id, on] of [['navAbout', about], ['navDust', forgotten], ['navDecks', decksPage], ['navDebuts', debutsPage], ['navFav', favsPage]] as const) {
     const el = document.getElementById(id);
     if (on) el?.setAttribute('aria-current', 'page');
     else el?.removeAttribute('aria-current');
@@ -1101,11 +1120,15 @@ function route(): void {
     debuts?.show();
     track('debutti');
   }
+  if (favsPage) {
+    favPage?.show();
+    track('preferite');
+  }
   if (location.hash === '#note-legali') {
     const legal = document.getElementById('legal');
     legal?.scrollIntoView({ block: 'start' });
     legal?.focus({ preventScroll: true });
-  } else if (about || forgotten || decksPage || debutsPage) window.scrollTo(0, 0);
+  } else if (about || forgotten || decksPage || debutsPage || favsPage) window.scrollTo(0, 0);
 }
 
 /* ---------- eventi ---------- */
@@ -1288,7 +1311,7 @@ function wire(): void {
       openFor(b, 'hover', true);
     }, HOVER_OPEN_MS);
   };
-  for (const rows of [$('#cardRows'), $('#deckList'), $('#debutsList'), $('#debWatchBox')]) {
+  for (const rows of [$('#cardRows'), $('#deckList'), $('#debutsList'), $('#debWatchBox'), $('#favList')]) {
     rows.addEventListener('mouseover', (e) => {
       if (!fine.matches) return;
       const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
@@ -1489,6 +1512,23 @@ async function main(): Promise<void> {
     data: () => S.d,
     owned: () => (hasColl() && S.cix ? (idx: number) => S.cix!.byCard.get(idx)?.total || 0 : null),
     prices: () => S.prices,
+  });
+  favPage = initFavPage({
+    data: () => S.d,
+    opts: () => S.opts,
+    setWin: (w) => {
+      S.opts.win = w;
+      refresh();
+    },
+    collection: () => (hasColl() ? S.cix : null),
+    prices: () => S.prices,
+    price: favPrice,
+    openNever: (anchor, e) => openNeverSheet(anchor, {
+      name: e.name, legal: e.legal, itNames: [], itForce: false,
+      owned: hasColl() && S.cix ? S.cix.byName.get(norm(e.name)) || null : null, hasCollection: hasColl(),
+    }),
+    copy: (text, what) => void copyText(text, what),
+    save: saveText,
   });
   initFav({ data: () => S.d, changed: favsChanged });
   route();

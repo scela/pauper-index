@@ -447,6 +447,54 @@
     </section>
   </div>
 
+  <div id="viewFav" hidden>
+    <section class="favpage" aria-labelledby="favHeading">
+      <h2 id="favHeading" data-i18n="fav.title">Preferite</h2>
+      <p class="fav-lead" data-i18n="fav.lead">Le carte che hai segnato con il cuore, anche quelle mai giocate in Pauper.</p>
+      <div class="res-head fav-head">
+        <div>
+          <h3 class="verdict" id="favVerdict"></h3>
+          <p class="sub" id="favSub"></p>
+        </div>
+        <div class="res-tools" id="favTools">
+          <label><span class="flabel" data-i18n="filters.period">Periodo</span><select id="favPeriod"></select></label>
+          <label><span class="flabel" data-i18n="sort.aria">Ordina</span><select id="favSort">
+            <option value="recent" data-i18n="fav.sortRecent">Aggiunte di recente</option>
+            <option value="name" data-i18n="sort.name">Nome (A–Z)</option>
+            <option value="share" data-i18n="sort.share">Più giocate</option>
+          </select></label>
+        </div>
+      </div>
+      <p class="note" id="favStatus" role="status" aria-live="polite"></p>
+      <div class="undo" id="favUndo" role="status" aria-live="polite" hidden></div>
+      <ul class="favlist" id="favList"></ul>
+      <p class="note fav-empty" id="favEmpty" hidden data-i18n="fav.empty"></p>
+      <div id="favMissing"></div>
+      <div class="fav-tools">
+        <details class="mini" id="favExport">
+          <summary data-i18n="fav.export">Esporta</summary>
+          <div class="btns">
+            <button class="btn small" type="button" id="favCopy" data-i18n="fav.copy">Copia la lista</button>
+            <button class="btn small" type="button" id="favSave" data-i18n="fav.download">Scarica .txt</button>
+          </div>
+          <p class="note" data-i18n="fav.exportNote"></p>
+        </details>
+        <details class="mini" id="favImport">
+          <summary data-i18n="fav.import">Importa una lista</summary>
+          <label for="favText" data-i18n="fav.importLabel">Una carta per riga, in inglese o in italiano, con o senza il numero davanti</label>
+          <textarea id="favText" rows="5" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="1 Lightning Bolt&#10;Fulmine"></textarea>
+          <div class="row">
+            <label class="btn small favfile"><input type="file" id="favFile" accept=".txt,text/plain"><span data-i18n="fav.importFile">Da un file .txt</span></label>
+            <button class="btn primary small" id="favImportBtn" type="button" data-i18n="fav.importBtn">Importa</button>
+          </div>
+          <p class="note" data-i18n="fav.importNote"></p>
+          <div id="favImportResult" aria-live="polite"></div>
+        </details>
+        <button class="btn quiet small" id="favClear" type="button" data-i18n="fav.clear">Svuota le preferite</button>
+      </div>
+    </section>
+  </div>
+
   <div id="viewAbout" hidden></div>
   </main>
 

@@ -11,7 +11,7 @@
 
 ## Dopo la funzione 4, in quest'ordine (decise dall'utente il 2026-10-07; non ancora implementate)
 
-1. **Preferite**: un cuore sulle carte (Carta dimenticata, controllo rapido, scheda, vista per espansione) e una sezione "Preferite". Salvate nel browser, con export e import come lista di testo per spostarle tra dispositivi.
+1. **Preferite**: un cuore sulle carte (Carta dimenticata, controllo rapido, scheda, vista per espansione) e una sezione "Preferite". Salvate nel browser, con export e import come lista di testo per spostarle tra dispositivi. **Fatta il 2026-10-20** (vedi CLAUDE.md, "Preferite").
 2. **Brewing, versione 1**: una scheda in cui si aggiungono carte, anche dalle preferite. Il sito mostra:
    - i mazzi reali in cui le carte comparivano insieme;
    - le carte che le accompagnano più spesso, misurando quanto compaiono insieme più del normale, non con il conteggio grezzo, che premierebbe le carte onnipresenti;
