@@ -1524,6 +1524,29 @@ test('scheda al passaggio del mouse: si apre dopo una breve sosta, cambia carta 
   await expect(sheet).toBeHidden({ timeout: 400 });
 });
 
+test('scheda: non si apre quando l’elenco sale sotto il mouse fermo (Esc sul pannello "Filtri")', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'solo con il mouse');
+  await setup(page);
+  const sheet = page.locator('#sheet');
+  // il punto dove sta la prima carta a pannello chiuso: con il pannello aperto lì c'è il pannello
+  const b = (await page.locator('#cardRows .cardbtn').first().boundingBox())!;
+  const x = Math.round(b.x + 20);
+  const y = Math.round(b.y + b.height / 2);
+  await page.click('#filtersBtn');
+  await expect(page.locator('#fpanel')).toBeVisible();
+  await page.mouse.move(x, y);
+  expect(await page.evaluate(([x, y]) => !!document.elementFromPoint(x!, y!)?.closest('#fpanel'), [x, y])).toBe(true);
+  // Esc: il pannello si chiude e l'elenco sale sotto il cursore fermo
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#fpanel')).toBeHidden();
+  expect(await page.evaluate(([x, y]) => !!document.elementFromPoint(x!, y!)?.closest('#cardRows .cardbtn'), [x, y])).toBe(true);
+  await page.waitForTimeout(500);
+  await expect(sheet).toBeHidden();
+  // un movimento reale sopra la carta la apre
+  await page.mouse.move(x + 3, y);
+  await expect(sheet).toBeVisible({ timeout: 1000 });
+});
+
 test('scheda al passaggio del mouse con prefers-reduced-motion: nessuna animazione', async ({ page, isMobile }) => {
   test.skip(isMobile, 'solo con il mouse');
   await page.emulateMedia({ reducedMotion: 'reduce' });

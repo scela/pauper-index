@@ -1303,6 +1303,16 @@ function wire(): void {
   // si apre HOVER_OPEN_MS dopo che il cursore si ferma sulla carta; se la scheda è già aperta (o appena chiusa
   // uscendo da un'altra carta) cambia contenuto subito
   let hoverFor: HTMLElement | null = null;
+  // Chromium manda mouseover e mousemove anche quando la pagina si sposta sotto il cursore fermo (per esempio
+  // l'elenco che sale dopo la chiusura del pannello "Filtri"), con le stesse coordinate dell'ultimo evento:
+  // quelli non sono un passaggio del mouse e non devono aprire la scheda. Un movimento reale cambia le coordinate.
+  let lastX = NaN;
+  let lastY = NaN;
+  const realMove = (e: MouseEvent) => e.clientX !== lastX || e.clientY !== lastY;
+  document.addEventListener('mousemove', (e) => {
+    lastX = e.clientX;
+    lastY = e.clientY;
+  }, { passive: true });
   const armHover = (b: HTMLElement) => {
     window.clearTimeout(hoverTimer);
     hoverFor = b;
@@ -1311,22 +1321,27 @@ function wire(): void {
       openFor(b, 'hover', true);
     }, HOVER_OPEN_MS);
   };
+  const enterCard = (b: HTMLElement) => {
+    cancelClose();
+    window.clearTimeout(hoverTimer);
+    hoverFor = null;
+    if (isOpenFor(Number(b.dataset.idx)) || isHoverBlocked(b)) return;
+    if (isWarm()) openFor(b, 'hover');
+    else armHover(b);
+  };
   for (const rows of [$('#cardRows'), $('#deckList'), $('#debutsList'), $('#debWatchBox'), $('#favList')]) {
     rows.addEventListener('mouseover', (e) => {
-      if (!fine.matches) return;
+      if (!fine.matches || !realMove(e)) return;
       const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
-      if (!b) return;
-      cancelClose();
-      window.clearTimeout(hoverTimer);
-      hoverFor = null;
-      if (isOpenFor(Number(b.dataset.idx)) || isHoverBlocked(b)) return;
-      if (isWarm()) openFor(b, 'hover');
-      else armHover(b);
+      if (b) enterCard(b);
     });
     rows.addEventListener('mousemove', (e) => {
-      if (!hoverFor) return;
+      if (!fine.matches || !realMove(e)) return;
       const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
+      if (!b) return;
       if (b === hoverFor) armHover(b); // il cursore si muove ancora: si aspetta che si fermi
+      // primo movimento reale su una carta arrivata sotto il cursore fermo (il suo mouseover era stato ignorato)
+      else if (!hoverFor && !isOpenFor(Number(b.dataset.idx)) && !isHoverBlocked(b)) enterCard(b);
     });
     rows.addEventListener('mouseout', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('.cardbtn');
