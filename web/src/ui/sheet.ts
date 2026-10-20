@@ -11,6 +11,7 @@ import { imageUrl, type Data } from '../lib/data';
 import { h } from '../lib/dom';
 import { fmtDate, fmtEur, fmtInt, fmtPct, fmtPrint, lastSeen } from '../lib/format';
 import { ownedPrices, printPrice, type PricesFile } from '../lib/prices';
+import { heartBtn } from './fav';
 
 export const FAN_MAX = 7;
 /** Passaggio del mouse: apertura dopo che il cursore si ferma, comparsa e dissolvenza in chiusura (ms). */
@@ -309,7 +310,7 @@ export function openSheet(anchor: HTMLElement, input: SheetInput, mode: 'hover' 
     h('div', { class: 'sheet-head' },
       h('div', { class: 'sheet-titles' },
         h('h3', { id: 'sheetTitle' }, c.n, legalBadge(c.l)),
-        italianLine(input.itNames, input.itForce)), close),
+        italianLine(input.itNames, input.itForce)), h('div', { class: 'sheet-acts' }, heartBtn({ n: c.n, o: c.o }), close)),
     fan,
     items.length > FAN_MAX
       ? h('p', { class: 'fan-note' }, t('sheet.someOf', { n: FAN_MAX, total: items.length }),
@@ -372,7 +373,7 @@ export function openNeverSheet(anchor: HTMLElement, input: NeverInput): void {
     h('div', { class: 'sheet-head' },
       h('div', { class: 'sheet-titles' },
         h('h3', { id: 'sheetTitle' }, input.name, legalBadge(input.legal)),
-        italianLine(input.itNames, input.itForce)), close),
+        italianLine(input.itNames, input.itForce)), h('div', { class: 'sheet-acts' }, heartBtn({ n: input.name }), close)),
     h('div', { class: 'details never' }, h('p', { class: 'qstat qnever' }, t('quick.never')), owned),
   );
   el.hidden = false;

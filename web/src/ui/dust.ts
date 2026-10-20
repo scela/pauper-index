@@ -17,6 +17,7 @@ import { fmtDate, fmtInt, fmtPct, fmtPrint, lastSeen } from '../lib/format';
 import type { CollectionIndex, Owned } from '../lib/quick';
 import { ssGet, ssSet } from '../lib/store';
 import { cobwebs, puff, type Corner } from './cobweb';
+import { heartBtn } from './fav';
 import { enableTilt, type Tilt } from './tilt';
 
 export interface DustCtx {
@@ -163,7 +164,7 @@ export function initDust(ctx: DustCtx): { refresh(): void } {
     const last = [lastSeen(d, c.lm, 'm'), lastSeen(d, c.lp, 'p')].filter((x) => x !== null)
       .sort((a, b) => b!.date.localeCompare(a!.date))[0] || null;
     const parts: (Node | null)[] = [
-      h('h3', { class: 'qtitle', id: 'dustTitle' }, c.n),
+      h('div', { class: 'dust-titlerow' }, h('h3', { class: 'qtitle', id: 'dustTitle' }, c.n), heartBtn({ n: c.n, o: c.o })),
       h('p', null, t('dust.played', { n: fmtInt(decks), from: fmtDate(c.f), to: fmtDate(c.z) })),
       peak ? h('p', null, t('dust.peak', { year: peak.year, pct: fmtPct(peak.share) })) : null,
       last ? h('p', null, t('dust.last', { date: fmtDate(last.date) }),

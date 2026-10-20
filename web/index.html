@@ -68,10 +68,11 @@
           <span class="sp-label" data-i18n="nav.debuts">Debutti</span>
         </a>
       </div>
-      <button class="btn quiet navmore" id="navMore" type="button" aria-expanded="false" aria-controls="navExtra" data-i18n-aria="nav.more" aria-label="Altro: informazioni, lingua e tema">
+      <button class="btn quiet navmore" id="navMore" type="button" aria-expanded="false" aria-controls="navExtra" data-i18n-aria="nav.more" aria-label="Altro: preferite, come funziona, lingua e tema">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
       </button>
       <div class="navextra" id="navExtra">
+        <a href="#preferite" id="navFav" class="navlink navfav"><span data-i18n="nav.fav">Preferite</span><span class="favcount"></span></a>
         <a href="#informazioni" id="navAbout" class="navlink" data-i18n="nav.about">Come funziona</a>
         <span class="langs" role="group" data-i18n-aria="nav.lang" aria-label="Lingua">
           <button class="btn quiet small" type="button" data-lang="it" lang="it" aria-label="Italiano">IT</button>
@@ -162,6 +163,10 @@
           <svg class="fico" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2 4h12M4.5 8h7M7 12h2"/></svg>
           <span id="filtersBtnText" data-i18n="filters.more">Filtri</span>
         </button>
+        <a href="#preferite" class="btn favbar" id="favBar">
+          <svg class="fav-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20.4l-7.3-7.1a4.8 4.8 0 0 1 0-6.9 4.9 4.9 0 0 1 6.9 0l.4.4.4-.4a4.9 4.9 0 0 1 6.9 0 4.8 4.8 0 0 1 0 6.9z"/></svg>
+          <span data-i18n="nav.fav">Preferite</span><span class="favcount"></span>
+        </a>
       </div>
     </form>
 
@@ -205,6 +210,15 @@
             <option value="recent" data-i18n="seen.recent">Viste negli ultimi 6 mesi</option>
             <option value="old" data-i18n="seen.old">Non viste da oltre 6 mesi</option>
           </select>
+        </div>
+        <div class="fp-sec fp-fav">
+          <button class="fbtn" id="fpFav" type="button" aria-pressed="false" data-f="fav">
+            <svg class="fcheck" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3L13 4.5"/></svg>
+            <svg class="fav-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20.4l-7.3-7.1a4.8 4.8 0 0 1 0-6.9 4.9 4.9 0 0 1 6.9 0l.4.4.4-.4a4.9 4.9 0 0 1 6.9 0 4.8 4.8 0 0 1 0 6.9z"/></svg>
+            <span data-i18n="fp.favOnly">Solo preferite</span>
+          </button>
+          <a href="#preferite" class="fp-favlink" id="fpFavLink"><span data-i18n="fp.favSee">Vedi tutte le preferite</span><span class="favcount"></span></a>
+          <p class="note" id="fpFavNone" data-i18n="fp.favNone">Non hai ancora preferite: aggiungile con il cuore nella scheda di una carta.</p>
         </div>
         <fieldset class="fp-sec fp-opts">
           <legend data-i18n="fp.options">Opzioni della lista</legend>

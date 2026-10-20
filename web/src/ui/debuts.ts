@@ -10,6 +10,7 @@ import {
 } from '../lib/debuts';
 import { $, h, svg } from '../lib/dom';
 import { cheapestPrice, type PricesFile } from '../lib/prices';
+import { heartBtn, refOf } from './fav';
 
 export interface DebutsDeps {
   data: () => Data | null;
@@ -109,7 +110,9 @@ export function initDebuts(deps: DebutsDeps): { show(): void; refresh(): void } 
           price ? ' · ' : null, price ? h('span', { class: 'deb-price' }, t('deb.price', { price: fmtEur(price) })) : null),
         h('p', { class: 'deb-sum' }, summary(f, r, d.cards, getLang()))),
       // l'analisi occupa tutta la larghezza della scheda (sotto immagine e testo)
-      h('details', { class: 'deb-an', dataset: { card: String(r.c) } }, h('summary', null, t('deb.analysis'))));
+      // il cuore sta sulla riga di "Analisi", dove lo spazio c'è già: la scheda non diventa più alta
+      h('div', { class: 'deb-foot' }, h('details', { class: 'deb-an', dataset: { card: String(r.c) } }, h('summary', null, t('deb.analysis'))),
+        heartBtn(refOf(d, r.c), 'deb-fav')));
   }
 
   function bar(share: number): HTMLElement {

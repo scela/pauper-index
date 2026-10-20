@@ -10,6 +10,7 @@ import {
 import { $, h } from '../lib/dom';
 import { lsGet, lsSet } from '../lib/store';
 import { cheapestPrice, type PricesFile } from '../lib/prices';
+import { favMark, refOf } from './fav';
 import { manaIcon, type ManaSymbol } from './mana';
 import { familyArt, initTier, manaPips, PRICE_LIST, PRICE_MISSING } from './tierlist';
 
@@ -455,6 +456,7 @@ export function initDecks(deps: DecksDeps): { show(): void; refresh(): void } {
       return h('li', { class: cls },
         h('span', { class: 'dk-q' }, String(n)), ' ',
         h('button', { class: 'cardbtn dk-card', type: 'button', dataset: { idx: String(idx) }, 'aria-haspopup': 'dialog', 'aria-label': t('card.open', { name: cards[idx].n }) }, cards[idx].n),
+        favMark(refOf(d, idx)),
         coll && cls === 'have' ? h('span', { class: 'dk-ok' }, h('span', { 'aria-hidden': 'true' }, '✓'), h('span', { class: 'sr' }, t('decks.owned'))) : null,
         coll && miss > 0 ? h('span', { class: 'dk-miss' }, t('decks.missCopies', { n: miss })) : null);
     };

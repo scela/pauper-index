@@ -25,6 +25,8 @@ export interface PanelDeps {
   /** "Ultima apparizione" (nel pannello dal 2026-10-15): valore e modifica */
   seen: () => Seen;
   setSeen: (v: Seen) => void;
+  /** quante preferite ci sono ("Solo preferite" non si offre se non ce n'è nessuna) */
+  favCount: () => number;
 }
 
 export type Seen = 'all' | 'recent' | 'old';
@@ -45,12 +47,13 @@ export function chips(f: CardFilters, seen: Seen = 'all', setSeen: (v: Seen) => 
   if (f.mv.length) out.push({ label: t('chip.mv', { v: mvLabel(f.mv) }), remove: () => { f.mv = []; } });
   for (const x of f.types) out.push({ label: typeLabel(x), remove: () => { f.types = f.types.filter((y) => y !== x); } });
   if (textWords(f.text).length) out.push({ label: t('chip.text', { q: f.text.trim() }), remove: () => { f.text = ''; } });
+  if (f.fav) out.push({ label: t('chip.fav'), remove: () => { f.fav = false; } });
   if (seen !== 'all') out.push({ label: t(seen === 'old' ? 'seen.old' : 'seen.recent'), remove: () => setSeen('all') });
   return out;
 }
 
 export function clearFilters(f: CardFilters): void {
-  Object.assign(f, { colors: [], colorMode: 'any', mv: [], types: [], text: '' });
+  Object.assign(f, { colors: [], colorMode: 'any', mv: [], types: [], text: '', fav: false });
 }
 
 const toggle = <T>(list: T[], v: T): T[] => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -116,6 +119,7 @@ export function initFilterPanel(deps: PanelDeps): { render(): void; close(): voi
     if (b.dataset.f === 'color') f.colors = toggle(f.colors, v as ColorKey);
     else if (b.dataset.f === 'mv') f.mv = toggle(f.mv, Number(v));
     else if (b.dataset.f === 'type') f.types = toggle(f.types, v);
+    else if (b.dataset.f === 'fav') f.fav = !f.fav;
     deps.change();
   });
   panel.addEventListener('change', (e) => {
@@ -182,12 +186,16 @@ export function initFilterPanel(deps: PanelDeps): { render(): void; close(): voi
       $('#fpTypes').replaceChildren(...types.map((x) => h('button', { class: 'fbtn', ...pressed(false), dataset: { f: 'type', v: x } },
         check(), typeLabel(x))));
     }
-    panel.querySelectorAll<HTMLButtonElement>('button[data-f]').forEach((b) => {
+    panel.querySelectorAll<HTMLButtonElement>('button[data-f]:not([data-f="fav"])').forEach((b) => {
       const v = b.dataset.v!;
       const on = b.dataset.f === 'color' ? f.colors.includes(v as ColorKey)
         : b.dataset.f === 'mv' ? f.mv.includes(Number(v)) : f.types.includes(v);
       b.setAttribute('aria-pressed', String(on));
     });
+    const favBtn = $('#fpFav') as HTMLButtonElement;
+    favBtn.setAttribute('aria-pressed', String(!!f.fav));
+    favBtn.disabled = !f.fav && deps.favCount() === 0;
+    $('#fpFavNone').hidden = deps.favCount() > 0;
     panel.querySelectorAll<HTMLInputElement>('input[name="colorMode"]').forEach((r) => { r.checked = r.value === f.colorMode; });
     if (text.value !== f.text) text.value = f.text;
     $('#fpDone').textContent = t('fp.show', { n: deps.count() });

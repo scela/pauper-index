@@ -30,7 +30,7 @@ async function rispolvera(page: Page): Promise<void> {
   await page.locator('#dustBtn').click();
 }
 
-/** Usa le funzioni principali: collezione, controllo rapido, espansione, export, Carta dimenticata, Mazzi, Ko-fi. */
+/** Usa le funzioni principali: collezione, controllo rapido, preferite, espansione, export, Carta dimenticata, Mazzi, Ko-fi. */
 async function useEverything(page: Page, lang: Lang): Promise<void> {
   await page.route('https://cards.scryfall.io/**', (r) => r.fulfill({ contentType: 'image/png', body: PNG }));
   // sul contesto, non sulla pagina: il link apre una finestra nuova, che altrimenti carica ko-fi.com e i suoi cookie
@@ -42,6 +42,8 @@ async function useEverything(page: Page, lang: Lang): Promise<void> {
   await page.locator('#search').fill('Brainstorm');
   await page.locator('#search').press('Enter');
   await expect(page.locator('#sheetTitle')).toContainText('Brainstorm');
+  // cuore nella scheda (evento preferita)
+  await page.locator('#sheet .favbtn').click();
   await page.keyboard.press('Escape');
   await page.locator('#setInput').click();
   await page.locator('#setInput').fill('ice age');

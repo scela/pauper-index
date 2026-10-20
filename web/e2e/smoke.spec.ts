@@ -645,7 +645,8 @@ test('testata: una riga, pannello "⋯" su mobile, pulsanti speciali, libro che 
     await more.click();
     await expect(more).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('#navAbout')).toBeVisible();
-    await expect(page.locator('#navAbout')).toBeFocused();
+    // la prima voce (Preferite) riceve il focus
+    await expect(page.locator('#navFav')).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.locator('#navAbout')).toBeHidden();
     await expect(more).toBeFocused();

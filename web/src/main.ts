@@ -28,6 +28,7 @@ import { initDust } from './ui/dust';
 import { initDecks } from './ui/decks';
 import { initDebuts } from './ui/debuts';
 import { initSearch, type SearchApi } from './ui/search';
+import { favIndices, favList, favMark, heartBtn, initFav, loadFavs, refOf, resetFavs } from './ui/fav';
 import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openNeverSheet, openSheet, recentlyClosed, renderGrid, scheduleClose, setSheetItalian, unblockHover } from './ui/sheet';
 
 // Elenchi di carte: 10 alla volta; filtri, ordinamento, riepiloghi ed export lavorano sempre sulla lista completa
@@ -580,7 +581,7 @@ function renderPriceSummary(): void {
 
 /** Filtri dell'elenco: senza espansione di default solo le possedute; con un'espansione tutte, a richiesta solo le possedute. */
 function listFilters(): ListFilters {
-  return { query: S.query, seen: S.seen, onlyOwned: hasColl() && (S.setCodes ? S.setOwned : !S.showMissing), card: S.cf, hay: S.hay, names: S.names };
+  return { query: S.query, seen: S.seen, onlyOwned: hasColl() && (S.setCodes ? S.setOwned : !S.showMissing), card: S.cf, hay: S.hay, names: S.names, favs: favIndices() };
 }
 
 /** Carte che rispettano tutti i filtri attivi, possedute e mancanti: export e riepilogo dei prezzi. */
@@ -669,6 +670,7 @@ function noteReasons(): string[] {
   if (cf.mv.length) why.push(t('why.mv', { v: mvLabel(cf.mv) }));
   if (cf.types.length) why.push(t('why.type', { v: cf.types.map((x) => lower(typeLabel(x))).join(t('why.or')) }));
   if (textWords(cf.text).length) why.push(t('why.text', { q: cf.text.trim() }));
+  if (cf.fav) why.push(t('why.fav'));
   if (S.setCodes && f.onlyOwned) why.push(t('why.onlyOwned'));
   if (!S.setCodes && hasColl() && S.showMissing) why.push(t('why.missing'));
   return why;
@@ -790,7 +792,8 @@ function renderRows(from = 0): void {
       ? h('span', { class: 'own' }, x.prints.map((p) => `${fmtPrint(p.row)} ×${p.q}`).join(', ')
         + (x.binders.length ? ` · ${x.binders.map((b) => b[0]).join(', ')}` : ''))
       : null;
-    const btn = h('button', { class: 'cardbtn', type: 'button', dataset: { idx: String(x.idx) }, 'aria-haspopup': 'dialog', 'aria-label': t('card.open', { name: c.n }) },
+    const ref = refOf(d, x.idx);
+    const btn = h('button', { class: 'cardbtn', type: 'button', dataset: { idx: String(x.idx), ariaBase: t('card.open', { name: c.n }) }, 'aria-haspopup': 'dialog', 'aria-label': t('card.open', { name: c.n }) },
       h('span', { class: 'thumbs' },
         ...thumbs.slice(0, 3).map((th) => h('img', {
           class: 'thumb' + (th.owned ? ' owned' : '') + (setView ? ' big' : ''), src: imageUrl(th.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204,
@@ -800,7 +803,8 @@ function renderRows(from = 0): void {
           dataset: refId ? { fallback: imageUrl(refId, 'small') } : undefined,
         })),
         thumbs.length > 3 ? h('span', { class: 'more-n' }, `+${thumbs.length - 3}`) : null),
-      h('span', { class: 'nmwrap' }, h('span', { class: 'nm' }, c.n), status,
+      // su mobile solo il segno ♥ accanto al nome (il cuore che si preme è nella scheda); su desktop il pulsante
+      h('span', { class: 'nmwrap' }, h('span', { class: 'nm' }, c.n), favMark(ref), status,
         isNew(c.e) ? h('span', { class: 'badge new' }, t('badge.new')) : null,
         c.l === 'b' ? h('span', { class: 'badge banned' }, t('badge.banned')) : null,
         setView ? h('span', { class: 'rarity' + (setView.common ? ' is-common' : '') },
@@ -817,7 +821,7 @@ function renderRows(from = 0): void {
         h('span', { class: 'mline2' }, entry && c.e ? `${t('row.entry', { set: c.e.toUpperCase(), year: entry[1].slice(0, 4) })} · ` : '',
           h('span', { class: 'mprice' }, priceText(x)))));
     return h('tr', { class: coll ? `r-${x.status}` : '' },
-      h('td', { class: 'c-name' }, btn),
+      h('td', { class: 'c-name' }, h('div', { class: 'cn-wrap' }, btn, heartBtn(ref, 'row-fav'))),
       h('td', { class: 'c-qty num', 'data-label': t('mobile.qty') }, coll ? String(x.owned) : String(x.typical)),
       h('td', { class: 'c-pct num', 'data-label': t('mobile.decks') }, fmtPct(x.share), h('span', { class: 'muted' }, st ? ` · ${fmtInt(S.opts.side ? st[0] : st[1])}` : '')),
       h('td', { class: 'c-seen', 'data-label': t('mobile.last') }, fmtDate(c.z)),
@@ -1018,6 +1022,15 @@ function showWelcome(): void {
   const box = $('#welcome');
   box.hidden = lsGet('welcomeClosed') === '1';
   if (!box.hidden) $('#welcomeSteps').replaceChildren(howSteps());
+}
+
+/* ---------- preferite ---------- */
+
+/** Preferite cambiate: con "Solo preferite" l'elenco si ricalcola, altrimenti cuori e segni sono già aggiornati. */
+function favsChanged(): void {
+  if (!S.d) return;
+  if (S.cf.fav) renderResults();
+  else panel?.render();
 }
 
 /* ---------- tema e viste ---------- */
@@ -1346,6 +1359,7 @@ function wire(): void {
     removed = null;
     hideUndo();
     await clearAll();
+    resetFavs(); // anche le preferite: erano nel database appena eliminato
     Object.assign(S, { groups: [], roles: {}, opts: { ...DEFAULT_OPTS }, showMissing: false, savedAt: null, summaries: [], query: '', replacing: false,
       seen: 'all', setOwned: false, cf: emptyFilters() });
     seenSel.value = 'all';
@@ -1400,6 +1414,8 @@ function wire(): void {
     ($('#search') as HTMLInputElement).focus();
   });
   window.addEventListener('hashchange', route);
+  // "Vedi tutte le preferite" nel pannello "Filtri": il pannello si chiude cambiando pagina
+  window.addEventListener('hashchange', () => panel?.close());
   $('#undoBar').addEventListener('click', (e) => {
     if ((e.target as HTMLElement).id === 'undoRemove') undoRemoval();
   });
@@ -1440,6 +1456,7 @@ async function main(): Promise<void> {
   panel = initFilterPanel({
     filters: () => S.cf, types: () => S.types, change: cardFiltersChanged, count: () => S.view.length, loadTexts,
     seen: () => S.seen,
+    favCount: () => favList().length,
     setSeen: (v) => {
       S.seen = v;
     },
@@ -1473,6 +1490,7 @@ async function main(): Promise<void> {
     owned: () => (hasColl() && S.cix ? (idx: number) => S.cix!.byCard.get(idx)?.total || 0 : null),
     prices: () => S.prices,
   });
+  initFav({ data: () => S.d, changed: favsChanged });
   route();
   showWelcome(); // non dipende dai dati: subito, senza spostare la pagina quando arrivano
   try {
@@ -1486,6 +1504,7 @@ async function main(): Promise<void> {
   renderDataline();
   S.types = availableTypes(S.d.cards.c);
   await restore();
+  await loadFavs();
   lsDel('seen'); // salvata dalle versioni precedenti: non più usata
   showWelcome();
   // espansione scelta nella visita precedente (preferenza): si ripristina dopo aver letto data/sets.json
