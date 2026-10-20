@@ -52,6 +52,30 @@ async function openFavs(page: Page): Promise<void> {
   await expect(page.locator('#viewFav')).toBeVisible();
 }
 
+test('preferite: nome accessibile della riga con il segno ♥, aggiornato senza ridisegnare la riga e già giusto dopo il ricaricamento', async ({ page }) => {
+  await setup(page);
+  const first = page.locator('#cardRows tr').first();
+  const name = (await first.locator('.nm').innerText()).trim();
+  const btn = first.locator('.cardbtn');
+  await expect(btn).toHaveAccessibleName(tr('card.open', { name }));
+  await btn.evaluate((el) => { el.dataset.same = '1'; }); // la stessa riga, non ridisegnata
+  await btn.click();
+  await page.locator('#sheet .favbtn').click();
+  await page.keyboard.press('Escape');
+  await expect(btn).toHaveAccessibleName(tr('card.openFav', { name }));
+  await expect(btn).toHaveAttribute('data-same', '1');
+  // ricaricata: la riga nasce con il nome giusto
+  await page.reload();
+  await expect(page.locator('#cardRows tr').first().locator('.cardbtn')).toHaveAccessibleName(tr('card.openFav', { name }));
+  // tolta: torna il nome di prima, sempre senza ridisegnare
+  await btn.evaluate((el) => { el.dataset.same = '2'; });
+  await btn.click();
+  await page.locator('#sheet .favbtn').click();
+  await page.keyboard.press('Escape');
+  await expect(btn).toHaveAccessibleName(tr('card.open', { name }));
+  await expect(btn).toHaveAttribute('data-same', '2');
+});
+
 test('preferite: cuore nella scheda (anche di una carta mai giocata), salvate nel browser, pagina con possesso e prezzi', async ({ page, isMobile }) => {
   const problems = await setup(page);
   const first = page.locator('#cardRows tr').first();
@@ -72,7 +96,7 @@ test('preferite: cuore nella scheda (anche di una carta mai giocata), salvate ne
   if (isMobile) {
     await expect(first.locator('.favmark')).toBeVisible();
     await expect(first.locator('.row-fav')).toBeHidden();
-    await expect(first.locator('.cardbtn')).toHaveAccessibleName(tr('fav.labelWith', { label: tr('card.open', { name }) }));
+    await expect(first.locator('.cardbtn')).toHaveAccessibleName(tr('card.openFav', { name }));
   } else {
     await expect(first.locator('.row-fav')).toHaveAttribute('aria-pressed', 'true');
     await expect(first.locator('.favmark')).toBeHidden();

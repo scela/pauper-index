@@ -29,7 +29,7 @@ import { initDust } from './ui/dust';
 import { initDecks } from './ui/decks';
 import { initDebuts } from './ui/debuts';
 import { initSearch, type SearchApi } from './ui/search';
-import { favIndices, favList, favMark, heartBtn, initFav, loadFavs, refOf, resetFavs } from './ui/fav';
+import { cardOpenLabel, favIndices, favList, favMark, heartBtn, initFav, isFav, loadFavs, refOf, resetFavs } from './ui/fav';
 import { initFavPage } from './ui/favpage';
 import { cancelClose, closeSheet, HOVER_OPEN_MS, isHoverBlocked, isOpenFor, isWarm, openNeverSheet, openSheet, recentlyClosed, renderGrid, scheduleClose, setSheetItalian, unblockHover } from './ui/sheet';
 
@@ -797,7 +797,7 @@ function renderRows(from = 0): void {
         + (x.binders.length ? ` · ${x.binders.map((b) => b[0]).join(', ')}` : ''))
       : null;
     const ref = refOf(d, x.idx);
-    const btn = h('button', { class: 'cardbtn', type: 'button', dataset: { idx: String(x.idx), ariaBase: t('card.open', { name: c.n }) }, 'aria-haspopup': 'dialog', 'aria-label': t('card.open', { name: c.n }) },
+    const btn = h('button', { class: 'cardbtn', type: 'button', dataset: { idx: String(x.idx), cardName: c.n }, 'aria-haspopup': 'dialog', 'aria-label': cardOpenLabel(c.n, isFav(ref)) },
       h('span', { class: 'thumbs' },
         ...thumbs.slice(0, 3).map((th) => h('img', {
           class: 'thumb' + (th.owned ? ' owned' : '') + (setView ? ' big' : ''), src: imageUrl(th.id, 'small'), alt: '', loading: 'lazy', width: 146, height: 204,

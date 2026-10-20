@@ -157,6 +157,11 @@ export function favMark(ref: FavRef): HTMLElement {
     h('span', { class: 'sr' }, t('fav.mark')));
 }
 
+/** Nome accessibile del pulsante di una riga con il segno ♥: "Pyroblast, preferita: apri la scheda". */
+export function cardOpenLabel(name: string, fav: boolean): string {
+  return t(fav ? 'card.openFav' : 'card.open', { name });
+}
+
 /** Aggiorna cuori, segni e conteggi già nella pagina. */
 export function syncFavs(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>('[data-fav]').forEach((el) => {
@@ -166,9 +171,9 @@ export function syncFavs(root: ParentNode = document): void {
       el.title = on ? t('fav.remove') : t('fav.add');
     } else {
       el.hidden = !on;
-      // segno dentro il pulsante della carta (righe su mobile): il nome accessibile del pulsante lo dice
-      const btn = el.closest<HTMLElement>('[data-aria-base]');
-      if (btn) btn.setAttribute('aria-label', on ? t('fav.labelWith', { label: btn.dataset.ariaBase! }) : btn.dataset.ariaBase!);
+      // segno dentro il pulsante della carta (righe su mobile): l'aria-label sostituisce il contenuto, quindi lo dice lui
+      const btn = el.closest<HTMLElement>('[data-card-name]');
+      if (btn) btn.setAttribute('aria-label', cardOpenLabel(btn.dataset.cardName!, on));
     }
   });
   const n = list.length;
