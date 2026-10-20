@@ -356,3 +356,36 @@ test('barra dei filtri su una riga da 961 a 1440 px, anche con un carattere larg
   await expect(page.locator('#favBar')).toBeHidden();
   await ctx.close();
 });
+
+/** prices.json sintetico allineato ai dati reali: prezzi solo per Brainstorm (la stampa più economica 0,50 €). */
+function syntheticPrices(): string {
+  const data = resolve(HERE, '../../data');
+  const cards = JSON.parse(readFileSync(resolve(data, 'cards.json'), 'utf-8')) as { c: { n: string }[] };
+  const prints = JSON.parse(readFileSync(resolve(data, 'printings.json'), 'utf-8')) as { p: [string, string, string][][] };
+  const bs = cards.c.findIndex((c) => c.n === 'Brainstorm');
+  const p = prints.p.map((list, i) => list.flatMap((pr) => (i !== bs ? [0, 0] : pr[1] === 'ice' && pr[2] === '61' ? [100, 0] : [50, 0])));
+  return JSON.stringify({ v: 1, date: '2026-10-07', p });
+}
+
+test('preferite: riepilogo dei prezzi con la stessa formula della pagina iniziale, senza e con collezione', async ({ page }) => {
+  const eur = (c: number) => (c / 100).toLocaleString(L === 'it' ? 'it-IT' : 'en-US', { style: 'currency', currency: 'EUR' });
+  await page.route('**/data/prices.json', (r) => r.fulfill({ contentType: 'application/json', body: syntheticPrices() }));
+  await setup(page);
+  for (const n of ['Brainstorm', 'Counterspell', 'Black Lotus']) await favFromSearch(page, n);
+  await openFavs(page);
+  const sub = page.locator('#favSub');
+  // senza collezione: una copia di ciascuna (Brainstorm 0,50 €; Counterspell senza prezzo; Black Lotus mai giocata)
+  await expect(sub).toHaveText(`${tr('price.list', { v: eur(50) })} (${tr('price.unpriced', { n: 2 })})`);
+  // con la collezione: valore delle tue copie (stima "almeno" per le righe senza printing) e costo delle mancanti
+  await page.evaluate(() => { location.hash = ''; });
+  await page.click('#pasteToggle');
+  await page.fill('#pasteText', '4 Brainstorm\n1 Black Lotus');
+  await page.click('#pasteAdd');
+  await expect(page.locator('#loaded')).toBeVisible();
+  await openFavs(page);
+  await expect(sub).toHaveText([
+    tr('fav.ownedN', { n: 2 }),
+    `${tr('price.ownedMin', { v: eur(200) })} (${tr('price.estimated', { n: 1 })}; ${tr('price.unpriced', { n: 1 })})`,
+    `${tr('price.missing', { v: eur(0) })} (${tr('price.unpriced', { n: 1 })})`,
+  ].join(' · '));
+});

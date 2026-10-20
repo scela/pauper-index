@@ -611,8 +611,6 @@ export const en: Record<Key, Msg> = {
   'fav.see': 'See your favorites',
   'fav.count': { one: '1 favorite', other: '{n} favorites' },
   'fav.ownedN': 'you own {n}',
-  'fav.missingCost': 'Estimated cost of the missing ones: about {v}',
-  'fav.listCost': 'Estimated cost of one copy of each: about {v}',
   'fav.notLegal': 'not legal',
   'fav.pending': 'Loading card names…',
   'fav.empty': 'No favorites yet. Tap the heart on a card sheet, in Forgotten card or in Debuts to add it here, or import a list.',

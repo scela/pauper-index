@@ -613,8 +613,6 @@ export const it = {
   'fav.see': 'Vedi le preferite',
   'fav.count': { one: '1 preferita', other: '{n} preferite' },
   'fav.ownedN': 'ne possiedi {n}',
-  'fav.missingCost': 'Costo indicativo delle mancanti: circa {v}',
-  'fav.listCost': 'Costo indicativo di una copia di ciascuna: circa {v}',
   'fav.notLegal': 'non legale',
   'fav.pending': 'Carico i nomi delle carte…',
   'fav.empty': 'Nessuna preferita. Tocca il cuore nella scheda di una carta, nella Carta dimenticata o nei Debutti per aggiungerla qui, oppure importa una lista.',

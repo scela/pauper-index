@@ -1,14 +1,13 @@
 // Pagina "Preferite" (#preferite): tutte le preferite, anche le carte mai giocate in Pauper, con possesso, prezzo e dati
 // del periodo; export "1 Nome" e import da una lista di testo (unisce, non sostituisce); svuota con Annulla.
 
-import { fmtDateShort, fmtEur, fmtInt, fmtPct, t, type Key } from '../i18n';
+import { fmtDateShort, fmtInt, fmtPct, t, type Key } from '../i18n';
 import { deckShare, typicalCopies, type Opts } from '../lib/compare';
 import { imageUrl, loadCardNames, type Data } from '../lib/data';
 import { $, h } from '../lib/dom';
 import { allNamesIndex, favText, italianIndex, mergeFavs, parseFavList, type Fav, type FavEntry, type FavSort } from '../lib/favorites';
 import { loadItalian } from '../lib/italian';
 import { norm } from '../lib/norm';
-import { cheapestPrice, type PricesFile } from '../lib/prices';
 import type { CollectionIndex } from '../lib/quick';
 import { lsGet, lsSet } from '../lib/store';
 import { changeFavs, favEntries, favList, favMark, hasAllNames, hasItalian, heartBtn, nameSource, setNameIndexes } from './fav';
@@ -19,9 +18,10 @@ export interface FavPageDeps {
   /** periodo (lo stesso, salvato, della pagina principale) */
   setWin: (w: number) => void;
   collection: () => CollectionIndex | null;
-  prices: () => PricesFile | null;
   /** testo del prezzo di una carta giocata (printing posseduta o "da X €") */
   price: (idx: number) => string;
+  /** Riepilogo dei prezzi, come quello della pagina iniziale ("" senza prezzi). */
+  priceSummary: (idxs: number[], never: { owned: number; missing: number }) => string;
   /** scheda ridotta di una carta mai giocata */
   openNever: (anchor: HTMLElement, e: { name: string; legal: 'l' | 'b' | 'n' }) => void;
   copy: (text: string, what: string) => void;
@@ -133,7 +133,6 @@ export function initFavPage(deps: FavPageDeps): { show(): void; refresh(): void 
     }
     const entries = favEntries();
     const coll = deps.collection();
-    const prices = deps.prices();
     const shown = ordered(d, entries.filter((e) => e.status !== 'missing'));
     const missing = entries.filter((e) => e.status === 'missing');
     const pending = entries.some((e) => e.status === 'pending');
@@ -144,18 +143,13 @@ export function initFavPage(deps: FavPageDeps): { show(): void; refresh(): void 
     $('#favVerdict').textContent = t('fav.count', { n: entries.length });
     const owned = (e: FavEntry) => (e.idx >= 0 ? coll?.byCard.get(e.idx)?.total || 0 : coll?.byName.get(norm(e.fav.n))?.total || 0);
     const nOwned = coll ? shown.filter((e) => owned(e) > 0).length : 0;
-    const toBuy = shown.filter((e) => !coll || owned(e) === 0);
-    let cost = 0;
-    let unpriced = 0;
-    for (const e of toBuy) {
-      const c = e.idx >= 0 ? cheapestPrice(prices, e.idx) : 0;
-      if (c) cost += c;
-      else unpriced++;
-    }
+    const never = shown.filter((e) => e.idx < 0);
+    const neverOwned = coll ? never.filter((e) => owned(e) > 0).length : 0;
     const bits: string[] = [];
     if (coll) bits.push(t('fav.ownedN', { n: fmtInt(nOwned) }));
-    if (prices && toBuy.length) {
-      bits.push(t(coll ? 'fav.missingCost' : 'fav.listCost', { v: fmtEur(cost) }) + (unpriced ? ` (${t('price.unpriced', { n: fmtInt(unpriced) })})` : ''));
+    if (shown.length) {
+      const p = deps.priceSummary(shown.filter((e) => e.idx >= 0).map((e) => e.idx), { owned: neverOwned, missing: never.length - neverOwned });
+      if (p) bits.push(p);
     }
     $('#favSub').textContent = bits.join(' · ');
     $('#favTools').hidden = !entries.length;

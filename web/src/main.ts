@@ -10,7 +10,7 @@ import { imageUrl, loadData, loadPrices, type Data } from './lib/data';
 import { $, h, svg } from './lib/dom';
 import { realignedCSV, textList } from './lib/exports';
 import { daysBetween, fmtDate, fmtEur, fmtInt, fmtPct, fmtPrint } from './lib/format';
-import { cheapestPrice, ownedPrice, ownedPrintIndex, priceTotals, printPrice, type PricesFile } from './lib/prices';
+import { cheapestPrice, ownedPrice, ownedPrintIndex, priceTotals, printPrice, type PricesFile, type PriceTotals } from './lib/prices';
 import { clearAll, idbGet, idbSet, lsDel, lsGet, lsSet } from './lib/store';
 import { norm } from './lib/norm';
 import { parseTextList } from './lib/text';
@@ -568,8 +568,11 @@ function renderPriceSummary(): void {
   el.hidden = !S.prices || !S.d;
   if (el.hidden) return el.replaceChildren();
   // stessi filtri dell'elenco (ricerca, ultima apparizione), comprese le mancanti anche se l'elenco non le mostra
-  const rows = matching();
-  const tot = priceTotals(S.d!, S.prices, rows, missingPrice);
+  el.textContent = priceSummaryText(priceTotals(S.d!, S.prices, matching(), missingPrice));
+}
+
+/** Testo del riepilogo dei prezzi: lo stesso nella pagina iniziale e nella pagina delle preferite. */
+function priceSummaryText(tot: PriceTotals): string {
   const unpriced = (n: number) => (n ? ` (${t('price.unpriced', { n: fmtInt(n) })})` : '');
   const parts: string[] = [];
   if (hasColl()) {
@@ -580,7 +583,23 @@ function renderPriceSummary(): void {
   } else {
     parts.push(t('price.list', { v: fmtEur(tot.missingCost) }) + unpriced(tot.missingUnpriced));
   }
-  el.textContent = parts.join(' · ');
+  return parts.join(' · ');
+}
+
+/**
+ * Riepilogo dei prezzi delle preferite, con la stessa formula di #priceSummary: le carte giocate con i loro
+ * prezzi (le mancanti con la stampa più economica), le mai giocate senza prezzo.
+ */
+function favPriceSummary(idxs: number[], never: { owned: number; missing: number }): string {
+  if (!S.prices || !S.d) return '';
+  const coll = hasColl();
+  const rows = idxs.map((i) => ownedResult(i, coll ? S.cix?.byCard.get(i) || null : null));
+  const tot = priceTotals(S.d, S.prices, rows, (x) => cheapestPrice(S.prices, x.idx));
+  tot.ownedCards += never.owned;
+  tot.ownedUnpriced += never.owned;
+  tot.missingCards += never.missing;
+  tot.missingUnpriced += never.missing;
+  return priceSummaryText(tot);
 }
 
 /** Filtri dell'elenco: senza espansione di default solo le possedute; con un'espansione tutte, a richiesta solo le possedute. */
@@ -1536,8 +1555,8 @@ async function main(): Promise<void> {
       refresh();
     },
     collection: () => (hasColl() ? S.cix : null),
-    prices: () => S.prices,
     price: favPrice,
+    priceSummary: favPriceSummary,
     openNever: (anchor, e) => openNeverSheet(anchor, {
       name: e.name, legal: e.legal, itNames: [], itForce: false,
       owned: hasColl() && S.cix ? S.cix.byName.get(norm(e.name)) || null : null, hasCollection: hasColl(),
@@ -1575,6 +1594,7 @@ async function main(): Promise<void> {
     showPrices();
     decks?.refresh();
     debuts?.refresh();
+    favPage?.refresh();
   }
 }
 
