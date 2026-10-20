@@ -20,12 +20,14 @@ export interface CardFilters {
   mv: number[];
   types: string[];
   text: string;
+  /** "Solo preferite" (le carte preferite sono in ListFilters.favs) */
+  fav?: boolean;
 }
 
 export const emptyFilters = (): CardFilters => ({ colors: [], colorMode: 'any', mv: [], types: [], text: '' });
 
 export function isActive(f: CardFilters): boolean {
-  return f.colors.length > 0 || f.mv.length > 0 || f.types.length > 0 || textWords(f.text).length > 0;
+  return f.colors.length > 0 || f.mv.length > 0 || f.types.length > 0 || textWords(f.text).length > 0 || !!f.fav;
 }
 
 /** Tipi della carta su tutte le facce ("Kindred Instant — Faerie // …" -> Kindred, Instant). */

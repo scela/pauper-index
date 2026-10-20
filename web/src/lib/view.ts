@@ -23,6 +23,8 @@ export interface ListFilters {
   hay?: string[] | null;
   /** per ogni carta, il testo in cui cercare il nome (inglese e italiani, vedi lib/italian); senza, solo l'inglese */
   names?: string[] | null;
+  /** indici delle carte preferite, per "Solo preferite" (card.fav) */
+  favs?: Set<number> | null;
 }
 
 /** Carte stampate nel gruppo di set (a qualsiasi rarità). */
@@ -37,6 +39,7 @@ export function visible(d: Data, results: Result[], f: ListFilters): Result[] {
   const words = f.card ? textWords(f.card.text) : [];
   return results.filter((x) => {
     if (f.onlyOwned && x.owned === 0) return false;
+    if (f.card?.fav && !f.favs?.has(x.idx)) return false;
     const c = d.cards.c[x.idx];
     if (q && !nameMatches(f.names?.[x.idx] ?? nameHay([c.n]), q)) return false;
     if (f.card && !matchCard(c, x.idx, f.card, words, f.hay ?? null)) return false;

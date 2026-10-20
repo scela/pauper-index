@@ -4,7 +4,7 @@
 // Invio con un testo parziale chiude i suggerimenti e la tastiera e lascia l'elenco filtrato.
 
 import { t } from '../i18n';
-import type { Data } from '../lib/data';
+import { loadCardNames, type Data } from '../lib/data';
 import { h } from '../lib/dom';
 import { loadItalian } from '../lib/italian';
 import { buildNameIndex, exactEntry, suggest, type NameEntry } from '../lib/quick';
@@ -54,7 +54,7 @@ export function initSearch(ctx: SearchCtx): SearchApi {
   // tutti i nomi (anche mai giocati) e i nomi italiani: scaricati solo al primo uso del campo
   const loadAll = () => {
     if (allLoaded || loading) return loading;
-    allNames ??= fetch('data/cardnames.json').then((r) => (r.ok ? r.json() : [])).catch(() => []);
+    allNames ??= loadCardNames().then((x) => x ?? []);
     const d0 = ctx.data();
     if (!d0) return null;
     loading = Promise.all([allNames, loadItalian(d0.cards.c.length, true)])

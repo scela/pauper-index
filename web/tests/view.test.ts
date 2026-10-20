@@ -59,6 +59,17 @@ describe('riepilogo ed elenco contano lo stesso insieme', () => {
     expect(shownNote(owned, visible(d, all, NONE))).toBe(all.length);
   });
 
+  it('"Solo preferite": l’elenco tiene solo le preferite e la nota lo conta', () => {
+    const fav = all[0].idx;
+    const card = { colors: [], colorMode: 'any' as const, mv: [], types: [], text: '', fav: true };
+    const view = visible(d, all, { ...NONE, card, favs: new Set([fav]) });
+    expect(view.map((x) => x.idx)).toEqual([fav]);
+    expect(shownNote(all, view)).toBe(1);
+    // senza preferite l'elenco è vuoto, non intero
+    expect(visible(d, all, { ...NONE, card, favs: new Set() })).toEqual([]);
+    expect(visible(d, all, { ...NONE, card: { ...card, fav: false }, favs: new Set() })).toEqual(all);
+  });
+
   it('con un’espansione i conteggi del menu Periodo sono quelli dell’espansione', () => {
     const codes = memberCodes(group, false);
     const keep = (idx: number) => printsInSets(d, idx, codes).length > 0;

@@ -58,6 +58,24 @@ export async function loadPrices(d: Data, base = 'data/'): Promise<PricesFile | 
   }
 }
 
+let cardNames: Promise<[string, string][] | null> | null = null;
+
+/**
+ * Tutti i nomi delle carte giocabili (data/cardnames.json), scaricati una volta sola al primo uso (ricerca, preferite).
+ * null se il file non arriva: si riprova alla richiesta successiva.
+ */
+export function loadCardNames(): Promise<[string, string][] | null> {
+  cardNames ??= fetch('data/cardnames.json')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j: unknown) => (Array.isArray(j) && j.length ? (j as [string, string][]) : null))
+    .catch(() => null)
+    .then((x) => {
+      if (!x) cardNames = null;
+      return x;
+    });
+  return cardNames;
+}
+
 /** Indice della carta dal nome: nome intero, poi faccia frontale, poi "A/B" come "A // B". */
 export function cardByName(d: Data, name: string): number {
   const direct = d.names[norm(name)];
