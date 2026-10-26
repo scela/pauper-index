@@ -11,5 +11,5 @@ pluggy==1.7.0
 Pygments==2.21.0
 pytest==9.1.1
 requests==2.34.2
-ruff==0.17.1
+ruff==0.17.2
 urllib3==2.8.0
