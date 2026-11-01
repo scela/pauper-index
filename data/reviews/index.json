@@ -1,5 +1,292 @@
 [
  {
+  "set": "slz",
+  "nome": "The Zeta Set",
+  "uscita": "2026-09-02",
+  "data": "2026-11-01",
+  "sommario": "8 carte del set nella lista; 33 entrate; 17 uscite.",
+  "nuove": [
+   [
+    "Vandalblast",
+    828,
+    2.44
+   ],
+   [
+    "Baleful Strix",
+    805,
+    2.37
+   ],
+   [
+    "Dispatch",
+    526,
+    1.55
+   ],
+   [
+    "Cut Down",
+    442,
+    1.3
+   ],
+   [
+    "Soul-Guide Lantern",
+    205,
+    0.6
+   ],
+   [
+    "Return to Dust",
+    61,
+    0.18
+   ],
+   [
+    "Gigantosaurus",
+    38,
+    0.11
+   ],
+   [
+    "An Offer You Can't Refuse",
+    27,
+    0.08
+   ]
+  ],
+  "entrate": [
+   [
+    "Meditation Pools",
+    8,
+    0.02
+   ],
+   [
+    "Bestial Incursion",
+    4,
+    0.01
+   ],
+   [
+    "Protege's Awakening",
+    3,
+    0.01
+   ],
+   [
+    "Leonin Elder",
+    2,
+    0.01
+   ],
+   [
+    "Spider Food",
+    2,
+    0.01
+   ],
+   [
+    "Assert Perfection",
+    1,
+    0.0
+   ],
+   [
+    "Atraxa's Fall",
+    1,
+    0.0
+   ],
+   [
+    "Brute Strength",
+    1,
+    0.0
+   ],
+   [
+    "Carrion Grub",
+    1,
+    0.0
+   ],
+   [
+    "Compassionate Healer",
+    1,
+    0.0
+   ],
+   [
+    "Crawling Infestation",
+    1,
+    0.0
+   ],
+   [
+    "Earthen Arms",
+    1,
+    0.0
+   ],
+   [
+    "Elvish Herder",
+    1,
+    0.0
+   ],
+   [
+    "Flourishing Hunter",
+    1,
+    0.0
+   ],
+   [
+    "Goblin War Drums",
+    1,
+    0.0
+   ],
+   [
+    "Goblin Wizardry",
+    1,
+    0.0
+   ],
+   [
+    "Goblin-town",
+    1,
+    0.0
+   ],
+   [
+    "Gravedig",
+    1,
+    0.0
+   ],
+   [
+    "Greater Sandwurm",
+    1,
+    0.0
+   ],
+   [
+    "Mind Drain",
+    1,
+    0.0
+   ],
+   [
+    "Pet Avengers",
+    1,
+    0.0
+   ],
+   [
+    "Pyre Hound",
+    1,
+    0.0
+   ],
+   [
+    "Rust Goliath",
+    1,
+    0.0
+   ],
+   [
+    "Sanguine Syphoner",
+    1,
+    0.0
+   ],
+   [
+    "Screeching Soulbreaker",
+    1,
+    0.0
+   ],
+   [
+    "Shimmering Wings",
+    1,
+    0.0
+   ],
+   [
+    "Smashing Success",
+    1,
+    0.0
+   ],
+   [
+    "Stolen Vitality",
+    1,
+    0.0
+   ],
+   [
+    "Suburban Sanctuary",
+    1,
+    0.0
+   ],
+   [
+    "Tattermunge Duo",
+    1,
+    0.0
+   ],
+   [
+    "Vantress Transmuter // Croaking Curse",
+    1,
+    0.0
+   ],
+   [
+    "Vicious Rumors",
+    1,
+    0.0
+   ],
+   [
+    "Winter Eladrin",
+    1,
+    0.0
+   ]
+  ],
+  "uscite": [
+   [
+    "Bite Down on Crime",
+    3
+   ],
+   [
+    "Citanul Stalwart",
+    2
+   ],
+   [
+    "Desperate Farmer // Depraved Harvester",
+    2
+   ],
+   [
+    "Dig Up the Body",
+    1
+   ],
+   [
+    "Dimir Infiltrator",
+    1
+   ],
+   [
+    "Extinguish",
+    1
+   ],
+   [
+    "Hidden Courtyard",
+    1
+   ],
+   [
+    "Jousting Dummy",
+    1
+   ],
+   [
+    "Mandible Justiciar",
+    1
+   ],
+   [
+    "Mistvein Borderpost",
+    1
+   ],
+   [
+    "Piercing Rays",
+    1
+   ],
+   [
+    "Ranger's Guile",
+    1
+   ],
+   [
+    "Skullsnatcher",
+    1
+   ],
+   [
+    "Travel Preparations",
+    1
+   ],
+   [
+    "Weatherseed Faeries",
+    1
+   ],
+   [
+    "Wing It",
+    1
+   ],
+   [
+    "Yavimaya Barbarian",
+    1
+   ]
+  ],
+  "legalita": []
+ },
+ {
   "set": "hob",
   "nome": "The Hobbit",
   "uscita": "2026-08-14",
