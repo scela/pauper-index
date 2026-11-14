@@ -206,4 +206,4 @@ export function favText(list: Fav[]): string {
   return list.length ? list.map((f) => `1 ${f.n}`).join('\n') + '\n' : '';
 }
 
-export type FavSort = 'recent' | 'name' | 'share';
+export type FavSort = 'recent' | 'name' | 'share' | 'priceAsc' | 'priceDesc';

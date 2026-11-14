@@ -69,6 +69,50 @@ export function cheapestPrice(pr: PricesFile | null, idx: number, only?: number[
   return best;
 }
 
+export interface RowPrice {
+  cents: number; // 0 = nessun prezzo ("—")
+  from: boolean; // "da X €": la stampa non foil più economica
+}
+
+/**
+ * Prezzo che una riga mostra nella colonna Prezzo (e su mobile nella seconda riga), lo stesso usato per ordinare.
+ * - vista per espansione (`setPrint`, la stampa del set mostrata nella riga, -1 se non c'è): il prezzo di quella stampa;
+ * - carta posseduta: la printing posseduta di valore più alto (foil se la riga è foil); se nessuna ha un prezzo e qualche
+ *   copia non ha una printing nota (lista incollata), la stampa non foil più economica, "da X €";
+ * - carta mancante: la stampa non foil più economica, "da X €".
+ */
+export function rowPrice(d: Data, pr: PricesFile | null, x: Result, setPrint?: number): RowPrice {
+  if (!pr) return { cents: 0, from: false };
+  if (setPrint !== undefined) return { cents: printPrice(pr, x.idx, setPrint), from: false };
+  if (x.owned > 0) {
+    const c = ownedPrice(d, pr, x);
+    if (c) return { cents: c, from: false };
+    if (!x.prints.some((op) => ownedPrintIndex(d, x.idx, op) < 0)) return { cents: 0, from: false };
+  }
+  return { cents: cheapestPrice(pr, x.idx), from: true };
+}
+
+export type PriceSort = 'priceAsc' | 'priceDesc';
+
+export function isPriceSort(s: string): s is PriceSort {
+  return s === 'priceAsc' || s === 'priceDesc';
+}
+
+/**
+ * Ordina per prezzo (`cents`, 0 = senza prezzo): le carte senza prezzo sempre in fondo, in entrambi gli ordini;
+ * a parità di prezzo (e tra quelle senza) decide `tie` (più giocate, poi nome).
+ */
+export function sortByPrice<T>(rows: T[], cents: (x: T) => number, sort: PriceSort, tie: (a: T, b: T) => number): T[] {
+  const key = new Map(rows.map((x) => [x, cents(x)]));
+  const dir = sort === 'priceAsc' ? 1 : -1;
+  return rows.sort((a, b) => {
+    const pa = key.get(a)!;
+    const pb = key.get(b)!;
+    if (!pa || !pb) return (pa ? 0 : 1) - (pb ? 0 : 1) || tie(a, b);
+    return (pa - pb) * dir || tie(a, b);
+  });
+}
+
 export interface PriceTotals {
   ownedValue: number; // centesimi: tutte le copie possedute
   ownedCards: number; // carte possedute contate
