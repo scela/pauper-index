@@ -10,7 +10,7 @@ import { imageUrl, loadData, loadPrices, type Data } from './lib/data';
 import { $, h, svg } from './lib/dom';
 import { realignedCSV, textList } from './lib/exports';
 import { daysBetween, fmtDate, fmtEur, fmtInt, fmtPct, fmtPrint } from './lib/format';
-import { cheapestPrice, ownedPrice, ownedPrintIndex, priceTotals, printPrice, type PricesFile, type PriceTotals } from './lib/prices';
+import { cheapestPrice, isPriceSort, priceTotals, rowPrice, sortByPrice, type PricesFile, type PriceSort, type PriceTotals, type RowPrice } from './lib/prices';
 import { clearAll, idbGet, idbSet, lsDel, lsGet, lsSet } from './lib/store';
 import { norm } from './lib/norm';
 import { parseTextList } from './lib/text';
@@ -85,7 +85,7 @@ const S = {
   types: [] as string[],
   /** per ogni carta, il testo in cui cercare il nome (inglese e italiani), quando i nomi italiani sono arrivati */
   names: null as string[] | null,
-  sort: (lsGet('sort') as 'share' | 'name' | 'recent' | 'oldest') || 'share',
+  sort: (lsGet('sort') as 'share' | 'name' | 'recent' | 'oldest' | PriceSort) || 'share',
   results: [] as Result[],
   view: [] as Result[],
   shown: PAGE,
@@ -527,25 +527,40 @@ function renderResults(): void {
 
 /* ---------- prezzi indicativi ---------- */
 
-/** Prezzo di una carta mancante: la stampa del set nella vista per espansione, altrimenti la più economica. */
+/** Prezzo di una riga dell'elenco (colonna Prezzo e ordinamento): nella vista per espansione la stampa del set. */
+function listPrice(x: Result): RowPrice {
+  return rowPrice(S.d!, S.prices, x, S.setCodes ? displayPrint(S.d!, x.idx, S.setCodes, S.setFilter!) : undefined);
+}
+
+/** Prezzo di una carta mancante, per il riepilogo: lo stesso della colonna. */
 function missingPrice(x: Result): number {
-  if (S.setCodes) return printPrice(S.prices, x.idx, displayPrint(S.d!, x.idx, S.setCodes, S.setFilter!));
-  return cheapestPrice(S.prices, x.idx);
+  return listPrice(x).cents;
+}
+
+function rowPriceText(p: RowPrice): string {
+  if (!p.cents) return '—';
+  return p.from ? t('price.from', { p: fmtEur(p.cents) }) : fmtEur(p.cents);
 }
 
 /** Testo della colonna Prezzo: "—" se il prezzo manca. */
 function priceText(x: Result): string {
-  if (!S.prices) return '—';
-  if (S.setCodes || x.owned === 0) {
-    const c = missingPrice(x);
-    if (!c) return '—';
-    return S.setCodes ? fmtEur(c) : t('price.from', { p: fmtEur(c) });
+  return rowPriceText(listPrice(x));
+}
+
+/**
+ * Stato dei prezzi per i menu "Ordina": finché i prezzi non arrivano l'ordine per prezzo segue "Più giocate";
+ * se non arrivano (file mancante o download fallito) le due voci si disattivano con il motivo, senza toccare la scelta salvata.
+ */
+let pricesState: 'pending' | 'ok' | 'none' = 'pending';
+
+function syncPriceSort(): void {
+  const none = pricesState === 'none';
+  for (const o of document.querySelectorAll<HTMLOptionElement>('#sort option[value^="price"], #favSort option[value^="price"]')) o.disabled = none;
+  // il motivo è una voce disattivata in fondo, presente solo quando serve (una voce nascosta allargherebbe il menu)
+  for (const sel of document.querySelectorAll<HTMLSelectElement>('#sort, #favSort')) {
+    sel.querySelector('option.sort-na')?.remove();
+    if (none) sel.append(h('option', { class: 'sort-na', disabled: true }, t('sort.priceNA')));
   }
-  const c = ownedPrice(S.d!, S.prices, x);
-  if (c) return fmtEur(c);
-  // printing sconosciuta (lista incollata): la stampa più economica, come la stima del riepilogo
-  const low = x.prints.some((op) => ownedPrintIndex(S.d!, x.idx, op) < 0) ? cheapestPrice(S.prices, x.idx) : 0;
-  return low ? t('price.from', { p: fmtEur(low) }) : '—';
 }
 
 /**
@@ -560,6 +575,22 @@ function showPrices(): void {
     if (mobile[i]) mobile[i].textContent = priceText(x);
   });
   renderPriceSummary();
+}
+
+/** L'ordine dell'elenco è cambiato (prezzi arrivati): stesse righe caricate, il focus resta sulla stessa carta. */
+function reorderRows(): void {
+  const act = document.activeElement as HTMLElement | null;
+  const tr = act?.closest('#cardRows tr');
+  const idx = tr?.querySelector<HTMLElement>('.cardbtn')?.dataset.idx;
+  const heart = !!act?.closest('.favbtn');
+  renderRows();
+  if (idx === undefined) return;
+  const btn = $('#cardRows').querySelector<HTMLElement>(`.cardbtn[data-idx="${idx}"]`);
+  const target = heart ? btn?.closest('tr')?.querySelector<HTMLElement>('.favbtn') : btn;
+  if (!target) return;
+  focusNoSheet = true;
+  target.focus({ preventScroll: true });
+  focusNoSheet = false;
 }
 
 /** Valore delle copie possedute e costo delle mancanti, sulle carte dell'elenco con i filtri attivi. */
@@ -668,7 +699,9 @@ function filtered(): Result[] {
   let rows = visible(d, S.results, listFilters());
   const name = (x: Result) => d.cards.c[x.idx].n;
   const cmpName = (a: Result, b: Result) => name(a).localeCompare(name(b), 'en', { sensitivity: 'base' });
-  if (S.sort === 'share') rows = rows.sort((a, b) => b.share - a.share || cmpName(a, b));
+  const byShare = (a: Result, b: Result) => b.share - a.share || cmpName(a, b);
+  if (isPriceSort(S.sort) && S.prices) rows = sortByPrice(rows, (x) => listPrice(x).cents, S.sort, byShare);
+  else if (S.sort === 'share' || isPriceSort(S.sort)) rows = rows.sort(byShare); // prezzi in arrivo o assenti: "Più giocate"
   else if (S.sort === 'name') rows = rows.sort(cmpName);
   else {
     const z = (x: Result) => d.cards.c[x.idx].z;
@@ -1057,16 +1090,10 @@ function favsChanged(): void {
   favPage?.refresh();
 }
 
-/** Prezzo di una preferita giocata: la printing posseduta (come la colonna Prezzo), altrimenti "da X €". */
-function favPrice(idx: number): string {
-  if (!S.prices) return '—';
-  const res = hasColl() ? ownedResult(idx) : null;
-  if (res && res.owned > 0) {
-    const c = ownedPrice(S.d!, S.prices, res);
-    if (c) return fmtEur(c);
-  }
-  const low = cheapestPrice(S.prices, idx);
-  return low ? t('price.from', { p: fmtEur(low) }) : '—';
+/** Prezzo di una preferita giocata, con la regola della colonna Prezzo; null finché i prezzi non ci sono. */
+function favRowPrice(idx: number): RowPrice | null {
+  if (!S.prices) return null;
+  return rowPrice(S.d!, S.prices, ownedResult(idx, hasColl() ? S.cix?.byCard.get(idx) || null : null));
 }
 
 /* ---------- tema e viste ---------- */
@@ -1087,6 +1114,7 @@ function applyStatic(): void {
   document.querySelectorAll<HTMLElement>('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', t(el.dataset.i18nAria as Key)));
   document.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((el) => el.setAttribute('title', t(el.dataset.i18nTitle as Key)));
   document.querySelectorAll<HTMLElement>('[data-i18n-content]').forEach((el) => el.setAttribute('content', t(el.dataset.i18nContent as Key)));
+  syncPriceSort();
   document.querySelectorAll<HTMLElement>('[data-lang]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === getLang())));
   applyTheme(lsGet('theme'));
 }
@@ -1555,7 +1583,9 @@ async function main(): Promise<void> {
       refresh();
     },
     collection: () => (hasColl() ? S.cix : null),
-    price: favPrice,
+    price: (idx) => rowPriceText(favRowPrice(idx) || { cents: 0, from: false }),
+    priceCents: (idx) => favRowPrice(idx)?.cents || 0,
+    pricesReady: () => !!S.prices,
     priceSummary: favPriceSummary,
     openNever: (anchor, e) => openNeverSheet(anchor, {
       name: e.name, legal: e.legal, itNames: [], itForce: false,
@@ -1590,8 +1620,12 @@ async function main(): Promise<void> {
   void renderNews();
   // prezzi indicativi: dopo il resto, senza bloccare la pagina
   S.prices = await loadPrices(S.d);
+  pricesState = S.prices ? 'ok' : 'none';
+  syncPriceSort();
   if (S.prices) {
-    showPrices();
+    // ordine per prezzo scelto: l'elenco si riordina, con le righe già caricate e il focus; altrimenti solo le celle
+    if (isPriceSort(S.sort)) reorderRows();
+    else showPrices();
     decks?.refresh();
     debuts?.refresh();
     favPage?.refresh();

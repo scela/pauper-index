@@ -991,6 +991,7 @@ details.mini[open]{flex-basis:100%;background:var(--surface);border:1px solid va
 /* pagina */
 .favpage h2#favHeading{font-size:clamp(1.5rem,4vw,2rem);line-height:1.15;letter-spacing:-.02em;margin:10px 0 4px}
 .fav-lead{margin:0 0 8px;color:var(--muted)}
+.fav-head > div:first-child{flex-basis:400px}
 .fav-head .res-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .fav-head .res-tools label{display:flex;gap:6px;align-items:center}
 .fav-head select{font:inherit;font-size:16px;padding:6px 8px;border:1px solid var(--line-strong);border-radius:var(--r-s);background:var(--surface);color:var(--ink)}

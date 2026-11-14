@@ -7,6 +7,7 @@ import { imageUrl, loadCardNames, type Data } from '../lib/data';
 import { $, h } from '../lib/dom';
 import { allNamesIndex, favText, italianIndex, mergeFavs, parseFavList, type Fav, type FavEntry, type FavSort } from '../lib/favorites';
 import { loadItalian } from '../lib/italian';
+import { isPriceSort, sortByPrice } from '../lib/prices';
 import { norm } from '../lib/norm';
 import type { CollectionIndex } from '../lib/quick';
 import { lsGet, lsSet } from '../lib/store';
@@ -20,6 +21,10 @@ export interface FavPageDeps {
   collection: () => CollectionIndex | null;
   /** testo del prezzo di una carta giocata (printing posseduta o "da X €") */
   price: (idx: number) => string;
+  /** lo stesso prezzo in centesimi, per ordinare (0 = senza prezzo) */
+  priceCents: (idx: number) => number;
+  /** prezzi arrivati: prima, e se non arrivano, l'ordine per prezzo segue "Più giocate" */
+  pricesReady: () => boolean;
   /** Riepilogo dei prezzi, come quello della pagina iniziale ("" senza prezzi). */
   priceSummary: (idxs: number[], never: { owned: number; missing: number }) => string;
   /** scheda ridotta di una carta mai giocata */
@@ -29,7 +34,7 @@ export interface FavPageDeps {
 }
 
 const UNDO_MS = 8000;
-const SORTS: FavSort[] = ['recent', 'name', 'share'];
+const SORTS: FavSort[] = ['recent', 'name', 'share', 'priceAsc', 'priceDesc'];
 
 export function initFavPage(deps: FavPageDeps): { show(): void; refresh(): void } {
   let sort: FavSort = SORTS.includes(lsGet('favSort') as FavSort) ? (lsGet('favSort') as FavSort) : 'recent';
@@ -68,11 +73,14 @@ export function initFavPage(deps: FavPageDeps): { show(): void; refresh(): void 
     const name = (e: FavEntry) => e.fav.n;
     const byName = (a: FavEntry, b: FavEntry) => name(a).localeCompare(name(b), 'en', { sensitivity: 'base' });
     const out = [...entries]; // la lista salvata è già dalle aggiunte più recenti
+    const share = (e: FavEntry) => (e.idx >= 0 ? deckShare(d, d.cards.c[e.idx], deps.opts()) : -1);
+    const byShare = (a: FavEntry, b: FavEntry) => share(b) - share(a) || byName(a, b);
     if (sort === 'name') out.sort(byName);
-    else if (sort === 'share') {
-      const share = (e: FavEntry) => (e.idx >= 0 ? deckShare(d, d.cards.c[e.idx], deps.opts()) : -1);
-      out.sort((a, b) => share(b) - share(a) || byName(a, b));
-    }
+    else if (isPriceSort(sort)) {
+      // le mai giocate non hanno prezzo: in fondo; prezzi in arrivo o assenti: "Più giocate"
+      if (!deps.pricesReady()) out.sort(byShare);
+      else sortByPrice(out, (e) => (e.idx >= 0 ? deps.priceCents(e.idx) : 0), sort, byShare);
+    } else if (sort === 'share') out.sort(byShare);
     return out;
   };
 
