@@ -1,12 +1,12 @@
 {
   "prima": {
-    "tournaments": 8778,
-    "decks": 211117,
+    "tournaments": 8818,
+    "decks": 211899,
     "tornei_senza_mazzi": 0
   },
   "dopo": {
-    "tournaments": 7238,
-    "decks": 159581
+    "tournaments": 7278,
+    "decks": 160363
   },
   "regola1_file_identici": [
     {
