@@ -1,67 +1,67 @@
 {
-  "generated_at": "2026-11-20T16:13:31+00:00",
-  "last_tournament": "2026-11-15",
-  "tournaments": 7278,
-  "decks": 160363,
+  "generated_at": "2026-11-23T19:19:16+00:00",
+  "last_tournament": "2026-11-22",
+  "tournaments": 7304,
+  "decks": 160860,
   "windows": [
     {
       "days": 61,
-      "decks": 6941,
-      "tournaments": 297
+      "decks": 6477,
+      "tournaments": 288
     },
     {
       "days": 365,
-      "decks": 34992,
-      "tournaments": 1282
+      "decks": 35152,
+      "tournaments": 1293
     },
     {
       "days": 730,
-      "decks": 55054,
-      "tournaments": 2093
+      "decks": 55267,
+      "tournaments": 2105
     },
     {
       "days": null,
-      "decks": 160363,
-      "tournaments": 7278
+      "decks": 160860,
+      "tournaments": 7304
     }
   ],
-  "cards": 5116,
+  "cards": 5127,
   "scryfall": {
-    "oracle_cards": "2026-11-20T10:02:03.416+00:00",
-    "default_cards": "2026-11-20T10:06:19.060+00:00"
+    "oracle_cards": "2026-11-23T10:02:36.425+00:00",
+    "default_cards": "2026-11-23T10:06:22.277+00:00"
   },
   "source": {
-    "commit": "a41bf04aa2de31a4a3d3b5fa9d3160a808e1d7b8",
-    "commit_date": "2026-11-16T17:48:27+01:00",
+    "commit": "3c45351bd07344ccc7e20f4e6d47a06fedfc817e",
+    "commit_date": "2026-11-23T16:56:26+01:00",
     "url": "https://github.com/Jiliac/MTGODecklistCache.git",
     "status": "ok",
-    "days_since_last_tournament": 5
+    "days_since_last_tournament": 1
   },
   "dedup": {
     "before": {
-      "tournaments": 8818,
-      "decks": 211899,
+      "tournaments": 8847,
+      "decks": 212492,
       "tornei_senza_mazzi": 0
     },
     "after": {
-      "tournaments": 7278,
-      "decks": 160363
+      "tournaments": 7304,
+      "decks": 160860
     }
   },
   "resolution": {
-    "distinct_names": 5371,
+    "distinct_names": 5383,
     "methods": {
       "alias": 22,
       "alt": 15,
-      "exact": 5126,
+      "exact": 5137,
       "excluded": 4,
-      "face": 56,
+      "face": 57,
       "foreign": 108,
       "fuzzy": 12,
       "unresolved": 28
     },
     "unresolved_occurrences": 28,
-    "occurrences": 4008742,
+    "occurrences": 4021114,
     "unresolved_pct": 0.0007
   }
 }

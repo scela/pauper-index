@@ -1,12 +1,12 @@
 {
   "prima": {
-    "tournaments": 8818,
-    "decks": 211899,
+    "tournaments": 8847,
+    "decks": 212492,
     "tornei_senza_mazzi": 0
   },
   "dopo": {
-    "tournaments": 7278,
-    "decks": 160363
+    "tournaments": 7304,
+    "decks": 160860
   },
   "regola1_file_identici": [
     {
@@ -160,8 +160,8 @@
       "scartata": "mtgo.com_limited_data",
       "tenuta": "mtgo.com_limited_data",
       "anno": 2026,
-      "tornei": 14,
-      "mazzi": 434
+      "tornei": 17,
+      "mazzi": 530
     }
   ],
   "regola2_mazzi_ripetuti": [
